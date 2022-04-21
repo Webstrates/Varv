@@ -1,0 +1,11 @@
+{
+    "friendlyName": "Varv Memory Data Store",
+    "description": "Allow data to be stored in memory",
+    "dependencies": [
+        "#varv-engine"
+    ],
+    "assets": [],
+    "license": "MIT",
+    "version": "0.1",
+    "changelog": {}
+}

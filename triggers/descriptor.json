@@ -1,0 +1,11 @@
+{
+    "friendlyName": "Varv Standard Triggers",
+    "description": "Simple built-in triggers for varv",
+    "dependencies": [
+        "#varv-engine"
+    ],
+    "assets": [],
+    "license": "MIT",
+    "version": "0.1",
+    "changelog": {}
+}

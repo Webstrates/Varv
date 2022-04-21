@@ -1,0 +1,1488 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "type": "object",
+    "properties": {
+        "concepts": {
+            "type": "object",
+            "description": "The concepts specified by this Varv Definition",
+            "patternProperties": {
+                "^\\S+$": {
+                    "type": "object",
+                    "description": "A concept",
+                    "properties": {
+                        "schema": {
+                            "type": "object",
+                            "description": "The structure of this concept",
+                            "patternProperties": {
+                                "^\\S+$": {
+                                    "description": "A property of this concept.",
+                                    "anyOf": [
+                                        {
+                                            "type": "string",
+                                            "enum": ["number", "boolean", "string"]
+                                        },
+                                        {
+                                            "type": "string",
+                                            "pattern": "^\\S+$"
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "string": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "default": {
+                                                            "type": "string"
+                                                        },
+                                                        "enum": {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "type": "string"
+                                                            }
+                                                        },
+                                                        "derive": {
+                                                            "$ref": "#/$defs/derive"
+                                                        }
+                                                    },
+                                                    "additionalProperties": false
+                                                },
+                                                "number": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "deafult": {
+                                                            "type": "number"
+                                                        },
+                                                        "min": {
+                                                            "type": "number"
+                                                        },
+                                                        "max": {
+                                                            "type": "number"
+                                                        },
+                                                        "derive": {
+                                                            "$ref": "#/$defs/derive"
+                                                        }
+                                                    },
+                                                    "additionalProperties": false
+                                                },
+                                                "boolean": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "default": {
+                                                            "type": "boolean"
+                                                        },
+                                                        "derive": {
+                                                            "$ref": "#/$defs/derive"
+                                                        }
+                                                    },
+                                                    "additionalProperties": false
+                                                },
+                                                "array": {
+                                                    "oneOf": [
+                                                        {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "items": {
+                                                                    "type":"string"
+                                                                },
+                                                                "derive": {
+                                                                    "$ref": "#/$defs/derive"
+                                                                }
+                                                            },
+                                                            "required": ["items"],
+                                                            "additionalProperties": false
+                                                        },
+                                                        {
+                                                            "type": "string"
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            "additionalProperties": false,
+                                            "minProperties": 1,
+                                            "maxProperties": 1,
+                                            "oneOf": [
+                                                {
+                                                    "required": ["string"]
+                                                },
+                                                {
+                                                    "required": ["number"]
+                                                },
+                                                {
+                                                    "required": ["array"]
+                                                },
+                                                {
+                                                    "required": ["boolean"]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        "actions": {
+                            "type": "object",
+                            "description": "The actions of this concept",
+                            "patternProperties": {
+                                "^.+$": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "when": {
+                                                    "oneOf": [
+                                                        {
+                                                            "type": "array",
+                                                            "items": {
+                                                                "$ref": "#/$defs/trigger"
+                                                            }
+                                                        },
+                                                        {
+                                                            "$ref": "#/$defs/trigger"
+                                                        },
+                                                        {
+                                                            "type": "null"
+                                                        }
+                                                    ]
+                                                },
+                                                "then": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/$defs/action"
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/$defs/action"
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        "mappings": {
+                            "type": "object",
+                            "description": "Property mappings",
+                            "patternProperties": {
+                                "^\\S+$":{
+                                    "type": "array",
+                                    "description": "Property mapping",
+                                    "items":{
+                                        "type":"string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "dataStores": {
+            "type": "object",
+            "patternProperties": {
+                "^\\S+$": {
+                    "oneOf": [
+                        {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "const": "dom"
+                                },
+                                "options": {
+                                    "type": "object",
+                                    "properties": {
+                                        "storageName": {
+                                            "type": "string"
+                                        },
+                                        "storageWebstrate": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            },
+                            "required": [
+                                "type"
+                            ]
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "const": "cauldron"
+                                },
+                                "options": {
+                                    "type": "object",
+                                    "properties": {
+                                    }
+                                }
+                            },
+                            "required": [
+                                "type"
+                            ]
+                        },
+                        {
+                            "type": "object",
+                            "properties": {
+                                "type": {
+                                    "const": "memory"
+                                },
+                                "options": {
+                                    "type": "object",
+                                    "properties": {
+                                    }
+                                }
+                            },
+                            "required": [
+                                "type"
+                            ]
+                        }
+                    ]
+                }
+            }
+        }
+    },
+    "required": [
+        "concepts"
+    ],
+    "$defs": {
+        "filter": {
+            "type": "object",
+            "description": "A Filter",
+            "properties": {
+                "property": {
+                    "type": "string"
+                },
+                "variable": {
+                    "type": "string"
+                },
+                "equals": {
+                    "type": ["string", "number", "boolean"]
+                },
+                "unequals": {
+                    "type": ["string", "number", "boolean"]
+                },
+                "greaterThan": {
+                    "type": ["string", "number"]
+                },
+                "lessThan": {
+                    "type": ["string", "number"]
+                },
+                "greaterOrEquals": {
+                    "type": ["string", "number"]
+                },
+                "lessOrEquals": {
+                    "type": ["string", "number"]
+                },
+                "startsWith": {
+                    "type": ["string"]
+                },
+                "endsWith": {
+                    "type": ["string"]
+                },
+                "includes": {
+                    "type": ["string", "number", "boolean"]
+                },
+                "includesAny": {
+                    "type": ["array"]
+                },
+                "includesAll": {
+                    "type": ["array"]
+                },
+                "and": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/filter"
+                    }
+                },
+                "or": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/filter"
+                    }
+                },
+                "not": {
+                    "type": "object",
+                    "$ref": "#/$defs/filter"
+                }
+            },
+            "oneOf": [
+                {"allOf":[
+                    {"required": ["property"]},
+                    {"oneOf": [
+                        {"required": ["equals"]},
+                        {"required": ["unequals"]},
+                        {"required": ["greaterThan"]},
+                        {"required": ["greaterOrEquals"]},
+                        {"required": ["lessOrEquals"]},
+                        {"required": ["startsWith"]},
+                        {"required": ["endsWith"]},
+                        {"required": ["includes"]},
+                        {"required": ["includesAny"]},
+                        {"required": ["includesAll"]},
+                        {"required": ["lessThan"]}
+                    ]}
+                ]},
+                {"allOf":[
+                    {"required": ["variable"]},
+                    {"oneOf": [
+                        {"required": ["equals"]},
+                        {"required": ["unequals"]},
+                        {"required": ["greaterThan"]},
+                        {"required": ["greaterOrEquals"]},
+                        {"required": ["lessOrEquals"]},
+                        {"required": ["startsWith"]},
+                        {"required": ["endsWith"]},
+                        {"required": ["includes"]},
+                        {"required": ["includesAny"]},
+                        {"required": ["includesAll"]},
+                        {"required": ["lessThan"]}
+                    ]}
+                ]},
+                {"required": ["and"]},
+                {"required": ["or"]},
+                {"required": ["not"]}
+            ]
+        },
+        "action": {
+            "oneOf": [
+                {
+                    "description": "Direct primitive action",
+                    "$ref": "#/$defs/primitiveActionEnum"
+                },
+                {
+                    "description": "Where action",
+                    "type": "object",
+                    "properties": {
+                        "where": {
+                            "anyOf": [
+                                {"$ref": "#/$defs/filter"},
+                                {
+                                    "properties": {
+                                        "stopIfEmpty": {
+                                            "type": "boolean",
+                                            "default": false,
+                                            "description": "Stops the action chain if where filter allows no concepts through"
+                                        }
+                                    }
+        
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["where"],
+                    "additionalProperties": false
+                },
+                {
+                    "description": "Length action",
+                    "type": "object",
+                    "properties": {
+                        "length": {
+                            "oneOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "variable": {
+                                            "type": "string"
+                                        },
+                                        "property": {
+                                            "type": "string"
+                                        },
+                                        "as": {
+                                            "of": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "variable": {
+                                                        "type": "string"
+                                                    },
+                                                    "property": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "oneOf":[
+                                                    {"required": ["variable"]},
+                                                    {"required": ["property"]}
+                                                ]
+                                            },
+                                            "type": "string"
+                                        }
+                                    },
+                                    "oneOf":[
+                                        {"required": ["variable"]},
+                                        {"required": ["property"]},
+                                        {"required": ["of"]}
+                                    ]
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["length"],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "set": {
+                            "oneOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "property": {
+                                            "type": "string"
+                                        },
+                                        "variable": {
+                                            "type": "string"
+                                        },
+                                        "value": {
+                                            "type": ["string", "boolean", "number", "array"]
+                                        }
+                                    },
+                                    "required": ["value"],
+                                    "oneOf": [
+                                        {"required": ["property"]},
+                                        {"required": ["variable"]}
+                                    ]
+                                },
+                                {
+                                    "type": "object",
+                                    "patternProperties": {
+                                        "^\\S+$": {
+                                            "type": ["string", "boolean", "number", "array"]
+                                        }
+                                    },
+                                    "minProperties": 1,
+                                    "not": {
+                                        "anyOf": [
+                                            {"required": ["variable"]},
+                                            {"required": ["value"]}
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["set"],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "get": {
+                            "oneOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "property": {
+                                            "type": "string"
+                                        },
+                                        "as": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": ["property"]
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["get"],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "switch": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "where": {
+                                        "$ref": "#/$defs/filter"
+                                    },
+                                    "then": {
+                                        "oneOf": [
+                                            {
+                                                "type": "array",
+                                                "items": {
+                                                    "$ref": "#/$defs/action"
+                                                }
+                                            },
+                                            {
+                                                "$ref": "#/$defs/action"
+                                            }
+                                        ]
+                                    },
+                                    "break": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": ["then"]
+                            }
+                        }
+                    },
+                    "required": ["switch"],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "select": {
+                            "oneOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "concept": {
+                                            "description": "Selects the given concept",
+                                            "type": "string"
+                                        },
+                                        "property": {
+                                            "description": "Selects concepts with the given property",
+                                            "type": "string"
+                                        },
+                                        "target": {
+                                            "description": "Selects the given uuid, or array of uuid's",
+                                            "type": "string"
+                                        },
+                                        "as": {
+                                            "description": "The variable name to store the selection as",
+                                            "type": "string"
+                                        },
+                                        "where": {
+                                            "$ref": "#/$defs/filter"
+                                        },
+                                        "forEach": {
+                                            "description": "If true, runs the select for each already selected concept, if false, runs select once",
+                                            "type": "boolean",
+                                            "default": false
+                                        },
+                                        "stopIfEmpty": {
+                                            "type": "boolean",
+                                            "default": false
+                                        }
+                                    },
+                                    "oneOf": [
+                                        {"required": ["concept"]},
+                                        {"required": ["property"]},
+                                        {"required": ["target"]}
+                                    ]
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["select"],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "exists": {
+                            "oneOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "concept": {
+                                            "description": "Selects the given concept",
+                                            "type": "string"
+                                        },
+                                        "property": {
+                                            "description": "Selects concepts with the given property",
+                                            "type": "string"
+                                        },
+                                        "target": {
+                                            "description": "Selects the given uuid, or array of uuid's",
+                                            "type": "string"
+                                        },
+                                        "as": {
+                                            "description": "The variable name to store the selection as",
+                                            "type": "string"
+                                        },
+                                        "where": {
+                                            "$ref": "#/$defs/filter"
+                                        },
+                                        "forEach": {
+                                            "description": "If true, runs the select for each already selected concept, if false, runs select once",
+                                            "type": "boolean",
+                                            "default": false
+                                        },
+                                        "stopIfEmpty": {
+                                            "type": "boolean",
+                                            "default": false
+                                        }
+                                    },
+                                    "oneOf": [
+                                        {"required": ["concept"]},
+                                        {"required": ["property"]},
+                                        {"required": ["target"]}
+                                    ]
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["exists"],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "count": {
+                            "oneOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "concept": {
+                                            "description": "Selects the given concept",
+                                            "type": "string"
+                                        },
+                                        "property": {
+                                            "description": "Selects concepts with the given property",
+                                            "type": "string"
+                                        },
+                                        "target": {
+                                            "description": "Selects the given uuid, or array of uuid's",
+                                            "type": "string"
+                                        },
+                                        "as": {
+                                            "description": "The variable name to store the selection as",
+                                            "type": "string"
+                                        },
+                                        "where": {
+                                            "$ref": "#/$defs/filter"
+                                        },
+                                        "forEach": {
+                                            "description": "If true, runs the select for each already selected concept, if false, runs select once",
+                                            "type": "boolean",
+                                            "default": false
+                                        },
+                                        "stopIfEmpty": {
+                                            "type": "boolean",
+                                            "default": false
+                                        }
+                                    },
+                                    "oneOf": [
+                                        {"required": ["concept"]},
+                                        {"required": ["property"]},
+                                        {"required": ["target"]}
+                                    ]
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["count"],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "toggle": {
+                            "oneOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "property": {
+                                            "type": "string"
+                                        },
+                                        "variable": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "oneOf": [
+                                        {"required": ["property"]},
+                                        {"required": ["variable"]}
+                                    ]
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["toggle"],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "increment": {
+                            "oneOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "property": {
+                                            "type": "string"
+                                        },
+                                        "variable": {
+                                            "type": "string"
+                                        },
+                                        "by": {
+                                            "type": "number"
+                                        }
+                                    },
+                                    "oneOf": [
+                                        {"required": ["property"]},
+                                        {"required": ["variable"]}
+                                    ]
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["increment"],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "decrement": {
+                            "oneOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "property": {
+                                            "type": "string"
+                                        },
+                                        "variable": {
+                                            "type": "string"
+                                        },
+                                        "by": {
+                                            "type": "number"
+                                        }
+                                    },
+                                    "oneOf": [
+                                        {"required": ["property"]},
+                                        {"required": ["variable"]}
+                                    ]
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["decrement"],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "calculate": {
+                            "oneOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "expression": {
+                                            "type": "string",
+                                            "description": "The expression to calculate"
+                                        },
+                                        "as": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": ["expression"]
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["calculate"],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "new": {
+                            "oneOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "concept": {
+                                            "type": "string",
+                                            "description": "The concept to create"
+                                        },
+                                        "as": {
+                                            "type": "string"
+                                        },
+                                        "select": {
+                                            "type": "boolean"
+                                        },
+                                        "with": {
+                                            "type": "object",
+                                            "patternProperties": {
+                                                "^\\S+$": {
+                                                    "type": ["string", "boolean", "number", "array"]
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "required": ["concept"]
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["new"],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "run": {
+                            "oneOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "action": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": ["action"]
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["run"],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "append": {
+                            "oneOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "property": {
+                                            "type": "string"
+                                        },
+                                        "variable": {
+                                            "type": "string"
+                                        },
+                                        "to": {
+                                            "property": {
+                                                "type": "string"
+                                            },
+                                            "variable": {
+                                                "type": "string"
+                                            },
+                                            "oneOf": [
+                                                {"required": ["property"]},
+                                                {"required": ["variable"]}
+                                            ]
+                                        },
+                                        "item": {
+                                            "type": ["number", "string", "boolean"]
+                                        }
+                                    },
+                                    "oneOf": [
+                                        {"required": ["property"]},
+                                        {"required": ["variable"]},
+                                        {"required": ["to"]}
+                                    ]
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["append"],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "prepend": {
+                            "oneOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "property": {
+                                            "type": "string"
+                                        },
+                                        "variable": {
+                                            "type": "string"
+                                        },
+                                        "to": {
+                                            "property": {
+                                                "type": "string"
+                                            },
+                                            "variable": {
+                                                "type": "string"
+                                            },
+                                            "oneOf": [
+                                                {"required": ["property"]},
+                                                {"required": ["variable"]}
+                                            ]
+                                        },
+                                        "item": {
+                                            "type": ["number", "string", "boolean"]
+                                        }
+                                    },
+                                    "oneOf": [
+                                        {"required": ["property"]},
+                                        {"required": ["variable"]},
+                                        {"required": ["to"]}
+                                    ]
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["prepend"],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "items": {
+                            "oneOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "property": {
+                                            "type": "string"
+                                        },
+                                        "variable": {
+                                            "type": "string"
+                                        },
+                                        "as": {
+                                            "type": "string"
+                                        },
+                                        "where": {
+                                            "$ref": "#/$defs/filter"
+                                        }
+                                    },
+                                    "oneOf": [
+                                        {"required": ["property"]},
+                                        {"required": ["variable"]}
+                                    ]
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["items"],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "enums": {
+                            "oneOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "property": {
+                                            "type": "string"
+                                        },
+                                        "as": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": ["property"]
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["enums"],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "debugMessage": {
+                            "oneOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": ["message"]
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["debugMessage"],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "description": "Pattern action",
+                    "patternProperties": {
+                        "^\\S+$": {
+                            "type": "object",
+                            "patternProperties": {
+                                "^\\S+$": {
+                                    "type": ["string", "boolean", "number", "array"]
+                                }
+                            }
+                        }
+                    },
+                    "allOf": [
+                        {"not": {"required":["length"]}},
+                        {"not": {"required":["append"]}},
+                        {"not": {"required":["prepend"]}},
+                        {"not": {"required":["removeFirst"]}},
+                        {"not": {"required":["removeLast"]}},
+                        {"not": {"required":["removeItem"]}},
+                        {"not": {"required":["items"]}},
+                        {"not": {"required":["select"]}},
+                        {"not": {"required":["storeSelection"]}},
+                        {"not": {"required":["limit"]}},
+                        {"not": {"required":["where"]}},
+                        {"not": {"required":["new"]}},
+                        {"not": {"required":["remove"]}},
+                        {"not": {"required":["eval"]}},
+                        {"not": {"required":["count"]}},
+                        {"not": {"required":["exists"]}},
+                        {"not": {"required":["debugMessage"]}},
+                        {"not": {"required":["debugContext"]}},
+                        {"not": {"required":["debugConcept"]}},
+                        {"not": {"required":["run"]}},
+                        {"not": {"required":["exit"]}},
+                        {"not": {"required":["switch"]}},
+                        {"not": {"required":["increment"]}},
+                        {"not": {"required":["decrement"]}},
+                        {"not": {"required":["calculate"]}},
+                        {"not": {"required":["random"]}},
+                        {"not": {"required":["set"]}},
+                        {"not": {"required":["get"]}},
+                        {"not": {"required":["toggle"]}},
+                        {"not": {"required":["enums"]}},
+                        {"not": {"required":["textTransform"]}},
+                        {"not": {"required":["concat"]}},
+                        {"not": {"required":["wait"]}}
+                    ]
+                },
+                {
+                    "type": "string",
+                    "not": {
+                        "$ref": "#/$defs/primitiveActionEnum"
+                    }
+                }
+            ]
+        },
+        "trigger": {
+            "oneOf": [
+                {
+                    "description": "Enum trigger",
+                    "$ref": "#/$defs/primitiveTriggerEnum"
+                },
+                {
+                    "type": "object",
+                    "description": "Click trigger",
+                    "properties": {
+                        "click": {
+                            "oneOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "concept": {
+                                            "type": "string"
+                                        },
+                                        "property": {
+                                            "type": "string"
+                                        },
+                                        "view": {
+                                            "type": "string"
+                                        },
+                                        "runtimeLookup": {
+                                            "type": "string"
+                                        },
+                                        "where": {
+                                            "$ref": "#/$defs/filter"
+                                        }
+                                    },
+                                    "oneOf": [
+                                        {"required": ["concept"]},
+                                        {"required": ["property"]},
+                                        {"required": ["view"]},
+                                        {"required": ["runtimeLookup"]}
+                                    ]
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["click"]
+                },
+                {
+                    "type": "object",
+                    "description": "Mouseup trigger",
+                    "properties": {
+                        "mouseup": {
+                            "oneOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "concept": {
+                                            "type": "string"
+                                        },
+                                        "property": {
+                                            "type": "string"
+                                        },
+                                        "view": {
+                                            "type": "string"
+                                        },
+                                        "runtimeLookup": {
+                                            "type": "string"
+                                        },
+                                        "where": {
+                                            "$ref": "#/$defs/filter"
+                                        }
+                                    },
+                                    "oneOf": [
+                                        {"required": ["concept"]},
+                                        {"required": ["property"]},
+                                        {"required": ["view"]},
+                                        {"required": ["runtimeLookup"]}
+                                    ]
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["mouseup"]
+                },
+                {
+                    "type": "object",
+                    "description": "Mousedown trigger",
+                    "properties": {
+                        "mousedown": {
+                            "oneOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "concept": {
+                                            "type": "string"
+                                        },
+                                        "property": {
+                                            "type": "string"
+                                        },
+                                        "view": {
+                                            "type": "string"
+                                        },
+                                        "runtimeLookup": {
+                                            "type": "string"
+                                        },
+                                        "where": {
+                                            "$ref": "#/$defs/filter"
+                                        }
+                                    },
+                                    "oneOf": [
+                                        {"required": ["concept"]},
+                                        {"required": ["property"]},
+                                        {"required": ["view"]},
+                                        {"required": ["runtimeLookup"]}
+                                    ]
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["mousedown"]
+                },
+                {
+                    "type": "object",
+                    "description": "Mousemove trigger",
+                    "properties": {
+                        "mousemove": {
+                            "oneOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "concept": {
+                                            "type": "string"
+                                        },
+                                        "property": {
+                                            "type": "string"
+                                        },
+                                        "view": {
+                                            "type": "string"
+                                        },
+                                        "runtimeLookup": {
+                                            "type": "string"
+                                        },
+                                        "where": {
+                                            "$ref": "#/$defs/filter"
+                                        }
+                                    },
+                                    "oneOf": [
+                                        {"required": ["concept"]},
+                                        {"required": ["property"]},
+                                        {"required": ["view"]},
+                                        {"required": ["runtimeLookup"]}
+                                    ]
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["mousemove"]
+                },
+                {
+                    "type": "object",
+                    "description": "Interval trigger",
+                    "properties": {
+                        "interval": {
+                            "oneOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "interval": {
+                                            "type": "number"
+                                        }
+                                    },
+                                    "required": ["interval"]
+                                },
+                                {
+                                    "type": "number"
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["interval"]
+                },
+                {
+                    "type": "object",
+                    "description": "Key trigger",
+                    "properties": {
+                        "key": {
+                            "oneOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "event": {
+                                            "description": "The type of key event",
+                                            "enum": ["keyUp","keyDown","keyPress"],
+                                            "default": "keyPress"
+                                        },
+                                        "ctrl": {
+                                            "type": "boolean"
+                                        },
+                                        "alt": {
+                                            "type": "boolean"
+                                        },
+                                        "shift": {
+                                            "type": "boolean"
+                                        },
+                                        "meta": {
+                                            "type": "boolean"
+                                        },
+                                        "key": {
+                                            "description": "The key to match, ex. \"Enter\"",
+                                            "type": "string"
+                                        },
+                                        "focus": {
+                                            "oneOf": [
+                                                {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "concept": {
+                                                            "type": "string"
+                                                        },
+                                                        "view": {
+                                                            "type": "string"
+                                                        }
+                                                    }
+                                                },
+                                                {
+                                                    "type": "string"
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["key"]
+                },
+                {
+                    "type": "object",
+                    "description": "Statechanged trigger",
+                    "properties": {
+                        "stateChanged": {
+                            "oneOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "concept": {
+                                            "type": "string"
+                                        },
+                                        "property": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "anyOf": [
+                                        {"required": ["concept"]},
+                                        {"required": ["property"]}
+                                    ]
+                                },
+                                {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["stateChanged"]
+                },
+                {
+                    "type": "object",
+                    "description": "Action trigger",
+                    "properties": {
+                        "action": {
+                            "oneOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "action": {
+                                            "type": "string"
+                                        },
+                                        "hook": {
+                                            "type": "string",
+                                            "enum": ["before", "after"]
+                                        }
+                                    },
+                                    "required": ["action"]
+                                },
+                                {
+                                    "type": "string"
+                                }
+                            ]
+                        }
+                    },
+                    "required": ["action"]
+                },
+                {
+                    "type": "string",
+                    "not": {
+                        "$ref": "#/$defs/primitiveTriggerEnum"
+                    }
+                }
+            ]
+        },
+        "primitiveTriggerEnum": {
+            "enum": [
+                "click",
+                "mousedown",
+                "mouseup",
+                "mousemove",
+                "key",
+                "stateChanged",
+                "interval"
+            ]
+        },
+        "primitiveActionEnum": {
+            "enum": [
+                "length",
+                "append",
+                "prepend",
+                "removeFirst",
+                "removeLast",
+                "removeItem",
+                "items",
+                "select",
+                "storeSelection",
+                "limit",
+                "where",
+                "new",
+                "remove",
+                "eval",
+                "count",
+                "exists",
+                "debugMessage",
+                "debugContext",
+                "debugConcept",
+                "run",
+                "exit",
+                "switch",
+                "increment",
+                "decrement",
+                "calculate",
+                "random",
+                "set",
+                "get",
+                "toggle",
+                "enums",
+                "textTransform",
+                "concat",
+                "wait"
+            ]
+        },
+        "derive": {
+            "type": "object",
+            "properties": {
+                "properties": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "transform": {
+                    "oneOf": [
+                        {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/$defs/action"
+                            }
+                        },
+                        {
+                            "$ref": "#/$defs/action"
+                        }
+                    ]
+                }
+            },
+            "additionalProperties": false
+        }
+    }
+}

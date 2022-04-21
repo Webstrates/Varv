@@ -1,0 +1,10 @@
+.mdc-menu .varv-inspector-preview {
+    background: rgba(100,100,100,0.2);
+    max-width: 30rem;
+    width: 100%;
+    overflow: auto;
+    max-height: 20rem;
+    padding: 0;
+    margin: 0;
+    font-size: 0.8em;
+}

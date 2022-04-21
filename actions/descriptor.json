@@ -1,0 +1,12 @@
+{
+    "friendlyName": "Varv Standard Actions",
+    "description": "Simple built-in actions for varv",
+    "dependencies": [
+        "#varv-engine",
+        "/wpm_js_libs/?raw #mathjs"
+    ],
+    "assets": [],
+    "license": "MIT",
+    "version": "0.1",
+    "changelog": {}
+}

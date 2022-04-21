@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Varv library repository</title>
+        <meta charset="UTF-8">
+    </head>
+    <body>
+        <div class="packages"> 
+            <div class="package" id="varv">
+                <script src="descriptor.json" type="descriptor"></script>
+            </div>
+            
+            <div class="package" id="varv-engine">
+                <script src="core/descriptor.json" type="descriptor"></script>
+                <script src="core/YAMLJSONConverter.js" type="disabled"></script>
+                <script src="core/Concept.js" type="disabled"></script>
+                <script src="core/Property.js" type="disabled"></script>
+                <script src="core/Datastore.js" type="disabled"></script>
+                <script src="core/Trigger.js" type="disabled"></script>
+                <script src="core/Filter.js" type="disabled"></script>
+                <script src="core/Action.js" type="disabled"></script>
+                <script src="core/Behaviour.js" type="disabled"></script>
+                <script src="core/ConceptLoader.js" type="disabled"></script>
+                <script src="core/VarvEngine.js" type="disabled"></script>
+            </div>
+            <div class="package" id="varv-builtin-actions">
+                <script src="actions/descriptor.json" type="descriptor"></script>
+                <script src="actions/ArrayActions.js" type="disabled"></script>
+                <script src="actions/ContextActions.js" type="disabled"></script>
+                <script src="actions/MathActions.js" type="disabled"></script>
+                <script src="actions/PropertyActions.js" type="disabled"></script>
+                <script src="actions/TextActions.js" type="disabled"></script>
+                <script src="actions/TimingActions.js" type="disabled"></script>
+                <script src="actions/DebugActions.js" type="disabled"></script>
+                <script src="actions/FlowActions.js" type="disabled"></script>
+            </div>
+            <div class="package" id="varv-builtin-triggers">
+                <script src="triggers/descriptor.json" type="descriptor"></script>
+                <script src="triggers/TimingTriggers.js" type="disabled"></script>
+                <script src="triggers/PropertyTriggers.js" type="disabled"></script>
+                <script src="triggers/FlowTriggers.js" type="disabled"></script>
+            </div>
+
+            <!--------------------- Datastores ---------------->
+            <div class="package" id="varv-dom">
+                <script src="datastores/dom/descriptor.json" type="descriptor"></script>
+                <script src="datastores/dom/DOMDataStore.js" type="disabled"></script>
+            </div>   
+            <div class="package" id="varv-dom-view">
+                <script src="views/dom/descriptor.json" type="descriptor"></script>
+                <script src="views/dom/DOMTriggers.js" type="disabled"></script>
+                <script src="views/dom/DOMView.js" type="disabled"></script>
+                <link href="views/dom/domview.scss" rel="stylesheet" type="text/css"/>                
+            </div>             
+            <div class="package" id="varv-memory">
+                <script src="datastores/memory/descriptor.json" type="descriptor"></script>
+                <script src="datastores/memory/MemoryDataStore.js" type="disabled"></script>
+            </div>     
+            <div class="package" id="varv-localstorage">
+                <script src="datastores/localstorage/descriptor.json" type="descriptor"></script>
+                <script src="datastores/localstorage/LocalStorageDataStore.js" type="disabled"></script>
+            </div>            
+            <div class="package" id="varv-cauldron">
+                <script src="integration/cauldron/descriptor.json" type="descriptor"></script>
+                <script src="integration/cauldron/ConceptTreeGenerator.js" type="disabled"></script>
+                <script src="integration/cauldron/CauldronDatastore.js" type="disabled"></script>
+                <script src="integration/cauldron/InspectorConceptBinding.js" type="disabled"></script>
+                <script src="integration/cauldron/ConceptDecorator.js" type="disabled"></script>
+                <script src="integration/cauldron/ConceptMenuActions.js" type="disabled"></script>
+                <link href="integration/cauldron/base.scss" rel="stylesheet" type="text/css"/>
+            </div>
+            
+            
+            <div class="package" id="varv-codestrates-extensions">
+                <script src="codestrates/descriptor.json" type="descriptor"></script>
+                <script src="codestrates/ConceptDefinitionFragment.js" type="disabled"></script>
+            </div>
+            <div class="package" id="varv-blockly">
+                <script src="codestrates/blockly-editor/descriptor.json" type="descriptor"></script>
+                <script src="codestrates/blockly-editor/SVGIconButtonField.js" type="disabled"></script>
+                <script src="codestrates/blockly-editor/blockly-editor.js" type="disabled"></script>
+                <link href="codestrates/blockly-editor/blockly-editor.scss" rel="stylesheet" type="text/css"/>
+                <inline src="codestrates/blockly-editor/blockly_editor_plus.svg"></inline>
+            </div>
+            <div class="package" id="varv-inspector">
+                <link href="views/dom/inspector/inspector.css" rel="stylesheet" type="text/css"/>
+                <script src="views/dom/inspector/descriptor.json" type="descriptor"></script>
+                <script src="views/dom/inspector/Inspector.js" type="disabled"></script>
+            </div>
+        </div>
+    </body> 
+</html> 

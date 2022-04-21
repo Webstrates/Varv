@@ -1,0 +1,23 @@
+{
+    "friendlyName": "Varv",
+    "description": "The standard meta package for using Varv",
+    "dependencies": [
+        "#varv-engine",
+        "#varv-builtin-actions",
+        "#varv-builtin-triggers",
+        "#varv-dom",
+        "#varv-dom-view",
+        "#varv-memory",
+        "#varv-localstorage",
+        "#varv-codestrates-extensions"
+    ],
+    "optionalDependencies": [
+        "#varv-cauldron",
+        "#varv-blockly",
+        "#varv-inspector"
+    ],
+    "assets": [],
+    "license": "MIT",
+    "version": "1.0",
+    "changelog": {}
+}

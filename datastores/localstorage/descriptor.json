@@ -1,0 +1,11 @@
+{
+    "friendlyName": "Varv localStorage Datastore",
+    "description": "Store data in the browsers's local storage database",
+    "dependencies": [
+        "#varv-engine"
+    ],
+    "assets": [],
+    "license": "MIT",
+    "version": "0.1",
+    "changelog": {}
+}

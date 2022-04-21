@@ -1,3 +1,2 @@
-# Varv: Reprogrammable Interactive Software as a Declarative Data Structure
+# Varv - A piece of reprogrammable interactive software based on declarative data structures
 
-The source code of Varv will be published here before the publication of the paper in April 2022.

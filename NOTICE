@@ -1,0 +1,20 @@
+Varv Licensing
+
+While licensed under MIT, Varv builds upon other pieces of work that may be 
+licensed under other MIT-compatible open licenses. Please refer to the 
+individual module licenses when building upon or extending Varv.
+This includes, but is not limited to, artwork covered by various Creative Commons
+CC0 and CC-BY licenses as well as some modules covered by the Apache 2.0 license.
+
+Varv was developed at CAVI - Center for Advanced Visualization and Interaction
+at Aarhus University in relation with research done by Marcel Borowski and
+Clemens Klokmose.
+
+Consider referencing their work if you use this in your research.
+See http://webstrates.net/ for more info.
+
+You should have received a copy of the MIT license alongside this code. 
+If not, please refer to the following URL:
+    https://mit-license.org/
+
+Derivative works must reproduce this notice

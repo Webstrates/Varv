@@ -1,0 +1,11 @@
+{
+    "friendlyName": "Varv DOM View",
+    "description": "Allow data to be visualized as a browser-based UI",
+    "dependencies": [
+        "#varv-engine"
+    ],
+    "assets": [],
+    "license": "MIT",
+    "version": "0.1",
+    "changelog": {}
+}

@@ -1,0 +1,12 @@
+{
+    "friendlyName": "Varv Cauldron Datastore",
+    "description": "A datastore that allows mapping parts of concepts so that they show up in the Cauldron TreeBrowser and can be inspected with the inspector",
+    "dependencies": [
+        "#varv-engine",
+        "/cauldron-repos/?raw #Cauldron"
+    ],
+    "assets": [],
+    "license": "MIT",
+    "version": "0.1",
+    "changelog": {}
+}
