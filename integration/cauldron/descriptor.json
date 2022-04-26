@@ -3,7 +3,7 @@
     "description": "A datastore that allows mapping parts of concepts so that they show up in the Cauldron TreeBrowser and can be inspected with the inspector",
     "dependencies": [
         "#varv-engine",
-        "/cauldron-repos/?raw #Cauldron"
+        "cauldron-repos #Cauldron"
     ],
     "assets": [],
     "license": "MIT",

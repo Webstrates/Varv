@@ -2,8 +2,8 @@
     "friendlyName": "Varv codestrates extension",
     "description": "Extend Codestrates with Varv fragments",
     "dependencies": [
-        "/codestrates-repos/?raw #fragment_core",
-        "/codestrates-repos/?raw #js-eval-engine"
+        "codestrates-repos #fragment_core",
+        "codestrates-repos #js-eval-engine"
     ],
     "assets": [],
     "license": "MIT",

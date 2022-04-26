@@ -2,7 +2,7 @@
     "friendlyName": "Varv engine inspector",
     "description": "Inspect DOMView rendering elements using ctrl+rclick",
     "dependencies": [
-        "/webstrate-components-repos/?raw #MaterialMenu"
+        "webstrate-components-repos #MaterialMenu"
     ],
     "assets": [],
     "license": "MIT",

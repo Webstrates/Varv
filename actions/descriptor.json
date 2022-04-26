@@ -3,7 +3,7 @@
     "description": "Simple built-in actions for varv",
     "dependencies": [
         "#varv-engine",
-        "/wpm_js_libs/?raw #mathjs"
+        "wpm_js_libs #mathjs"
     ],
     "assets": [],
     "license": "MIT",

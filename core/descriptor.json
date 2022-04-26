@@ -2,14 +2,14 @@
     "friendlyName": "Varv engine",
     "description": "The core of the Varv system",
     "dependencies": [
-        "/wpm_js_libs/?raw #UUIDGenerator",
-        "/wpm_js_libs/?raw #js-yaml",
-        "/wpm_js_libs/?raw #LiveElement",
-        "/wpm_js_libs/?raw #izitoast",
-        "/wpm_js_libs/?raw #Observer",
-        "/webstrate-components-repos/?raw #MaterialDesignOutlinedIcons",
-        "/webstrate-components-repos/?raw #MaterialMenu",
-        "/codestrates-repos/?raw #EventSystem"
+        "wpm_js_libs #UUIDGenerator",
+        "wpm_js_libs #js-yaml",
+        "wpm_js_libs #LiveElement",
+        "wpm_js_libs #izitoast",
+        "wpm_js_libs #Observer",
+        "webstrate-components-repos #MaterialDesignOutlinedIcons",
+        "webstrate-components-repos #MaterialMenu",
+        "codestrates-repos #EventSystem"
     ],
     "license": "MIT",
     "assets": [],

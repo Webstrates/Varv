@@ -1,10 +1,10 @@
 {
     "description": "Visual block-based programming editor for Varv",
     "dependencies": [
-        "/wpm_js_libs/?raw #BlocklyCore",
-        "/wpm_js_libs/?raw #LiveElement",
-        "/wpm_js_libs/?raw #potpack",
-        "/codestrates-repos/?raw #editor_core",
+        "wpm_js_libs #BlocklyCore",
+        "wpm_js_libs #LiveElement",
+        "wpm_js_libs #potpack",
+        "codestrates-repos #editor_core",
         "#varv-engine"
     ],
     "assets":[],

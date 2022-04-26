@@ -42,14 +42,14 @@
     "friendlyName": "Varv engine",
     "description": "The core of the Varv system",
     "dependencies": [
-        "https://raw.githubusercontent.com/Webstrates/WebstrateLibraryRepository/master/libraries.html #UUIDGenerator",
-        "https://raw.githubusercontent.com/Webstrates/WebstrateLibraryRepository/master/libraries.html #js-yaml",
-        "https://raw.githubusercontent.com/Webstrates/WebstrateLibraryRepository/master/libraries.html #LiveElement",
-        "https://raw.githubusercontent.com/Webstrates/WebstrateLibraryRepository/master/libraries.html #izitoast",
-        "https://raw.githubusercontent.com/Webstrates/WebstrateLibraryRepository/master/libraries.html #Observer",
-        "https://raw.githubusercontent.com/Webstrates/WebstrateComponents/master/components.html #MaterialDesignOutlinedIcons",
-        "https://raw.githubusercontent.com/Webstrates/WebstrateComponents/master/components.html #MaterialMenu",
-        "https://raw.githubusercontent.com/Webstrates/Codestrates-v2/master/codestrates.html #EventSystem"
+        "wpm_js_libs #UUIDGenerator",
+        "wpm_js_libs #js-yaml",
+        "wpm_js_libs #LiveElement",
+        "wpm_js_libs #izitoast",
+        "wpm_js_libs #Observer",
+        "webstrate-components-repos #MaterialDesignOutlinedIcons",
+        "webstrate-components-repos #MaterialMenu",
+        "codestrates-repos #EventSystem"
     ],
     "license": "MIT",
     "assets": [],
@@ -4294,7 +4294,7 @@ window.VarvEngine = VarvEngine;
     "description": "Simple built-in actions for varv",
     "dependencies": [
         "#varv-engine",
-        "https://raw.githubusercontent.com/Webstrates/WebstrateLibraryRepository/master/libraries.html #mathjs"
+        "wpm_js_libs #mathjs"
     ],
     "assets": [],
     "license": "MIT",
@@ -11272,7 +11272,7 @@ Datastore.registerDatastoreType("localStorage", LocalStorageDataStore);
     "description": "A datastore that allows mapping parts of concepts so that they show up in the Cauldron TreeBrowser and can be inspected with the inspector",
     "dependencies": [
         "#varv-engine",
-        "https://raw.githubusercontent.com/Webstrates/Cauldron/master/cauldron.html #Cauldron"
+        "cauldron-repos #Cauldron"
     ],
     "assets": [],
     "license": "MIT",
@@ -12144,8 +12144,8 @@ MenuSystem.MenuManager.registerMenuItem("Cauldron.Help.Documentation", {
     "friendlyName": "Varv codestrates extension",
     "description": "Extend Codestrates with Varv fragments",
     "dependencies": [
-        "https://raw.githubusercontent.com/Webstrates/Codestrates-v2/master/codestrates.html #fragment_core",
-        "https://raw.githubusercontent.com/Webstrates/Codestrates-v2/master/codestrates.html #js-eval-engine"
+        "codestrates-repos #fragment_core",
+        "codestrates-repos #js-eval-engine"
     ],
     "assets": [],
     "license": "MIT",
@@ -12274,10 +12274,10 @@ EventSystem.registerEventCallback("Codestrates.Editor.Opened", (evt)=>{
 {
     "description": "Visual block-based programming editor for Varv",
     "dependencies": [
-        "https://raw.githubusercontent.com/Webstrates/WebstrateLibraryRepository/master/libraries.html #BlocklyCore",
-        "https://raw.githubusercontent.com/Webstrates/WebstrateLibraryRepository/master/libraries.html #LiveElement",
-        "https://raw.githubusercontent.com/Webstrates/WebstrateLibraryRepository/master/libraries.html #potpack",
-        "https://raw.githubusercontent.com/Webstrates/Codestrates-v2/master/codestrates.html #editor_core",
+        "wpm_js_libs #BlocklyCore",
+        "wpm_js_libs #LiveElement",
+        "wpm_js_libs #potpack",
+        "codestrates-repos #editor_core",
         "#varv-engine"
     ],
     "assets":[],
@@ -14691,7 +14691,7 @@ const parameterMixin = {
     "friendlyName": "Varv engine inspector",
     "description": "Inspect DOMView rendering elements using ctrl+rclick",
     "dependencies": [
-        "https://raw.githubusercontent.com/Webstrates/WebstrateComponents/master/components.html #MaterialMenu"
+        "webstrate-components-repos #MaterialMenu"
     ],
     "assets": [],
     "license": "MIT",
