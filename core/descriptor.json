@@ -7,8 +7,6 @@
         "wpm_js_libs #LiveElement",
         "wpm_js_libs #izitoast",
         "wpm_js_libs #Observer",
-        "webstrate-components-repos #MaterialDesignOutlinedIcons",
-        "webstrate-components-repos #MaterialMenu",
         "codestrates-repos #EventSystem"
     ],
     "license": "MIT",
