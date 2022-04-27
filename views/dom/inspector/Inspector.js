@@ -37,10 +37,11 @@ class Inspector {
             }
         });
 
-        document.addEventListener("mouseup", (evt)=>{
+        document.addEventListener("mouseup", async (evt)=>{
             if(evt.button !== 2 || !evt.ctrlKey) {
                 return;
             }
+            await wpm.require(["MaterialDesignOutlinedIcons", "MaterialMenu"]);
             self.handleContextMenu(evt);
         });
     }
@@ -71,7 +72,7 @@ class Inspector {
                 let concept = VarvEngine.getConceptFromUUID(uuid);            
                 let conceptMenu = MenuSystem.MenuManager.createMenu("ConceptInspectMenu");
                                 
-                if (TreeBrowser){
+                if (typeof TreeBrowser !== "undefined"){
                     let treeBrowsers = TreeBrowser.findAllTreeBrowsers();
                     if (treeBrowsers){
                         conceptMenu.addItem({
@@ -89,15 +90,21 @@ class Inspector {
                             }                        
                         });
                     }
+                    contextMenu.addItem({
+                        label: concept.name,
+                        group: "Concepts",
+                        groupOrder: 0,                    
+                        icon: IconRegistry.createIcon("mdc:api"),
+                        submenu: conceptMenu
+                    });
+                } else {
+                    contextMenu.addItem({
+                        label: concept.name,
+                        group: "Concepts",
+                        groupOrder: 0,                    
+                        icon: IconRegistry.createIcon("mdc:api")
+                    });
                 }
-                
-                contextMenu.addItem({
-                    label: concept.name,
-                    group: "Concepts",
-                    groupOrder: 0,                    
-                    icon: IconRegistry.createIcon("mdc:api"),
-                    submenu: conceptMenu
-                });
             };
             
             // Template path
@@ -114,7 +121,7 @@ class Inspector {
                 }
                 
                 
-                if (TreeBrowser){
+                if (typeof TreeBrowser !== "undefined"){
                     let treeBrowsers = TreeBrowser.findAllTreeBrowsers();
                     if (treeBrowsers){
                         templateMenu.addItem({
@@ -132,13 +139,19 @@ class Inspector {
                             }
                         });
                     }
-                }           
+                }  else {
+                    templateMenu.addItem({
+                        label: "Dump to console",
+                        icon: IconRegistry.createIcon("mdc:mode_edit"),
+                        onAction: (menuItem) => {
+                            console.log(fragment);
+                        }
+                    });
+                }
+                
                 let textView = document.createElement("pre");
                 textView.classList.add("varv-inspector-preview");
                 textView.innerText = templateNode.innerHTML;
-
-                
-                
                 templateMenu.registerOnOpenCallback(()=>{
                     templateMenu.html.appendChild(textView);
                 });
