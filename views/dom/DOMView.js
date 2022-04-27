@@ -887,7 +887,7 @@ class DOMView {
                         
                         // Check for special attributes
                         if (attr.name==="value"){
-                            if (element.tagName==="INPUT"){
+                            if (element.tagName==="INPUT" || element.tagName==="TEXTAREA"){
                                 if (element.type==="checkbox"){
                                     element.checked = value==="true" || value===true;
                                 } else {
@@ -917,7 +917,7 @@ class DOMView {
                 }
                 
                 // Check for special elements that can push data back to the concepts
-                if (element.tagName==="INPUT"){
+                if (element.tagName==="INPUT" || element.tagName==="TEXTAREA"){
                     let valueLookupName = self.getLookupNameFromAttribute(templateElement, "value");
                     if (valueLookupName!==null){
                         let binding = DOMView.getBindingFromScope(valueLookupName,scope);
