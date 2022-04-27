@@ -104,34 +104,3 @@ class YAMLJSONConverter {
     }
 }
 window.YAMLJSONConverter = YAMLJSONConverter;
-
-//Setup cauldron menu item
-MenuSystem.MenuManager.registerMenuItem("Cauldron.Editor.Toolbar", {
-    label: "JSON/YAML",
-    icon: IconRegistry.createIcon("mdc:cached"),
-    group: "EditActions",
-    groupOrder: 0,
-    order: 200,
-    onOpen: (menu) => {
-        return menu.context instanceof ConceptDefinitionFragment;
-    },
-    onAction: (menuItem) => {
-        EventSystem.triggerEvent("Varv.Convert.YAMLJSON", {
-            fragment: Fragment.one(menuItem.menu.context)
-        });
-    }
-});
-
-EventSystem.registerEventCallback("Varv.Convert.YAMLJSON", async (evt)=>{
-    let fragment = evt.detail.fragment;
-    let code = fragment.raw;
-
-    let convertedCode = YAMLJSONConverter.convert(code);
-    fragment.raw = convertedCode;
-
-    const detail = {
-        fragment: evt.detail.fragment,
-    };
-
-    EventSystem.triggerEvent("Cauldron.Open.FragmentEditor", detail);
-});
