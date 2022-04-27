@@ -401,6 +401,10 @@ class VarvEngine {
                 }, RELOAD_TIMEOUT);
             });
         }
+
+        EventSystem.registerEventCallback("Varv.Restart", ()=>{
+            queueReload();
+        });
     }
 
     static lookupTarget(concept) {
