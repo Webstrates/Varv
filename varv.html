@@ -10928,7 +10928,9 @@ class MemoryDataStore extends Datastore {
             let concept = VarvEngine.getConceptFromType(type);                        
             
             if (conceptByUUID){
-                console.warn("Notice: Memory concept found for already existing concept "+conceptByUUID.name +" with uuid "+uuid+", this may be perfectly fine for multi-backed concepts but for now we throw this notice when it happens");
+                if (MemoryDataStore.DEBUG){
+                    console.warn("Notice: Memory concept found for already existing concept "+conceptByUUID.name +" with uuid "+uuid+", this may be perfectly fine for multi-backed concepts but for now we throw this notice when it happens");
+                }
             } else {
                 VarvEngine.registerConceptFromUUID(uuid, concept);
             }
