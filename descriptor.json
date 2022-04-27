@@ -9,6 +9,8 @@
         "#varv-dom-view",
         "#varv-memory",
         "#varv-localstorage",
+        "#varv-inspector",
+        "#varv-cauldron-delayloader",
         "#varv-codestrates-extensions"
     ],
     "optionalDependencies": [

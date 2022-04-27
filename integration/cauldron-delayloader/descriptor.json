@@ -1,0 +1,14 @@
+{
+    "friendlyName": "Varv Cauldron (delayed)",
+    "description": "A delayed loader for the varv-cauldron package",
+    "dependencies": [
+        "codestrates-repos #EventSystem"
+    ],
+    "optionalDependencies": [
+        "#varv-cauldron"
+    ],
+    "assets": [],
+    "license": "MIT",
+    "version": "0.1",
+    "changelog": {}
+}

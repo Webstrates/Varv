@@ -19,6 +19,8 @@
         "#varv-dom-view",
         "#varv-memory",
         "#varv-localstorage",
+        "#varv-inspector",
+        "#varv-cauldron-delayloader",
         "#varv-codestrates-extensions"
     ],
     "optionalDependencies": [
@@ -12138,6 +12140,38 @@ EventSystem.registerEventCallback("Varv.Convert.YAMLJSON", async (evt)=>{
 </style>
 
             </div>
+            <div class="package" id="varv-cauldron-delayloader">
+                <script id="descriptor-script" type="descriptor">
+{
+    "friendlyName": "Varv Cauldron (delayed)",
+    "description": "A delayed loader for the varv-cauldron package",
+    "dependencies": [
+        "codestrates-repos #EventSystem"
+    ],
+    "optionalDependencies": [
+        "#varv-cauldron"
+    ],
+    "assets": [],
+    "license": "MIT",
+    "version": "0.1",
+    "changelog": {}
+}
+
+</script>
+
+                <script id="cauldron-delayloader-script" type="disabled">
+// Run when/if Cauldron is initialized
+EventSystem.registerEventCallback("Cauldron.OnOpen", async ()=>{
+        await wpm.require("varv-cauldron");
+        
+        // Cause a restart to update the TreeBrowser with the current Concepts
+        EventSystem.triggerEvent("Varv.Restart");
+});
+
+</script>
+
+            </div>
+            
             
             
             <div class="package" id="varv-codestrates-extensions">
