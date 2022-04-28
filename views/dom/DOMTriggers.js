@@ -80,7 +80,8 @@ class MouseTrigger extends Trigger {
                 //Reset target, we will set it if matching concept is found
                 resultContext.target = null;
 
-                for(let uuid of context.conceptUUIDs) {
+                for(let i = context.conceptUUIDs.length-1; i >= 0; i--) {
+                    let uuid = context.conceptUUIDs[i];
                     let concept = VarvEngine.getConceptFromUUID(uuid);
 
                     if(concept != null && concept.name === options.concept) {
@@ -101,7 +102,8 @@ class MouseTrigger extends Trigger {
 
             if(options.property) {
                 let foundPropertyBinding = null;
-                for(let propertyBinding of context.properties) {
+                for(let i = context.properties.length-1; i>= 0; i--) {
+                    let propertyBinding = context.properties[i];
                     if(propertyBinding.property.name === options.property) {
                         foundPropertyBinding = propertyBinding;
                     }
@@ -111,9 +113,24 @@ class MouseTrigger extends Trigger {
                     return;
                 }
 
+                //Set target to the property's owner.
                 resultContext.target = foundPropertyBinding.uuid;
 
-                //TODO: Some test according to concept of found property?
+                try {
+                    let propertyValueLookup = foundPropertyBinding.property.name + ".value";
+                    let propertyValue = await DOMView.singleton.evaluateValueInScope(propertyValueLookup, context.targetElement.scope);
+                    Action.setVariable(resultContext, "propertyValue", propertyValue);
+                } catch(e) {
+                    console.warn("Error evaluating property value:", e);
+                }
+
+                try {
+                    let propertyIndexLookup = foundPropertyBinding.property.name + ".index";
+                    let propertyIndex = await DOMView.singleton.evaluateValueInScope(propertyIndexLookup, context.targetElement.scope);
+                    Action.setVariable(resultContext, "propertyIndex", propertyIndex);
+                } catch(e) {
+                    console.warn("Error evaluating property index:", e);
+                }
             }
 
             if(options.unknown != null) {
