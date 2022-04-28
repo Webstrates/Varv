@@ -408,6 +408,7 @@ class DOMView {
             case Node.TEXT_NODE:
                 // Rewrite contents by matching {zzz} with content from the scope and updating it if it changes
                 let element = targetDocument.createTextNode("");
+                element.templateElement = currentTemplateNode;
                 await new Promise(initialUpdateResolve => {
                     let selfUpdatingString = new UpdatingStringEvaluation(currentTemplateNode.nodeValue, currentScope, function textNodeUpdated(text){                        
                         element.nodeValue = text;
@@ -421,7 +422,7 @@ class DOMView {
                         selfUpdatingString.destroy();
                     });      
                 });
-                currentViewElement.appendChild(element);
+                currentViewElement.appendChild(element);                
                 results.push(element);
                 break;
             case Node.ELEMENT_NODE:
@@ -823,7 +824,6 @@ class DOMView {
                     } else {
                         for(let childTemplateNode of Array.from(template.content?template.content.childNodes:template.childNodes)){  // Could be a HTML template element
                             for (let child of await self.cloneToView(targetDocument, currentViewElement, childTemplateNode, scope, handle)){
-                                child.templateElement = template;
                                 ourChildren.push(child);
                             }                    
                         }
@@ -879,6 +879,7 @@ class DOMView {
                 break;
             default:
                 let element = templateElement.cloneNode(false);
+                element.templateElement = templateElement;
 
                 // Evaluate all attributes
                 for(let attr of Array.from(templateElement.attributes)) {

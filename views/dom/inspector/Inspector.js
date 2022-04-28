@@ -51,7 +51,7 @@ class Inspector {
         let properties = DOMView.singleton.getPropertyPath(evt.target);
         let templates = DOMView.singleton.getTemplatePath(evt.target);
 
-        console.group("Inspecting:", evt.target);
+        //console.group("Inspecting:", evt.target);
         
         if(window.MenuSystem != null) {
             console.log("Adding menu ");
@@ -108,18 +108,29 @@ class Inspector {
             };
             
             // Template path
+            let currentTemplateTop = null;
             for (let templateNode of templates.reverse()){
                 let templateMenu = MenuSystem.MenuManager.createMenu("TemplateInspectMenu");
                 let fragment = null;
 
-                let parentAutoDom = cQuery(templateNode).closest(".autoDom");
-                if (parentAutoDom && parentAutoDom[0]){
-                    let id = parentAutoDom[0].getAttribute("id");
-                    if (id){
+                let parentAutoDom = cQuery(templateNode).closest(".autoDom")[0];
+                if (parentAutoDom){
+                    let id = parentAutoDom.getAttribute("id");
+                    if (id){                        
                         fragment = Fragment.one("[transient-fragment-uuid='"+id+"']");
                     }
                 }
                 
+                // Filter som levels
+                let parentTemplate = cQuery(templateNode).closest("varv-template")[0];
+                if (!parentTemplate){
+                    parentTemplate = parentAutoDom; // Not a template, use main fragment as top
+                }
+                if (currentTemplateTop === parentTemplate){
+                    // Only show one level from each template, skip the rest
+                    continue;
+                }
+                currentTemplateTop = parentTemplate;
                 
                 if (typeof TreeBrowser !== "undefined"){
                     let treeBrowsers = TreeBrowser.findAllTreeBrowsers();
@@ -149,10 +160,15 @@ class Inspector {
                     });
                 }
                 
+                // Text
                 let textView = document.createElement("pre");
                 textView.classList.add("varv-inspector-preview");
-                textView.innerText = templateNode.innerHTML;
+                textView.innerText = templateNode.outerHTML;
+                let source = textView.innerHTML;
+                let replacement = "<b style='background:rgba(255,0,0,0.2)'>"+textView.innerHTML+"</b>";
+                textView.innerText = currentTemplateTop.outerHTML;
                 templateMenu.registerOnOpenCallback(()=>{
+                    textView.innerHTML = textView.innerHTML.replace(source,replacement);
                     templateMenu.html.appendChild(textView);
                 });
                 
