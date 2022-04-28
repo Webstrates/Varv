@@ -10176,12 +10176,11 @@ class DOMView {
                                                 console.warn("DOM varv template using something that is not a list of simple values, a concept or a list of concepts as a property, this is not valid", propertyType, scope, currentTemplateNode);
                                                 throw new Error("Cannot use a type for the property attribute that is not a list of simple values or a concept reference");                                                
                                             }
-
+                                            let newBinding = {'concept::uuid': propertyValue.uuid};
+                                            newBinding[propertyType + ".value"] = propertyValue.uuid;
                                             scope.push(new ConceptInstanceBinding(propertyValue.uuid));
                                             scope.push(new PropertyBinding(binding.concept.getProperty(propertyType), binding.uuid));
-                                            scope.push(new ValueBinding({
-                                                'concept::uuid': propertyValue.uuid
-                                            })); // Make the uuid referenceable for debug etc                            
+                                            scope.push(new ValueBinding(newBinding));
                                             await conditionalIf(handle, outerPropertyHandleChildren, scope);
                                         }        
                                         
