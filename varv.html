@@ -10158,6 +10158,7 @@ class DOMView {
                                                     childScope.push(new ValueBinding({
                                                         'concept::uuid': arrayEntry.uuid
                                                     })); // Make the uuid referenceable for debug etc                                             
+                                                    newBinding[propertyType + ".value"] = arrayEntry.uuid;
                                                 } else {
                                                     newBinding[propertyType + ".value"] = arrayEntry; // otherwise then the value becomes bound under X.value
                                                 }
