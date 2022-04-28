@@ -55,6 +55,9 @@
  * {
  *     "action": "myConcept.myActionName"
  * }
+ *
+ * //Super shorthand, triggers after myActionName
+ * "myActionName"
  */
 class ActionTrigger extends Trigger {
     static options() {

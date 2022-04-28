@@ -1481,6 +1481,15 @@ class Trigger {
     }
 
     /**
+     * Checks if the given type corresponds to a trigger type
+     * @param {tring} type the type to check
+     * @returns {boolean} true/false depending on if type was a trigger type
+     */
+    static isTriggerType(type) {
+        return Trigger.triggers.has(type);
+    }
+
+    /**
      * Create a new named instance of the given trigger type, using the given options
      * @param {string} type - The type of trigger to create
      * @param {string} name - The name to give the trigger
@@ -2639,6 +2648,13 @@ class Behaviour {
         this.name = name;
 
         this.triggers = triggers.map((triggerJson)=>{
+            if(typeof triggerJson === "string") {
+                if(!Trigger.isTriggerType(triggerJson)) {
+                    console.log("Unknown trigger, guessing it is an action trigger:", triggerJson);
+                    triggerJson = {"action": triggerJson};
+                }
+            }
+
             if(typeof triggerJson !== "string") {
 
                 let triggerName = UUIDGenerator.generateUUID("trigger-");
@@ -8095,6 +8111,9 @@ window.StateChangedTrigger = StateChangedTrigger;
  * {
  *     "action": "myConcept.myActionName"
  * }
+ *
+ * //Super shorthand, triggers after myActionName
+ * "myActionName"
  */
 class ActionTrigger extends Trigger {
     static options() {

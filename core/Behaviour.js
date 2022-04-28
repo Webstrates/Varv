@@ -58,6 +58,13 @@ class Behaviour {
         this.name = name;
 
         this.triggers = triggers.map((triggerJson)=>{
+            if(typeof triggerJson === "string") {
+                if(!Trigger.isTriggerType(triggerJson)) {
+                    console.log("Unknown trigger, guessing it is an action trigger:", triggerJson);
+                    triggerJson = {"action": triggerJson};
+                }
+            }
+
             if(typeof triggerJson !== "string") {
 
                 let triggerName = UUIDGenerator.generateUUID("trigger-");

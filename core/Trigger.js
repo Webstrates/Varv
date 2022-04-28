@@ -75,6 +75,15 @@ class Trigger {
     }
 
     /**
+     * Checks if the given type corresponds to a trigger type
+     * @param {tring} type the type to check
+     * @returns {boolean} true/false depending on if type was a trigger type
+     */
+    static isTriggerType(type) {
+        return Trigger.triggers.has(type);
+    }
+
+    /**
      * Create a new named instance of the given trigger type, using the given options
      * @param {string} type - The type of trigger to create
      * @param {string} name - The name to give the trigger
