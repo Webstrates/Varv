@@ -2458,7 +2458,11 @@ class Action {
             throw new Error("Unknown primitive action [" + name + "]");
         }
 
-        return new actionClass(name, options, concept);
+        let action = new actionClass(name, options, concept);
+
+        action.isPrimitive = true;
+
+        return action;
     }
 
     /**
@@ -2563,11 +2567,11 @@ class LookupActionAction extends Action {
             contextConcept = VarvEngine.getConceptFromUUID(contexts[0].target);
         }
 
-        let action = VarvEngine.lookupAction(optionsWithArguments.lookupActionName, [contextConcept, self.concept]);
+        let action = VarvEngine.lookupAction(optionsWithArguments.lookupActionName, [contextConcept, self.concept], optionsWithArguments.lookupActionArguments);
 
         if(action != null) {
             await ActionTrigger.before(action, contexts);
-            let lookupActionResult = await action.apply(contexts, optionsWithArguments.lookupActionArguments);
+            let lookupActionResult = await action.apply(contexts, action.isPrimitive?{}:optionsWithArguments.lookupActionArguments);
             await ActionTrigger.after(action, lookupActionResult);
             return lookupActionResult;
         }
@@ -3423,7 +3427,7 @@ class VarvEngine {
         return Array.from(uuidSet);
     }
 
-    static lookupAction(actionName, lookupConcepts = []) {
+    static lookupAction(actionName, lookupConcepts = [], primitiveOptions = {}) {
         //Filter null and undefined
         lookupConcepts = lookupConcepts.filter((concept)=>{
             return concept != null;
@@ -3441,10 +3445,12 @@ class VarvEngine {
             console.groupCollapsed("Looking up:", actionName, [...lookupConcepts].map((concept)=>{return concept.name}));
         }
 
-        let action = VarvEngine.lookupActionInternal(actionName, lookupConcepts);
+        let action = VarvEngine.lookupActionInternal(actionName, lookupConcepts, primitiveOptions);
 
         if(VarvEngine.DEBUG) {
-            console.log("Found action:", action);
+            if(action != null) {
+                console.log("Found action:", action);
+            }
             console.groupEnd();
         }
 
@@ -3457,7 +3463,7 @@ class VarvEngine {
      * @param {Set<Concept>} lookupConcepts
      * @returns {Action|null}
      */
-    static lookupActionInternal(actionName, lookupConcepts) {
+    static lookupActionInternal(actionName, lookupConcepts, primitiveOptions = {}) {
 
         let conceptName = null;
 
@@ -3522,9 +3528,11 @@ class VarvEngine {
         }
 
         //Try primitive actions?
-        if(Action.hasPrimitiveAction(actionName)) {
-            return Action.getPrimitiveAction(actionName, {});
-        }
+        try {
+            if (Action.hasPrimitiveAction(actionName)) {
+                return Action.getPrimitiveAction(actionName, primitiveOptions, null);
+            }
+        } catch(e) {}
 
         if(VarvEngine.DEBUG) {
             console.log("Action not found!");
@@ -7711,6 +7719,87 @@ class SwitchAction extends Action {
 }
 Action.registerPrimitiveAction("switch", SwitchAction);
 window.SwitchAction = SwitchAction;
+
+</script>
+
+                <script id="CustomActions-script" type="disabled">
+/**
+ *  CustomActions - Actions that allow custom code
+ *
+ *  This code is licensed under the MIT License (MIT).
+ *
+ *  Copyright 2020, 2021, 2022 Rolf Bagge, Janus B. Kristensen, CAVI,
+ *  Center for Advanced Visualization and Interaction, Aarhus University
+ *
+ *  Permission is hereby granted, free of charge, to any person obtaining a copy
+ *  of this software and associated documentation files (the “Software”), to deal
+ *  in the Software without restriction, including without limitation the rights
+ *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *  copies of the Software, and to permit persons to whom the Software is
+ *  furnished to do so, subject to the following conditions:
+ *
+ *  The above copyright notice and this permission notice shall be included in
+ *  all copies or substantial portions of the Software.
+ *
+ *  THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ *  THE SOFTWARE.
+ *
+ */
+
+/**
+ * An action 'customJS' that can run a custom piece of javascript code on the current context, the function must be a function on the window object
+ *
+ * @example
+ * //Runs window.myFunction
+ * {
+ *     "customJS": {
+ *          "functionName": "myFunction"
+*      }
+ * }
+ *
+ * //Shorthand, runs window.myFunction
+ * {
+ *     "customJS": "myFunction"
+ * }
+ */
+class CustomJSAction extends Action {
+    constructor(name, options, concept) {
+        if(typeof options === "string") {
+            options = {
+                "functionName": options
+            }
+        }
+
+        super(name, options, concept);
+    }
+
+    async apply(contexts, actionArguments) {
+        return this.forEachContext(contexts, actionArguments, async (context, options)=> {
+            if(this.options.functionName == null) {
+                throw new Error("'functionName' must be set for action 'customJS'");
+            }
+
+            let f = window[options.functionName];
+
+            if(f == null) {
+                throw new Error("'window."+options.functionName+"' is not defined");
+            }
+
+            if(typeof f !== "function") {
+                throw new Error("'window."+options.functionName+"' is not a function");
+            }
+
+            return await f(context, options);
+        });
+    }
+}
+Action.registerPrimitiveAction("customJS", CustomJSAction);
+window.CustomJSAction = CustomJSAction;
 
 </script>
 

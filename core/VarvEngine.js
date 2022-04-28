@@ -70,7 +70,7 @@ class VarvEngine {
         return Array.from(uuidSet);
     }
 
-    static lookupAction(actionName, lookupConcepts = []) {
+    static lookupAction(actionName, lookupConcepts = [], primitiveOptions = {}) {
         //Filter null and undefined
         lookupConcepts = lookupConcepts.filter((concept)=>{
             return concept != null;
@@ -88,10 +88,12 @@ class VarvEngine {
             console.groupCollapsed("Looking up:", actionName, [...lookupConcepts].map((concept)=>{return concept.name}));
         }
 
-        let action = VarvEngine.lookupActionInternal(actionName, lookupConcepts);
+        let action = VarvEngine.lookupActionInternal(actionName, lookupConcepts, primitiveOptions);
 
         if(VarvEngine.DEBUG) {
-            console.log("Found action:", action);
+            if(action != null) {
+                console.log("Found action:", action);
+            }
             console.groupEnd();
         }
 
@@ -104,7 +106,7 @@ class VarvEngine {
      * @param {Set<Concept>} lookupConcepts
      * @returns {Action|null}
      */
-    static lookupActionInternal(actionName, lookupConcepts) {
+    static lookupActionInternal(actionName, lookupConcepts, primitiveOptions = {}) {
 
         let conceptName = null;
 
@@ -169,9 +171,11 @@ class VarvEngine {
         }
 
         //Try primitive actions?
-        if(Action.hasPrimitiveAction(actionName)) {
-            return Action.getPrimitiveAction(actionName, {});
-        }
+        try {
+            if (Action.hasPrimitiveAction(actionName)) {
+                return Action.getPrimitiveAction(actionName, primitiveOptions, null);
+            }
+        } catch(e) {}
 
         if(VarvEngine.DEBUG) {
             console.log("Action not found!");

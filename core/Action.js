@@ -425,7 +425,11 @@ class Action {
             throw new Error("Unknown primitive action [" + name + "]");
         }
 
-        return new actionClass(name, options, concept);
+        let action = new actionClass(name, options, concept);
+
+        action.isPrimitive = true;
+
+        return action;
     }
 
     /**
@@ -530,11 +534,11 @@ class LookupActionAction extends Action {
             contextConcept = VarvEngine.getConceptFromUUID(contexts[0].target);
         }
 
-        let action = VarvEngine.lookupAction(optionsWithArguments.lookupActionName, [contextConcept, self.concept]);
+        let action = VarvEngine.lookupAction(optionsWithArguments.lookupActionName, [contextConcept, self.concept], optionsWithArguments.lookupActionArguments);
 
         if(action != null) {
             await ActionTrigger.before(action, contexts);
-            let lookupActionResult = await action.apply(contexts, optionsWithArguments.lookupActionArguments);
+            let lookupActionResult = await action.apply(contexts, action.isPrimitive?{}:optionsWithArguments.lookupActionArguments);
             await ActionTrigger.after(action, lookupActionResult);
             return lookupActionResult;
         }
