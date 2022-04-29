@@ -159,11 +159,8 @@ class Action {
      * @returns {any}
      */
     static getVariable(context, name) {
-        if(name === "target") {
-            if(!context.hasOwnProperty("target")) {
-                throw new Error("No target on context");
-            }
-
+        if(name === "target" && context.target != null) {
+            //If context.target exists use that, if not, check variables as getCommonVariables might have saved a common target
             return context.target;
         }
 
@@ -172,6 +169,10 @@ class Action {
         }
 
         if(!context.variables.hasOwnProperty(name)) {
+            if(name === "target") {
+                throw new Error("Context did not contain target, and no variable target existed either!");
+            }
+
             throw new Error("No named variable ["+name+"]");
         }
 
@@ -224,6 +225,20 @@ class Action {
                         common[variableName] = variableValue;
                     }
                 });
+            }
+
+            if(testContext.target != null) {
+                let keep = true;
+                for(let otherContext of contexts) {
+                    if (otherContext.target != testContext.target) {
+                        keep = false;
+                        break;
+                    }
+                }
+
+                if(keep) {
+                    common["target"] = testContext.target;
+                }
             }
         } else {
             if(contexts.savedVariables) {
