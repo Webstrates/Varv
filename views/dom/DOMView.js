@@ -760,7 +760,7 @@ class DOMView {
                 break;
             default:
                 // Unknown non-element nodes are copied verbatim
-                let unknown = currentTemplateNode.cloneNode(false);
+                let unknown = targetDocument.importNode(currentTemplateNode,false);
                 currentViewElement.insertBefore(unknown, currentInsertBeforeElement);
                 results.push(unknown);
         }
@@ -878,7 +878,7 @@ class DOMView {
                 
                 break;
             default:
-                let element = templateElement.cloneNode(false);
+                let element = targetDocument.importNode(templateElement,false);
                 element.templateElement = templateElement;
 
                 // Evaluate all attributes
