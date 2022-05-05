@@ -181,10 +181,6 @@ class InspectorPropertyEditor extends Cauldron.InspectorElement {
             EventSystem.triggerEventAsync("Varv.DOMView.HighlightProperty", property);
         });        
         
-        if (property.type!=="array" && property.isConceptType()){
-            this.html.append(this.getConceptLink(this.editor.value));
-        }
-
         if(this.property.isConceptType()) {
             this.autocompleteDiv = document.createElement("div");
             this.autocompleteDiv.classList.add("cauldron-inspector-element-autocomplete")
@@ -200,7 +196,18 @@ class InspectorPropertyEditor extends Cauldron.InspectorElement {
                     self.autocompleteDiv.classList.add("hidden");
                 }
             });
+            
+            // Add the click-to-locate feature
+            if (property.type!=="array"){
+                this.locatorContainer = document.createElement("span");
+                this.editorContainer.append(this.locatorContainer);
+            }            
         }
+        
+        let updateLocator = ()=>{
+            this.locatorContainer.innerHTML = "";
+            this.locatorContainer.appendChild(this.getConceptLink(this.editor.value));
+        };
 
         this.html.addEventListener("keydown", (event)=>{
             if(event.code === "Enter") {
@@ -220,6 +227,9 @@ class InspectorPropertyEditor extends Cauldron.InspectorElement {
                     value = self.editor.checked;
                 } else {
                     value = property.typeCast(self.editor.value);
+                    if (property.isConceptType()){
+                        updateLocator();
+                    }
                 }
                 property.setValue(conceptInstance.uuid, value);
                 this.setFailing(false);
@@ -247,7 +257,7 @@ class InspectorPropertyEditor extends Cauldron.InspectorElement {
                             deleter.style.fontSize = "1.5em";
                             deleter.addEventListener("click", ()=>{
                                 // Delete this entry
-                                value.splice(i, 1)
+                                value.splice(i, 1);
                                 property.setValue(conceptInstance.uuid, value); 
                             });    
                             entryElement.appendChild(deleter);
@@ -272,7 +282,9 @@ class InspectorPropertyEditor extends Cauldron.InspectorElement {
                         let adder = document.createElement("button");
                         adder.innerText = "Add Entry";
                         adder.addEventListener("click", ()=>{
-                            // TODO: Add entry
+                            let newValue = prompt ("Value to add", "");
+                            value.push(newValue);
+                            property.setValue(conceptInstance.uuid, value);
                         });                    
                         self.editor.appendChild(adder);
                     }
@@ -280,6 +292,10 @@ class InspectorPropertyEditor extends Cauldron.InspectorElement {
                     self.editor.checked = value;
                 } else {
                     self.editor.value = value;
+                    
+                    if (property.isConceptType()){
+                        updateLocator();
+                    }
                 }
             }
         };
@@ -326,7 +342,9 @@ class InspectorPropertyEditor extends Cauldron.InspectorElement {
         let linker = IconRegistry.createIcon("mdc:gps_fixed");
         linker.style.cursor = "pointer";
         linker.addEventListener("click", ()=>{
+            console.log("Revealing ", uuid, this.browser);
             let treeNodes = this.browser.findTreeNode(uuid);
+            console.log("Found ", treeNodes);
             if(treeNodes.length > 0) {
                 let treeNode = treeNodes[0];
                 treeNode.reveal();
