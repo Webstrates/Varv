@@ -241,7 +241,10 @@ class CalculateAction extends Action {
             }
 
             let result = math.evaluate(options.expression);
-
+            if (typeof result === "object" && Array.isArray(result.entries) && result.entries.length>0){
+                    // Collapse to single value if parser switched to multi-expression evaluation mode
+                    result = result.entries[0];
+            }
             Action.setVariable(context, resultName, result);
 
             return context;
