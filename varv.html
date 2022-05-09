@@ -3340,7 +3340,13 @@ class ConceptLoader {
                     chain.addAction(lookupAction);
                 }
             } else {
-                let actionName = Object.keys(actionPart)[0];
+                let keys = Object.keys(actionPart);
+
+                if(keys.length > 1) {
+                    console.warn("You have an action with more than one key as action name: ", actionPart);
+                }
+
+                let actionName = keys[0];
                 let actionOptions = actionPart[actionName];
 
                 let action = null;
