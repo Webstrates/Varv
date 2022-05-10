@@ -204,11 +204,6 @@ class InspectorPropertyEditor extends Cauldron.InspectorElement {
             }            
         }
         
-        let updateLocator = ()=>{
-            this.locatorContainer.innerHTML = "";
-            this.locatorContainer.appendChild(this.getConceptLink(this.editor.value));
-        };
-
         this.html.addEventListener("keydown", (event)=>{
             if(event.code === "Enter") {
                 event.preventDefault();
@@ -221,21 +216,7 @@ class InspectorPropertyEditor extends Cauldron.InspectorElement {
                 self.autoComplete(self.editor.value);
             }
 
-            try {
-                let value = null;
-                if (property.type==="boolean"){
-                    value = self.editor.checked;
-                } else {
-                    value = property.typeCast(self.editor.value);
-                    if (property.isConceptType()){
-                        updateLocator();
-                    }
-                }
-                property.setValue(conceptInstance.uuid, value);
-                this.setFailing(false);
-            } catch (ex){                
-                this.setFailing(true);
-            };
+            self.persistValue();
         });
 
         // Fetch changes from concept
@@ -294,7 +275,7 @@ class InspectorPropertyEditor extends Cauldron.InspectorElement {
                     self.editor.value = value;
                     
                     if (property.isConceptType()){
-                        updateLocator();
+                        self.updateLocator();
                     }
                 }
             }
@@ -304,6 +285,31 @@ class InspectorPropertyEditor extends Cauldron.InspectorElement {
             self.valueUpdaterCallback(self.conceptInstance.uuid, value);
         });
         property.addSetCallback(this.valueUpdaterCallback);
+    }
+
+    updateLocator() {
+        this.locatorContainer.innerHTML = "";
+        this.locatorContainer.appendChild(this.getConceptLink(this.editor.value));
+    }
+
+    persistValue() {
+        try {
+            let value = null;
+            if (this.property.type==="boolean"){
+                value = this.editor.checked;
+            } else {
+                value = this.property.typeCast(this.editor.value);
+                if (this.property.isConceptType()){
+                    this.updateLocator();
+                }
+            }
+            this.property.setValue(this.conceptInstance.uuid, value);
+
+            //What is this method?
+            this.setFailing(false);
+        } catch (ex){
+            this.setFailing(true);
+        };
     }
 
     autoComplete() {
@@ -331,6 +337,7 @@ class InspectorPropertyEditor extends Cauldron.InspectorElement {
             li.addEventListener("click", ()=>{
                 self.editor.value = uuid;
                 self.autocompleteDiv.classList.add("hidden");
+                self.persistValue();
             });
         });
 
