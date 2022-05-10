@@ -478,7 +478,7 @@ class Action {
         if(Action.DEBUG) {
             console.log("Cloning context:", context, preCloneObject);
         }
-        return JSON.parse(JSON.stringify(preCloneObject));
+        return fastCopy(preCloneObject);
     }
 }
 Action.DEBUG = false;
