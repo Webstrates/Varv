@@ -9042,8 +9042,10 @@ class MouseTrigger extends Trigger {
                 context.originalEvent.preventDefault();
             }
 
+            console.time("MouseTrigger-"+self.name);
             await Trigger.trigger(self.name, resultContext).then(()=>{
                 //Ignore
+                console.timeEnd("MouseTrigger-"+self.name);
             });
         });
     }
