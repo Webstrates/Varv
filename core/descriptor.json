@@ -7,7 +7,6 @@
         "wpm_js_libs #LiveElement",
         "wpm_js_libs #izitoast",
         "wpm_js_libs #Observer",
-        "wpm_js_libs #fast-copy",
         "codestrates-repos #EventSystem"
     ],
     "license": "MIT",

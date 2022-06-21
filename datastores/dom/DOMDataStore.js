@@ -29,12 +29,15 @@
 /**
  * A storage that provides a DOM-element&attribute-based serialization of Concept properties
  *
+ * <pre>
  * options:
  * storageName - The name of the element to store that data below (Default: "varv-data")
  * storageWebstrate - The name of the webstrate to store the data at (Default: current webstrate)
+ * </pre>
+ *
+ * @memberOf Datastores
  */
-
-class DOMDataStore extends Datastore {
+class DOMDataStore extends DirectDatastore {
     constructor(name, options = {}) {
         super(name, options);
 
@@ -91,6 +94,8 @@ class DOMDataStore extends Datastore {
         // Try to find an existing one
         this.backingElement = topElement.querySelector(storageName);
 
+        this.queryCache = new QuerySelectorCache(this.backingElement);
+
         // None exists, create one
         if (!this.backingElement) {
             this.backingElement = topElement.createElement(storageName, {approved: true});
@@ -123,12 +128,13 @@ class DOMDataStore extends Datastore {
                 console.log("Saw appeared UUID (DOMDataStore):", context.target);
             }
 
-            let concept = VarvEngine.getConceptFromUUID(context.target);
-            if (self.isConceptMapped(concept)){
-                this.executeObserverless(()=>{
-                    self.getConceptElementOrCreate(context.target, concept);
+            let mark = VarvPerformance.start();
+            if (self.isConceptMapped(context.concept)) {
+                this.executeObserverless(() => {
+                    self.getConceptElementOrCreate(context.target, context.concept);
                 });
             }
+            VarvPerformance.stop("DOMDataStore.registerEventCallback.appeared", mark);
         }));
     }
 
@@ -139,6 +145,8 @@ class DOMDataStore extends Datastore {
             console.log("Got remote mutation", mutationList);
         }
         for(let mutation of mutationList) {
+            console.log("Mutations:", mutationList);
+
             switch (mutation.type) {
                 case 'childList':
                     // Look for newly added concept instances first
@@ -154,10 +162,7 @@ class DOMDataStore extends Datastore {
                                 }
 
                                 // Check if already exists (this would be a bit weird but could happen in multi-backed concepts where the other backing already registered their part)
-                                let conceptByUUID = VarvEngine.getConceptFromUUID(uuid);
-                                if (conceptByUUID){
-                                    console.warn("Notice: DOM concept node found for already existing concept "+conceptByUUID.name +" with uuid "+uuid+", this may be perfectly fine for multi-backed concepts but for now we throw this notice when it happens");
-                                }
+                                let conceptByUUID = await VarvEngine.getConceptFromUUID(uuid);
                                 // Check if a duplicate already exists in the DOM marshalled data, since that is definitely a mistake
                                 if (this.backingElement.querySelectorAll('concept[uuid="'+uuid+'"]').length > 1){
                                     console.warn("Warning: More than one DOM concept node found for "+conceptByUUID.name +" - only one element is allowed per uuid, this is bad, ignoring one of them");
@@ -188,7 +193,7 @@ class DOMDataStore extends Datastore {
                                 if(DOMDataStore.DEBUG) {
                                     console.log("DOM saw " + uuid + " of type "+conceptType);
                                 }
-                                VarvEngine.registerConceptFromUUID(uuid, concept);
+                                self.registerConceptFromUUID(uuid, concept);
 
                                 // Concepts can only exist as top-level but when added they can already carry properties as children nodes
                                 Array.from(node.children).forEach((childNode)=>{
@@ -198,13 +203,15 @@ class DOMDataStore extends Datastore {
                                     }
                                 });
 
-                                // Signal that someone made a new concept instance appear
-                                await concept.appeared(uuid);
+                                // Signal that someone made a new concept instance appear for the first time
+                                if(conceptByUUID == null) {
+                                    await concept.appeared(uuid);
+                                }
                             }
 
                             // A property could also be added (set) directly by someone for the first time
                             if (node.tagName==="PROPERTY"){
-                                propertyChangedNodes.push(mutation.target);
+                                propertyChangedNodes.push(node);
                             }                      
                         } catch (ex){
                             console.error("Unhandled exception in DOM node adding handler", ex);
@@ -226,7 +233,7 @@ class DOMDataStore extends Datastore {
                                     console.warn("DOM concept node removed without uuid, ignored for now - not sure what to do about it");
                                     return;
                                 }
-                                let concept =  VarvEngine.getConceptFromUUID(uuid);
+                                let concept =  self.getConceptFromUUID(uuid);
                                 if (!concept ){
                                     console.warn("Notice: DOM concept node removed for concept with uuid "+uuid+" that we didn't know about, this inconsistency is odd");
                                     return;
@@ -268,6 +275,10 @@ class DOMDataStore extends Datastore {
     }
 
     createBackingStore(concept, property) {
+        if(DOMDataStore.DEBUG) {
+            console.log("DOMDataStore Mapping "+concept.name+"."+property.name);
+        }
+
         const self = this;
         if (!concept)
             throw new Error('Cannot map invalid concept to DOM: ' + concept);
@@ -280,17 +291,33 @@ class DOMDataStore extends Datastore {
             // TODO: This is the first time we hear about this concept, add some create/delete or appear/disappear events as well
         }
         let getter = (uuid) => {
-            let conceptElement = self.backingElement.querySelector("concept[uuid='" + uuid + "']");
+            if(DOMDataStore.DEBUG) {
+                console.log("DOMDataStore getter: "+concept.name+"."+property.name);
+            }
+
+            let mark = VarvPerformance.start();
+
+            let conceptElement = self.queryCache.querySelector("concept[uuid='" + uuid + "']");
             if (!conceptElement)
                 throw new Error("No DOM data stored at all for "+concept.name+" with UUID "+uuid+" while getting "+concept.name+"."+property.name);
             let propertyElement = conceptElement.querySelector("property[name='" + property.name + "']");
             if (!propertyElement)
                 throw new Error('No DOM data for property ' + concept.name + "." + property.name + " stored yet with UUID "+uuid);
 
-            return self.getPropertyFromDOM(concept, propertyElement, property);
+            let result = self.getPropertyFromDOM(concept, propertyElement, property);
+
+            VarvPerformance.stop("DOMDataStore.getter.nonCached", mark);
+
+            return result;
         }
 
         let setter = (uuid, value) => {
+            let mark = VarvPerformance.start();
+
+            if(DOMDataStore.DEBUG) {
+                console.log("DOMDataStore setter: "+concept.name+"."+property.name);
+            }
+
             this.executeObserverless(()=>{
                 let conceptElement = self.getConceptElementOrCreate(uuid, concept);
 
@@ -331,6 +358,7 @@ class DOMDataStore extends Datastore {
                     propertyElement.setAttribute("value", value, { approved: true });
                 }
             });
+            VarvPerformance.stop("DOMDataStore.setter", mark);
         }
         property.addSetCallback(setter);
         property.addGetCallback(getter);
@@ -340,13 +368,15 @@ class DOMDataStore extends Datastore {
     }
 
     getConceptElementOrCreate(uuid, concept) {
-        let conceptElement = this.backingElement.querySelector("concept[uuid='" + uuid + "']");
+        let mark = VarvPerformance.start();
+        let conceptElement = this.queryCache.querySelector("concept[uuid='" + uuid + "']");
         if (!conceptElement) {
             conceptElement = document.createElement("concept", {approved: true});
             conceptElement.setAttribute("type", concept.name, { approved: true });
             conceptElement.setAttribute("uuid", uuid, { approved: true });
             this.backingElement.appendChild(conceptElement);
         }
+        VarvPerformance.stop("DOMDataStore.getConceptElementOrCreate", mark);
         return conceptElement;
     }
 
@@ -470,6 +500,9 @@ class DOMDataStore extends Datastore {
 
         // Lookup concept
         let conceptElement = propertyElement.parentElement;
+
+        console.log("Synchronizing:", conceptElement, propertyElement);
+
         let conceptInstance = this.getConceptInstanceFromConceptElement(conceptElement);
         
         // Lookup property
@@ -520,3 +553,63 @@ window.DOMDataStore = DOMDataStore;
 
 //Register default dom datastore
 Datastore.registerDatastoreType("dom", DOMDataStore);
+
+class QuerySelectorCache {
+    constructor(optionalParent) {
+        this.parent = optionalParent!=null?optionalParent:document;
+        this.cache = new Map();
+        this.reverseLookup = new Map();
+
+        this.setupObserver();
+    }
+
+    setupObserver() {
+        const self = this;
+
+        this.observer = new MutationObserver((mutations)=>{
+            mutations.forEach((mutation)=>{
+                mutation.removedNodes.forEach((node)=>{
+                    let selectors = self.reverseLookup.get(node);
+                    if(selectors != null) {
+                        selectors.forEach((selector)=>{
+                            self.cache.delete(selector);
+                        });
+                        self.reverseLookup.delete(node);
+                        if(DOMDataStore.DEBUG) {
+                            console.log("Updated cache for: ", node);
+                        }
+                    }
+                });
+            });
+        });
+
+        this.observer.observe(this.parent, {
+            childList: true
+        });
+    }
+
+    querySelector(selector) {
+        let mark = VarvPerformance.start();
+        let cacheEntry = this.cache.get(selector);
+        if(cacheEntry != null) {
+            VarvPerformance.stop("DOMDataStore.querySelector.cached", mark);
+            return cacheEntry;
+        }
+
+        let result = this.parent.querySelector(selector);
+
+        if(result != null) {
+            this.cache.set(selector, result);
+            let selectors = this.reverseLookup.get(result);
+            if(selectors == null) {
+                selectors = new Set();
+                this.reverseLookup.set(result, selectors);
+            }
+            selectors.add(selector);
+        }
+
+        VarvPerformance.stop("DOMDataStore.querySelector.nonCached", mark);
+
+        return result;
+    }
+}

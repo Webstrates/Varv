@@ -1,0 +1,11 @@
+{
+    "friendlyName": "Varv URL Data Store",
+    "description": "Access properties of the URL as concept data",
+    "dependencies": [
+        "#varv"
+    ],
+    "assets": [],
+    "license": "MIT",
+    "version": "0.1",
+    "changelog": {}
+}

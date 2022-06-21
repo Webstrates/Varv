@@ -1,5 +1,5 @@
 /**
- *  ConceptDefinitionFragment - A Codestrate Fragment type for Concept Definitions
+ *  VarvScriptFragment - A simpler scripting language for Varv
  * 
  *  This code is licensed under the MIT License (MIT).
  *  
@@ -27,7 +27,7 @@
  */
 
 wpm.onRemoved(()=>{
-    Fragment.unRegisterFragmentType(ConceptDefinitionFragment);
+    Fragment.unRegisterFragmentType(VarvScriptFragment);
 });
 /**
  * A fragment that contains Varv code
@@ -37,13 +37,16 @@ wpm.onRemoved(()=>{
  * @hideconstructor
  * @memberof Fragments
  */
-class ConceptDefinitionFragment extends Fragment {
+class VarvScriptFragment extends Fragment {
     constructor(html) {
         super(html);
     }
 
     async require(options = {}) {
-        return YAMLJSONConverter.loadFromString(this.raw).obj;
+        console.log("Trying to parse",this.raw);
+        let result = parseVarvScript(this.raw);
+        console.log("Parsed to ", result);
+        return result;
     }
 
     supportsAuto() {
@@ -51,59 +54,8 @@ class ConceptDefinitionFragment extends Fragment {
     }
 
     static type() {
-        return "text/varv";
+        return "text/varvscript";
     }
 };
-window.ConceptDefinitionFragment = ConceptDefinitionFragment;
-Fragment.registerFragmentType(ConceptDefinitionFragment);
-
-function detectYAMLJSON(editor) {
-    let code = editor.getModel().getValue().trim();
-    let numCurlyBrackets = (code.match(/{/g)||[]).length;
-
-    let YAML = 0;
-    let JSON = 0
-
-    if(code.length === 0) {
-        //If fragment is empty, set it up as JSON
-        JSON += 4;
-    }
-
-    if(numCurlyBrackets > 10) {
-        //Many curly brackets, probably JSON
-        JSON++;
-    } else {
-        YAML++;
-    }
-
-    if(code.startsWith("{")) {
-        //Code starts with a curly bracket, probably JSON
-        JSON++;
-    } else {
-        YAML++;
-    }
-
-    if(code.endsWith("}")) {
-        //Code ends with a curly bracket, probably JSON
-        JSON++;
-    } else {
-        YAML++;
-    }
-
-    if(YAML > JSON) {
-        monaco.editor.setModelLanguage(editor.getModel(), "yaml");
-    } else {
-        monaco.editor.setModelLanguage(editor.getModel(), "json");
-    }
-}
-
-EventSystem.registerEventCallback("Codestrates.Editor.Opened", (evt)=>{
-    let editor = evt.detail.editor;
-
-    if(editor.fragment instanceof ConceptDefinitionFragment) {
-        editor.fragment.registerOnFragmentChangedHandler(() => {
-            detectYAMLJSON(editor.editor);
-        });
-        detectYAMLJSON(editor.editor);
-    }
-});
+window.VarvScriptFragment = VarvScriptFragment;
+Fragment.registerFragmentType(VarvScriptFragment);

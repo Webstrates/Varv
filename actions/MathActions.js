@@ -26,6 +26,11 @@
  *  
  */
 
+/**
+ * Actions that do math
+ * @namespace MathActions
+ */
+
 class IncrementDecrementAction extends Action {
     constructor(name, decrement, options, concept) {
         // Handle string shorthand
@@ -57,7 +62,7 @@ class IncrementDecrementAction extends Action {
 
         return this.forEachContext(contexts, actionArguments, async (context, options)=>{
             if(options.property != null) {
-                const lookup = VarvEngine.lookupProperty(context.target, self.concept, options.property);
+                const lookup = await VarvEngine.lookupProperty(context.target, self.concept, options.property);
 
                 if(lookup == null) {
                     throw new Error("No property ["+options.of.property+"] found");
@@ -95,7 +100,7 @@ class IncrementDecrementAction extends Action {
 
 /**
  * An action "increment" that increments a number property or variable
- *
+ * @memberOf MathActions
  * @example
  * // Increment the property by 1
  * {
@@ -145,7 +150,7 @@ window.IncrementAction = IncrementAction;
 
 /**
  * An action "decrement" that decrements a number property or variable
- *
+ * @memberOf MathActions
  * @example
  * // Decrement the property by 1
  * {
@@ -195,7 +200,7 @@ window.DecrementAction = DecrementAction;
 
 /**
  * An action 'calculate' that calculates a given math expression and sets a variable with the result
- *
+ * @memberOf MathActions
  * @example
  * //Shorthand, calculates and sets result in variable 'calculate'
  * {
@@ -258,7 +263,7 @@ window.CalculateAction = CalculateAction;
  * An action 'random' that generates a random number from within a range. Both minimum and maximum are inclusive
  *
  * If no range is specified. 0 - Number.MAX_SAFE_INTEGER (2^53 -1) is used as range.
- *
+ * @memberOf MathActions
  * @example
  * //Shorthand, generates a random number between 0 and 10, saves the result in the variable named "random"
  * {

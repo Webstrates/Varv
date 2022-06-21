@@ -82,7 +82,7 @@ class MouseTrigger extends Trigger {
 
                 for(let i = context.conceptUUIDs.length-1; i >= 0; i--) {
                     let uuid = context.conceptUUIDs[i];
-                    let concept = VarvEngine.getConceptFromUUID(uuid);
+                    let concept = await VarvEngine.getConceptFromUUID(uuid);
 
                     if(concept != null && concept.name === options.concept) {
                         resultContext.target = uuid;
@@ -158,10 +158,8 @@ class MouseTrigger extends Trigger {
                 context.originalEvent.preventDefault();
             }
 
-            console.time("MouseTrigger-"+self.name);
             await Trigger.trigger(self.name, resultContext).then(()=>{
                 //Ignore
-                console.timeEnd("MouseTrigger-"+self.name);
             });
         });
     }
@@ -176,7 +174,7 @@ class MouseTrigger extends Trigger {
 
 /**
  * A trigger "click" that listens for clicks on DOM elements
- *
+ * @memberOf Triggers
  * @example
  * {
  *     "click": {
@@ -206,7 +204,7 @@ window.ClickTrigger = ClickTrigger;
 
 /**
  * A trigger "mousedown" that listens for mousdown events on DOM elements
- *
+ * @memberOf Triggers
  * @example
  * {
  *     "mousedown": {
@@ -236,7 +234,7 @@ window.MousedownTrigger = MousedownTrigger;
 
 /**
  * A trigger "mouseup" that listens for mouseup events on DOM elements
- *
+ * @memberOf Triggers
  * @example
  * {
  *     "mouseup": {
@@ -266,7 +264,7 @@ window.MouseupTrigger = MouseupTrigger;
 
 /**
  * A trigger "contextmenu" that listens for contextmenu events on DOM elements
- *
+ * @memberOf Triggers
  * @example
  * {
  *     "contextmenu": {
@@ -296,7 +294,7 @@ window.ContextmenuTrigger = ContextmenuTrigger;
 
 /**
  * A trigger "mousemove" that listens for mousemove events on DOM elements
- *
+ * @memberOf Triggers
  * @example
  * {
  *     "mousemove": {
@@ -326,7 +324,7 @@ window.MousemoveTrigger = MousemoveTrigger;
 
 /**
  * A trigger "wheel" that listens for wheel events on DOM elements
- *
+ * @memberOf Triggers
  * @example
  * {
  *     "wheel": {
@@ -367,12 +365,12 @@ window.WheelTrigger = WheelTrigger;
  * <li>meta - If meta should be pressed or not (If omitted, then state of meta is not checked)</li>
  * <li>focus - If anything should be in focus for the event to trigger, supports concept and view</li>
  * </ul>
- *
+ * @memberOf Triggers
  * @example
  * //Trigger when key "Enter" is pressed and shift is held
  * {
  *     "key": {
- *         "event": "keyPress"
+ *         "event": "keyPress",
  *         "key": "Enter",
  *         "shift": true
  *     }
@@ -381,7 +379,7 @@ window.WheelTrigger = WheelTrigger;
  * //Trigger when key "Enter" is pressed and ctrl is held, and view 'myView' is in focus
  * {
  *     "key": {
- *         "event": "keyPress"
+ *         "event": "keyPress",
  *         "key": "Enter",
  *         "ctrl": true,
  *         "focus": {"view": "myView"}
@@ -479,12 +477,12 @@ class KeyTrigger extends Trigger {
 
                 if(focusOptions.concept != null) {
                     let foundFocusConcept = false;
-                    context.conceptUUIDs.forEach((uuid) => {
-                        let concept = VarvEngine.getConceptFromUUID(uuid);
+                    for(let uuid of context.conceptUUIDs) {
+                        let concept = await VarvEngine.getConceptFromUUID(uuid);
                         if (concept.name === self.options.focus) {
                             foundFocusConcept = true;
                         }
-                    });
+                    }
 
                     if (!foundFocusConcept) {
                         if (DOMTriggers.DEBUG) {
@@ -552,7 +550,7 @@ class DOMTriggers {
                 }
             }
 
-            let uuids = DOMView.singleton.getConceptPath(mouseEvent.target);
+            let uuids = DOMView.singleton.getConceptPath(mouseEvent.target).map((binding)=>{return binding.uuid});
             let target = null;
 
             let properties = DOMView.singleton.getPropertyPath(mouseEvent.target);
@@ -610,7 +608,7 @@ class DOMTriggers {
             let alt = keyEvent.altKey;
 
             let target = null;
-            let uuids = DOMView.singleton.getConceptPath(keyEvent.target);
+            let uuids = DOMView.singleton.getConceptPath(keyEvent.target).map((binding)=>{ return binding.uuid});
 
             let properties = DOMView.singleton.getPropertyPath(keyEvent.target);
 

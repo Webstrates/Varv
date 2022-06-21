@@ -1,0 +1,100 @@
+<!doctype html>
+<html data-protected="all">
+<head>
+    <title>New Varv</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script type="text/json+bootconfig">{
+            "creator": "WPMPackageManager",
+            "created": 1650368097912,
+            "require": [{
+                "repositories": {},
+                "dependencies": [
+                    {
+                        "package": "WPM-loading-skin-simple",
+                        "repository": "wpm-repos",
+                        "appendTarget": "head"
+                    },{
+                        "package": "CauldronURLLauncher",
+                        "repository": "cauldron-repos"
+                    },{
+                        "package": "CauldronButtonLauncher",
+                        "repository": "cauldron-repos"
+                    },{
+                        "package": "fragment_js",
+                        "repository": "codestrates-repos"
+                    },{
+                        "package": "fragment_html",
+                        "repository": "codestrates-repos"
+                    },{
+                        "package": "fragment_json",
+                        "repository": "codestrates-repos"
+                    },{
+                        "package": "fragment_wpm-descriptor",
+                        "repository": "codestrates-repos"
+                    },{
+                        "package": "fragment_css",
+                        "repository": "codestrates-repos"
+                    },{
+                        "package": "fragment_scss",
+                        "repository": "codestrates-repos"
+                    },{
+                        "package": "varv",
+                        "repository": "varv-repos"
+                    }                        
+                ],
+                "options": {}
+            }],
+            "updated": 1650368189432
+            }
+
+    </script>
+</head>
+
+<body>
+    <wpm-packages>
+        <wpm-package id="WPM-dev" data-repository="wpm-repos">
+            <script id="descriptor-script" type="descriptor">
+                        {
+                            "dependencies": [],
+                            "forceEmbedding": true
+                        }
+            </script>
+            <script id="WPMv2-script" src="https://cdn.jsdelivr.net/gh/Webstrates/WPM@latest/WPMv2.js" type="text/javascript"></script>
+        </wpm-package>
+    </wpm-packages>
+
+    <code-fragment data-type="text/javascript" name="VarvEngine" auto="">
+        await VarvEngine.start();
+    </code-fragment>
+    <code-fragment data-type="text/varv" name="VarvConceptDefinition" auto="">{
+    "concepts": {
+        "myConcept": {
+            "schema": {
+                "myProperty": "string"
+            },
+            "actions": {
+                "myAction": {
+                    "when": {
+                        "click": "myView"
+                    },
+                    "then": [
+                        "debugContext"
+                    ]
+                }
+            }
+        }
+    }
+}
+    </code-fragment>
+    <code-fragment data-type="text/html" name="VarvTemplate" auto="">&lt;dom-view-template&gt;
+    &lt;div concept="myConcept"&gt;
+        &lt;button view="myView"&gt;Click me!&lt;/button&gt;
+    &lt;/div&gt;
+&lt;/dom-view-template&gt;
+    </code-fragment>
+
+    <VARV-DATA>
+        <CONCEPT type="myConcept" uuid="concept57b18d140f8709bf4b74"></CONCEPT>
+    </VARV-DATA>
+</body>
+</html>

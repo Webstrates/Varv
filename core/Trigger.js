@@ -26,6 +26,11 @@
  *  
  */
 
+/**
+ * Triggers are used to do something when something happens
+ * @namespace Triggers
+ */
+
 const VarvEventPrefix = "VarvEvent.";
 let triggeringEnabled = true;
 
@@ -109,6 +114,7 @@ class Trigger {
     }
 
     static async trigger(triggerName, context) {
+        const mark = VarvPerformance.start();
         if(!triggeringEnabled) {
             if(Trigger.DEBUG) {
                 console.log("Skipping (Triggering Disabled):", triggerName, context);
@@ -124,7 +130,13 @@ class Trigger {
             console.group("Triggering:", triggerName, Action.clone(context));
         }
 
-        await EventSystem.triggerEventAsync(VarvEventPrefix+triggerName, context);
+        try {
+            await EventSystem.triggerEventAsync(VarvEventPrefix + triggerName, context);
+            VarvPerformance.stop("Trigger-"+triggerName, mark);
+        } catch(e) {
+            VarvPerformance.stop("Trigger-"+triggerName, mark);
+            throw e;
+        }
 
         if(Trigger.DEBUG) {
             console.groupEnd();

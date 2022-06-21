@@ -26,6 +26,11 @@
  *  
  */
 
+/**
+ * Datastores
+ * @namespace Datastores
+ */
+
 // superclass for all datastores (mostly empty for potential later introspection code)
 class Datastore {
     constructor(name, options){
@@ -44,6 +49,10 @@ class Datastore {
         if (!this.isConceptMapped(concept)) return false;
         return this.mappedConcepts.get(concept.name).has(property.name);
     }
+    isPropertyNameMapped(conceptName, propertyName){
+        if (!this.isConceptMapped(concept)) return false;
+        return this.mappedConcepts.get(conceptName).has(propertyName);
+    }    
     internalAddConceptMapping(concept){
         if (!this.isConceptMapped(concept))
             this.mappedConcepts.set(concept.name, new Map());
@@ -82,6 +91,50 @@ class Datastore {
         throw new Error("destroy, should always be overridden in Datastore subclass");
     }
 
+    /**
+     *
+     * @param {String[]} typeNames
+     * @param {Filter} query
+     * @param {VarvContext} context
+     * @param {number} limit
+     * @param {Concept} localConcept
+     * @returns {Promise<String[]>}
+     */
+    async lookupInstances(typeNames, query, context, limit = 0, localConcept = null) {
+        throw new Error("Implement [lookupInstances] me in sub datastores!");
+    }
+
+    /**
+     * @param {String[]} typeNames
+     * @param {Filter} query
+     * @param {VarvContext} context
+     * @param {Concept} localConcept
+     * @returns {Promise<number>}
+     */
+    async countInstances(typeNames, query, context, localConcept) {
+        throw new Error("Implement [countInstances] me in sub datastores!");
+    }
+
+    /**
+     * @param {String[]} typeNames
+     * @param {Filter} query
+     * @param {VarvContext} context
+     * @param {Concept} localConcept
+     * @returns {Promise<boolean>}
+     */
+    async existsInstance(typeNames, query, context, localConcept) {
+        throw new Error("Implement [existsInstance] me in sub datastores!");
+    }
+
+    /**
+     *
+     * @param {String} uuid
+     * @returns {Promise<Concept>}
+     */
+    async lookupConcept(uuid) {
+        throw new Error("Implement [lookupConcept] me in sub datastores!");
+    }
+
     static getDatastoreFromName(name) {
         return Datastore.datastores.get(name);
     }
@@ -92,6 +145,10 @@ class Datastore {
 
     static getDatastoreType(name) {
         return Datastore.datastoreTypes.get(name);
+    }
+
+    static getAllDatastores() {
+        return Array.from(Datastore.datastores.values());
     }
 }
 Datastore.DEBUG = false;

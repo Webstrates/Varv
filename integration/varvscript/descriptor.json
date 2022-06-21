@@ -1,0 +1,11 @@
+{
+    "friendlyName": "VarvScript Fragment",
+    "description": "A simpler, less JSON-based way of scripting Varv code",
+    "dependencies": [
+        "#varv-engine" 
+    ],
+    "assets": [],
+    "license": "MIT",
+    "version": "0.1",
+    "changelog": {}
+}

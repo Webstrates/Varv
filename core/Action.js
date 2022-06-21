@@ -33,6 +33,9 @@
  * @property {object} [variables] - The variables currently set to any value
  */
 
+/**
+ * Base class for all actions
+ */
 class Action {
     /**
      * Crate a new Action
@@ -187,6 +190,8 @@ class Action {
     static getCommonVariables(contexts) {
         let common = {};
 
+        let mark = VarvPerformance.start();
+
         if(contexts.length > 0) {
             let testContext = contexts[0];
 
@@ -246,6 +251,8 @@ class Action {
             }
         }
 
+        VarvPerformance.stop("Action.getCommonVariables", mark, "#contexts "+contexts.length);
+
         return common;
     }
 
@@ -256,18 +263,26 @@ class Action {
      * @returns {object} A clone of the options argument, with all replacement values replaced
      */
     static async lookupArguments(options, actionArguments) {
+        let mark = VarvPerformance.start();
+
         const optionsClone = Action.clone(options);
 
-        for(let parameter of Object.keys(optionsClone)) {
+        let regex = /@(\S+?)(?:@|\s|$)/gm;
+
+        for(let parameter in optionsClone) {
+            if(!Object.hasOwn(optionsClone, parameter)) {
+                continue;
+            }
+
             let value = optionsClone[parameter];
 
             optionsClone[parameter] = await Action.subParam(value, (value)=>{
+                if(!value.includes("@")) {
+                    return value;
+                }
+
                 //Substitute any @argumentName with the value of the argument
-                let regex = /@(\S+?)(?:@|\s|$)/gm;
-
-                let matches = [...value.matchAll(regex)];
-
-                for(let match of matches) {
+                for(let match of value.matchAll(regex)) {
                     let search = match[0].trim();
                     let variableName = match[1];
 
@@ -291,6 +306,8 @@ class Action {
 
         }
 
+        VarvPerformance.stop("Action.lookupArguments", mark, {options});
+
         return optionsClone;
     }
 
@@ -301,34 +318,40 @@ class Action {
             }
             return value;
         } else if (typeof value === "object" && value != null && Object.getPrototypeOf(value) === Object.prototype) {
-            for(let key of Object.keys(value)) {
-                value[key] = await Action.subParam(value[key], lookupCallback);
+            for(let key in value) {
+                if(Object.hasOwn(value, key)) {
+                    value[key] = await Action.subParam(value[key], lookupCallback);
+                }
             }
             return value;
         } else if (typeof value === "string") {
-
             return lookupCallback(value);
         } else {
             return value;
         }
     }
 
-    static clone(o) {
-        if (Array.isArray(o)) {
-            let c = [];
-            for (let i = 0; i < o.length; i++) {
-                c[i] = Action.clone(o[i]);
-            }
-            return c;
-        } else if (typeof o === "object" && o != null && Object.getPrototypeOf(o) === Object.prototype) {
-            let c = {};
-            Object.keys(o).forEach((key) => {
-                c[key] = Action.clone(o[key]);
+    static clone(obj) {
+        if(Array.isArray(obj)) {
+            return obj.map((arrayValue)=>{
+                return Action.clone(arrayValue);
             });
-            return c;
-        } else {
-            return o;
+        } else if(typeof obj === "object" && obj != null && Object.getPrototypeOf(obj) === Object.prototype) {
+
+            let clone = {};
+
+            for (let key in obj) {
+                if (!Object.hasOwn(obj, key)) {
+                    continue;
+                }
+
+                clone[key] = Action.clone(obj[key]);
+            }
+
+            return clone;
         }
+
+        return obj;
     }
 
 
@@ -342,6 +365,8 @@ class Action {
         if(Action.DEBUG) {
             console.group("Looking up variables from context:", options, context);
         }
+
+        let mark = VarvPerformance.start();
 
         const optionsClone = Action.clone(options);
 
@@ -358,9 +383,9 @@ class Action {
                 let result = null;
 
                 if(conceptName === "lastTarget") {
-                    result = VarvEngine.lookupProperty(context.lastTarget, null, propertyName);
+                    result = await VarvEngine.lookupProperty(context.lastTarget, null, propertyName);
                 } else {
-                    result = VarvEngine.lookupProperty(context.target, null, variableName);
+                    result = await VarvEngine.lookupProperty(context.target, null, variableName);
                 }
 
                 if (result != null && result.target != null) {
@@ -373,14 +398,16 @@ class Action {
             return variableValue;
         }
 
+        let regex = /\$(\S+?)(?:\$|\s|$)/gm;
+
         for(let key of Object.keys(optionsClone)) {
             optionsClone[key] = await Action.subParam(optionsClone[key], async (value)=>{
+                if(!value.includes("$")) {
+                    return value;
+                }
+
                 //Substitute any $VariableName with the value of the variable
-                let regex = /\$(\S+?)(?:\$|\s|$)/gm;
-
-                let matches = [...value.matchAll(regex)];
-
-                for(let match of matches) {
+                for(let match of value.matchAll(regex)) {
                     let search = match[0].trim();
                     let variableName = match[1];
 
@@ -406,6 +433,8 @@ class Action {
         if(Action.DEBUG) {
             console.groupEnd();
         }
+
+        VarvPerformance.stop("Action.lookupVariables", mark, {context, options});
 
         return optionsClone;
     }
@@ -462,11 +491,18 @@ class Action {
      * @returns {object} - The cloned context
      */
     static cloneContext(context) {
+        let mark = VarvPerformance.start();
+
+        let result = null;
         if(Array.isArray(context)) {
-            return context.map(Action.cloneContextInternal);
+            result = context.map(Action.cloneContextInternal);
+        } else {
+            result = Action.cloneContextInternal(context);
         }
 
-        return Action.cloneContextInternal(context);
+        VarvPerformance.stop("Action.cloneContext", mark);
+
+        return result;
     }
 
     static cloneContextInternal(context) {
@@ -478,7 +514,7 @@ class Action {
         if(Action.DEBUG) {
             console.log("Cloning context:", context, preCloneObject);
         }
-        return fastCopy(preCloneObject);
+        return Action.clone(preCloneObject);
     }
 }
 Action.DEBUG = false;
@@ -511,7 +547,13 @@ class ActionChain extends Action {
             let commonVariablesBefore = Action.getCommonVariables(currentContexts);
 
             await ActionTrigger.before(action, currentContexts);
+            let mark = VarvPerformance.start();
             currentContexts = await action.apply(currentContexts, actionArguments);
+            if(action.isPrimitive) {
+                VarvPerformance.stop("PrimitiveAction-"+action.name, mark);
+            } else {
+                VarvPerformance.stop("CustomAction-"+action.name, mark);
+            }
             await ActionTrigger.after(action, currentContexts);
 
             if(currentContexts == null) {
@@ -546,14 +588,20 @@ class LookupActionAction extends Action {
         //TODO: We assume that all concepts are of the same type, when/if polymorphism is introduced this breaks
         let contextConcept = null;
         if(contexts.length > 0) {
-            contextConcept = VarvEngine.getConceptFromUUID(contexts[0].target);
+            contextConcept = await VarvEngine.getConceptFromUUID(contexts[0].target);
         }
 
         let action = VarvEngine.lookupAction(optionsWithArguments.lookupActionName, [contextConcept, self.concept], optionsWithArguments.lookupActionArguments);
 
         if(action != null) {
             await ActionTrigger.before(action, contexts);
+            let mark = VarvPerformance.start();
             let lookupActionResult = await action.apply(contexts, action.isPrimitive?{}:optionsWithArguments.lookupActionArguments);
+            if(action.isPrimitive) {
+                VarvPerformance.stop("PrimitiveAction-"+action.name, mark);
+            } else {
+                VarvPerformance.stop("CustomAction-"+action.name, mark);
+            }
             await ActionTrigger.after(action, lookupActionResult);
             return lookupActionResult;
         }

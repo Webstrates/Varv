@@ -29,12 +29,15 @@
 
 /**
  * A storage that serializes into the localStorage database
- *
+ * <pre>
  * options:
  * storageName - The name of the prefix to store that data below (Default: "varv-data")
+ * </pre>
+ *
+ * @memberOf Datastores
  */
 
-class LocalStorageDataStore extends Datastore {
+class LocalStorageDataStore extends DirectDatastore {
     constructor(name, options = {}) {
         super(name, options);
         this.storagePrefix = "varv-data";
@@ -59,11 +62,9 @@ class LocalStorageDataStore extends Datastore {
 
             if (!self.entities[context.target]) return; // avoid loops when we caused the disappear event ourselves
 
-            const concept = VarvEngine.getConceptFromUUID(context.target);
-
-            concept.properties.forEach((property)=>{
-                if(self.isPropertyMapped(concept, property)) {
-                    localStorage.removeItem(self.storagePrefix+"-"+context.target+"-"+property.name);
+            context.concept.properties.forEach((property) => {
+                if (self.isPropertyMapped(context.concept, property)) {
+                    localStorage.removeItem(self.storagePrefix + "-" + context.target + "-" + property.name);
                 }
             });
             delete self.entities[context.target];
@@ -74,13 +75,14 @@ class LocalStorageDataStore extends Datastore {
                 console.log("Saw appeared UUID (LocalStorageDataStore):", context.target);
             }
 
+            let mark = VarvPerformance.start();
             if (self.entities[context.target]) return; // avoid loops when we caused the appear event ourselves
 
-            const concept = VarvEngine.getConceptFromUUID(context.target);
-            if (self.isConceptMapped(concept)){
-                self.entities[context.target] = concept.name;
+            if (self.isConceptMapped(context.concept)) {
+                self.entities[context.target] = context.concept.name;
                 self.saveEntities();
             }
+            VarvPerformance.stop("LocalStorageDataStore.registerEventCallback.appeared", mark);
         }));
 
         this.storageEventListener = async function localStorageChangeUpdate(event){
@@ -104,14 +106,14 @@ class LocalStorageDataStore extends Datastore {
                 };
             } else if (event.key.startsWith(self.storagePrefix+"-")){
                 // This could be a property change event if the key matches a property
-                let matches = new RegExp("^([^-]+)\-(.+?)$").exec(event.key.substr(self.storagePrefix.length+1));
+                let matches = new RegExp("^([^-]+)\-(.+?)$").exec(event.key.substring(self.storagePrefix.length+1));
                 if (matches.length===3){
                     if (event.newValue===null) return; // TODO: The property was removed, is there any way to handle this properly?
 
                     let uuid = matches[1];
                     let propertyName = matches[2];
 
-                    let concept = VarvEngine.getConceptFromUUID(uuid);
+                    let concept = self.getConceptFromUUID(uuid);
                     if (!concept){
                         console.log("Localstorage got property update from concept with UUID that does not exist locally", uuid);
                         return;
@@ -150,13 +152,16 @@ class LocalStorageDataStore extends Datastore {
         }
                 
         let setter = (uuid, value) => {
+            let mark = VarvPerformance.start();
             if (!self.entities[uuid]){
                 throw new Error("Tried to set concept property in localStorage for concept instance that never appeared: "+concept.name+"."+property.name);
             }
             
             localStorage.setItem(self.storagePrefix+"-"+uuid+"-"+property.name, JSON.stringify(value));
+            VarvPerformance.stop("LocalStorageDataStore.setter", mark);
         };
         let getter = (uuid) => {
+            let mark = VarvPerformance.start();
             if (!self.entities[uuid]){
                 throw new Error("Tried to get concept property from localStorage for concept instance that was never seen: "+concept.name+"."+property.name);
             }
@@ -165,8 +170,9 @@ class LocalStorageDataStore extends Datastore {
             if (data===null){
                 throw new Error("Tried to get concept property from localStorage that was never set: "+concept.name+"."+property.name);
             }
-            
-            return JSON.parse(data);
+            let result =  JSON.parse(data);
+            VarvPerformance.stop("LocalStorageDataStore.getter", mark);
+            return result;
         };
         property.addSetCallback(setter);
         property.addGetCallback(getter);
@@ -220,12 +226,8 @@ class LocalStorageDataStore extends Datastore {
             return;                
         }
 
-        let conceptByUUID = VarvEngine.getConceptFromUUID(uuid);
-        if (conceptByUUID){
-            console.warn("Notice: Localstorage concept instance found for already existing concept "+conceptByUUID.name +" with uuid "+uuid+", this may be perfectly fine for multi-backed concepts but for now we throw this notice when it happens");
-        } else {
-            VarvEngine.registerConceptFromUUID(uuid, concept);
-        }            
+        let conceptByUUID = await VarvEngine.getConceptFromUUID(uuid);
+        this.registerConceptFromUUID(uuid, concept);
 
         // Pull all properties
         for (const property of concept.properties){     

@@ -26,6 +26,9 @@
  *  
  */
 
+/**
+ *
+ */
 class DOMView {
     constructor() {
         const self = this;
@@ -193,18 +196,19 @@ class DOMView {
             console.log("Requested render of DOMView while already busy rendering, queueing another frame");
             templateElement.isRenderingInterruption = true;
         } else {
-            if (templateElement.renderTimeout) clearTimeout(templateElement.renderTimeout);
+            if (templateElement.renderTimeout != null) clearTimeout(templateElement.renderTimeout);
             templateElement.renderTimeout = setTimeout(async ()=>{
+                const mark = VarvPerformance.start()
                 try {
                     // Create a new rendering view
                     templateElement.isRendering = true;
                     
                     // Find the target document
-                    let targetFrameSpec = templateElement.getAttribute("targetFrame");
+                    let targetFrameSpec = templateElement.getAttribute("target-iframe");
                     let targetDocument;
                     if (targetFrameSpec){
                         let frame = document.querySelector(targetFrameSpec);
-                        if (!frame) throw new Error("DOMView: dom-view-template with targetFrame that does not exist in document failed to render", targetFrameSpec, templateElement);
+                        if (!frame) throw new Error("DOMView: dom-view-template with target-iframe that does not exist in document failed to render", targetFrameSpec, templateElement);
                         targetDocument = frame.contentDocument;
                     } else {                        
                         targetDocument = document;
@@ -215,8 +219,10 @@ class DOMView {
                     view.templateElement = templateElement;
 
                     // Re-render template nodes if additions/removals are made later
-                    let addCallback = VarvEngine.registerEventCallback("appeared", (evt) => {
-                        let conceptThatHadAdded = VarvEngine.getConceptFromUUID(evt.target);
+                    let addCallback = VarvEngine.registerEventCallback("appeared", async (evt) => {
+                        let mark = VarvPerformance.start();
+                        let conceptThatHadAdded = await VarvEngine.getConceptFromUUID(evt.target);
+                        VarvPerformance.stop("DOMView.getConceptFromUUID", mark);
 
                         // TODO: Check if we actually use it anywhere as a concept
                         // TODO: Check if we actually use it as a property
@@ -224,6 +230,7 @@ class DOMView {
 
                         // STUB: Rebuilding everything
                         self.stubTriggerFullRebuild(templateElement, "Concept was added somewhere");
+                        VarvPerformance.stop("DOMView.registerEventCallback.appeared", mark);
                     });
                     let deleteCallback = VarvEngine.registerEventCallback("disappeared", (evt) => {
                         // STUB: Rebuilding everything
@@ -232,7 +239,8 @@ class DOMView {
                     let reloadCallback = VarvEngine.registerEventCallback("engineReloaded", (evt) => {
                         // STUB: Rebuilding everything
                         self.stubTriggerFullRebuild(templateElement, "Engine was reloaded entirely");
-                    });      
+                    });
+
                     let clearHighlights = function clearHighlight(node){
                         if (node.getAttribute && node.getAttribute("varv-domview-highlight")){
                             node.removeAttribute("varv-domview-highlight");
@@ -243,9 +251,8 @@ class DOMView {
                         let concept = evt.detail;
                         self.walkView(view, clearHighlights);
                         self.walkView(view, function highlightConcept(node){
-                            for (let conceptUUID of self.getConceptPath(node)){
-                                let nodeConcept = VarvEngine.getConceptFromUUID(conceptUUID);
-                                if (nodeConcept===concept){
+                            for (let conceptBinding of self.getConceptPath(node)){
+                                if (conceptBinding.concept===concept){
                                     if (node.setAttribute){                                
                                         node.setAttribute("varv-domview-highlight",true);
                                     }
@@ -254,13 +261,14 @@ class DOMView {
                             }
                             return true;
                         });
-                    });            
+                    });
+
                     let instanceHighlightCallback = EventSystem.registerEventCallback("Varv.DOMView.HighlightInstance", (evt)=>{
                         let uuid = evt.detail;
                         self.walkView(view, clearHighlights);
                         self.walkView(view, function highlightInstance(node){
-                            for (let conceptUUID of self.getConceptPath(node)){
-                                if (conceptUUID===uuid){
+                            for (let conceptBinding of self.getConceptPath(node)){
+                                if (conceptBinding.uuid===uuid){
                                     if (node.setAttribute){                                
                                         node.setAttribute("varv-domview-highlight",true);
                                     }
@@ -269,7 +277,8 @@ class DOMView {
                             }
                             return true;
                         });
-                    });            
+                    });
+
                     let propertyHighlightCallback = EventSystem.registerEventCallback("Varv.DOMView.HighlightProperty", (evt)=>{
                         let property = evt.detail;
                         self.walkView(view, clearHighlights);
@@ -284,7 +293,7 @@ class DOMView {
                             }
                             return true;
                         });
-                    });              
+                    });
 
                     let clearHighlightCallback = EventSystem.registerEventCallback("Varv.DOMView.ClearHighlights", (evt)=>{
                         self.walkView(view, clearHighlights);
@@ -305,7 +314,7 @@ class DOMView {
                     }
 
                     // Insert into target document
-                    let targetSpec = templateElement.getAttribute("targetElement");
+                    let targetSpec = templateElement.getAttribute("target-element");
                     view.targetSpec = targetSpec;
                     view.targetFrameSpec = targetFrameSpec;
                     if ((oldView && oldView.targetSpec!=targetSpec) || (oldView && oldView.targetFrameSpec!=targetFrameSpec)){
@@ -330,7 +339,7 @@ class DOMView {
                                 if (targetElement){
                                     targetElement.appendChild(view);
                                 } else {
-                                    console.error("DOMView: Rendering into nothingness since template targetElement does not exist in target iframe: ", targetFrameSpec, targetSpec);
+                                    console.error("DOMView: Rendering into nothingness since template target-element does not exist in target iframe: ", targetFrameSpec, targetSpec);
                                 }
                             } else {
                                 // Just plain add it to body
@@ -344,7 +353,7 @@ class DOMView {
                                 if (targetElement){
                                     targetElement.appendChild(view);
                                 } else {
-                                    console.error("DOMView: Rendering into nothingness since template targetElement does not exist in document: ", targetSpec);
+                                    console.error("DOMView: Rendering into nothingness since template target-element does not exist in document: ", targetSpec);
                                 }
                             } else {
                                 // Default is to render just after the template element.
@@ -377,14 +386,14 @@ class DOMView {
                     console.error("DOMView render exception", ex);
                 }
                 templateElement.isRendering = false;
+                templateElement.renderTimeout = null;
                 if (templateElement.isRenderingInterruption){
                     // We got interrupted while rendering, try again
                     templateElement.isRenderingInterruption = false;
                     self.rebuildView(templateElement);
                 }
-
-            }, 1); // Only update view at 1000fps at most        
-            
+                VarvPerformance.stop("DOMView.rebuildView", mark)
+            }, 100);
         }
     }
     
@@ -400,7 +409,7 @@ class DOMView {
     async cloneToView(targetDocument, currentViewElement, currentTemplateNode, currentScope = [], currentInsertBeforeElement=null) {
         const self = this;
         let results = [];
-        
+
         switch (currentTemplateNode.nodeType){
             case Node.COMMENT_NODE:
                 // Drop all comments to minify view as much as possible - we cannot update them properly anyways
@@ -496,7 +505,7 @@ class DOMView {
                                                 testTarget = testTarget.concept;
                                             } else {
                                                 // This may be an uuid, if so, look it up instead
-                                                testTarget = VarvEngine.getConceptFromUUID(testTarget);
+                                                testTarget = await VarvEngine.getConceptFromUUID(testTarget);
                                             }
                                             conditionalValue = testTarget.isA(testType);
                                         } else {
@@ -578,6 +587,10 @@ class DOMView {
                                 
                                 // Handle changes to looked up property type attribute itself (i.e. when dynamically using {...} as the attribute
                                 let selfUpdatingPropertyAttribute = new UpdatingStringEvaluation(propertyAttributeRaw, scope, async function propertyAttributeUpdated(propertyType){
+
+                                    //Fix scope being added too, every new call to propertyAttributeUpdated
+                                    const clonedScope = scope.slice();
+
                                     // Remove previously rendered children
                                     for (let child of outerPropertyHandleChildren){
                                         self.tearDownElement(child);
@@ -591,64 +604,20 @@ class DOMView {
                                     // Insert the new ones
                                     try {
                                         if (propertyType === undefined){
-                                            console.warn("DOM varv template selecting property '"+propertyAttributeRaw+"' that evaluates to undefined", scope, currentTemplateNode);
+                                            console.warn("DOM varv template selecting property '"+propertyAttributeRaw+"' that evaluates to undefined", clonedScope, currentTemplateNode);
                                             throw new Error("Cannot render property '"+propertyAttributeRaw+"' which evaluates to undefined");
                                         }
-                                        let binding = await DOMView.getBindingFromScope(propertyType, scope);
+                                        let binding = await DOMView.getBindingFromScope(propertyType, clonedScope);
                                         if (!binding) {
-                                            console.warn("DOM varv template selecting undefined property '"+propertyType+"' not bound in scope: ", scope, currentTemplateNode);
+                                            console.warn("DOM varv template selecting undefined property '"+propertyType+"' not bound in scope: ", clonedScope, currentTemplateNode);
                                             throw new Error("Selecting undefined property '"+propertyType+"' not bound in scope");
                                         }                        
                                         if (!(binding instanceof ConceptInstanceBinding)){
-                                            console.warn("DOM varv template selecting property that was bound on something else than a concept, this is a bug: ", propertyType, scope, currentTemplateNode);
+                                            console.warn("DOM varv template selecting property that was bound on something else than a concept, this is a bug: ", propertyType, clonedScope, currentTemplateNode);
                                             throw new Error("Cannot select a property that was bound to something else than a concept");
                                         }
-                                        let propertyValue = await binding.getValueFor(propertyType);
-                                        if (propertyValue === undefined) {
-                                            console.warn("DOM varv template selecting property that evaluates to undefined value: ", propertyType, scope, currentTemplateNode);
-                                            throw new Error("Value is undefined and cannot be rendered");
-                                        }
 
-                                        if (Array.isArray(propertyValue)) {
-                                            // We need duplication
-                                            // STUB: No filtering of property values in SPEC?
-                                            // STUB: No sorting of property values in SPEC?  
-                                            let index = 0;
-                                            for(let arrayEntry of propertyValue) {
-                                                let childScope = scope.slice(); // Copy the scope
-                                                let newBinding = {};
-                                                if (arrayEntry instanceof ConceptInstance) {
-                                                    childScope.push(arrayEntry); // If this was a concept, add it to the scope
-                                                    childScope.push(new ValueBinding({
-                                                        'concept::uuid': arrayEntry.uuid
-                                                    })); // Make the uuid referenceable for debug etc                                             
-                                                    newBinding[propertyType + ".value"] = arrayEntry.uuid;
-                                                } else {
-                                                    newBinding[propertyType + ".value"] = arrayEntry; // otherwise then the value becomes bound under X.value
-                                                }
-                                                newBinding[propertyType + ".index"] = index;
-                                                index++;
-                                                childScope.push(new PropertyBinding(binding.concept.getProperty(propertyType), binding.uuid));
-                                                childScope.push(new ValueBinding(newBinding));
-
-                                                await conditionalIf(handle, outerPropertyHandleChildren, childScope);
-                                            }
-                                        } else {
-                                            // Single property value, no duplication                            
-                                            // Warn if this is not a concept as non-concept non-list values make no sense
-                                            if (!(propertyValue instanceof ConceptInstance)){
-                                                console.warn("DOM varv template using something that is not a list of simple values, a concept or a list of concepts as a property, this is not valid", propertyType, scope, currentTemplateNode);
-                                                throw new Error("Cannot use a type for the property attribute that is not a list of simple values or a concept reference");                                                
-                                            }
-                                            let newBinding = {'concept::uuid': propertyValue.uuid};
-                                            newBinding[propertyType + ".value"] = propertyValue.uuid;
-                                            scope.push(new ConceptInstanceBinding(propertyValue.uuid));
-                                            scope.push(new PropertyBinding(binding.concept.getProperty(propertyType), binding.uuid));
-                                            scope.push(new ValueBinding(newBinding));
-                                            await conditionalIf(handle, outerPropertyHandleChildren, scope);
-                                        }        
-                                        
-                                        // Register update callbacks for the final looked up property                                    
+                                        // Register update callbacks for the final looked up property
                                         let property = binding.concept.getProperty(propertyType);
                                         let callback = ()=>{
                                             propertyAttributeUpdated(propertyType); // Re-render ourselves
@@ -657,9 +626,51 @@ class DOMView {
                                         // Clean it up later
                                         self.addCleanup(handle, ()=>{
                                             property.removeUpdatedCallback(callback);
-                                        })
-                                    } catch (exception){                                    
-                                        console.warn("DOM varv template selecting property where value evaluation caused an error: ", exception, propertyType, scope, currentTemplateNode);
+                                        });
+
+                                        let propertyValue = await binding.getValueFor(propertyType);
+                                        if (propertyValue != null) {
+                                            if (Array.isArray(propertyValue)) {
+                                                // We need duplication
+                                                // STUB: No filtering of property values in SPEC?
+                                                // STUB: No sorting of property values in SPEC?
+                                                let index = 0;
+                                                for (let arrayEntry of propertyValue) {
+                                                    let childScope = clonedScope.slice(); // Copy the scope
+                                                    let newBinding = {};
+                                                    if (arrayEntry instanceof ConceptInstance) {
+                                                        childScope.push(arrayEntry); // If this was a concept, add it to the scope
+                                                        childScope.push(new ValueBinding({
+                                                            'concept::uuid': arrayEntry.uuid
+                                                        })); // Make the uuid referenceable for debug etc
+                                                        newBinding[propertyType + ".value"] = arrayEntry.uuid;
+                                                    } else {
+                                                        newBinding[propertyType + ".value"] = arrayEntry; // otherwise then the value becomes bound under X.value
+                                                    }
+                                                    newBinding[propertyType + ".index"] = index;
+                                                    index++;
+                                                    childScope.push(new PropertyBinding(binding.concept.getProperty(propertyType), binding.uuid));
+                                                    childScope.push(new ValueBinding(newBinding));
+
+                                                    await conditionalIf(handle, outerPropertyHandleChildren, childScope);
+                                                }
+                                            } else {
+                                                // Single property value, no duplication
+                                                // Warn if this is not a concept as non-concept non-list values make no sense
+                                                if (!(propertyValue instanceof ConceptInstance)) {
+                                                    console.warn("DOM varv template using something that is not a list of simple values, a concept or a list of concepts as a property, this is not valid", propertyType, clonedScope, currentTemplateNode);
+                                                    throw new Error("Cannot use a type for the property attribute that is not a list of simple values or a concept reference");
+                                                }
+                                                let newBinding = {'concept::uuid': propertyValue.uuid};
+                                                newBinding[propertyType + ".value"] = propertyValue.uuid;
+                                                clonedScope.push(await ConceptInstanceBinding.create(propertyValue.concept, propertyValue.uuid));
+                                                clonedScope.push(new PropertyBinding(binding.concept.getProperty(propertyType), binding.uuid));
+                                                clonedScope.push(new ValueBinding(newBinding));
+                                                await conditionalIf(handle, outerPropertyHandleChildren, clonedScope);
+                                            }
+                                        }
+                                    } catch (exception){
+                                        console.warn("DOM varv template selecting property where value evaluation caused an error: ", exception, propertyType, clonedScope, currentTemplateNode);
                                         let child = self.createErrorElement("Evaluating '"+propertyType+"' caused "+exception, targetDocument);
                                         currentViewElement.insertBefore(child, handle);
                                         outerPropertyHandleChildren.push(child); // intentionally only exposed to outerPropertyHandle
@@ -718,13 +729,13 @@ class DOMView {
                                         console.warn("DOM varv template selects concept '"+conceptType+"' that doesn't currently exist", conceptAttributeRaw, currentScope, currentTemplateNode);
                                         throw new Error("Cannot render concept '"+conceptAttributeRaw+"' which evaluates to "+conceptType+" which does not exist");                                        
                                     }
-                                    
-                                    let conceptUUIDs = VarvEngine.getAllUUIDsFromType(conceptType, true);
+
+                                    let conceptUUIDs = await VarvEngine.getAllUUIDsFromType(conceptType, true);
                                     // STUB: No filtering of concepts in SPEC?
                                     // STUB: No sorting of concepts in SPEC?
                                     for(let uuid of conceptUUIDs) {
                                         let childScope = currentScope.slice(); // Copy current
-                                        childScope.push(new ConceptInstanceBinding(uuid)); // Add this new concept to lookup scope but with the concrete type
+                                        childScope.push(await ConceptInstanceBinding.create(concept, uuid)); // Add this new concept to lookup scope but with the concrete type
                                         childScope.push(new ValueBinding({
                                             'concept::uuid': uuid
                                         })); // Make the uuid referenceable for debug etc
@@ -752,7 +763,7 @@ class DOMView {
                             });  
                         } else {
                             // No concept attribute just append directly and add to results directly
-                            await splitProperty(currentInsertBeforeElement, results, currentScope);
+                            await splitProperty(currentInsertBeforeElement, results, currentScope.slice());
                         }
 
                         break;
@@ -884,11 +895,12 @@ class DOMView {
                 // Evaluate all attributes
                 for(let attr of Array.from(templateElement.attributes)) {
                     let selfUpdatingString = new UpdatingStringEvaluation(attr.value, scope, function attributeNodeUpdated(value){
-                        element.setAttribute(attr.name, value);
-                        
+                        let shouldUpdateAttribute = true;
+
                         // Check for special attributes
                         if (attr.name==="value"){
                             if (element.tagName==="INPUT" || element.tagName==="TEXTAREA"){
+                                shouldUpdateAttribute = false;
                                 if (element.type==="checkbox"){
                                     element.checked = value==="true" || value===true;
                                 } else {
@@ -897,14 +909,23 @@ class DOMView {
                             } else if (element.tagName==="SELECT"){
                                 // STUB: wait for the rest of the tree to render so that our OPTIONS nodes are ready
                                 // TODO: Move this into a post-render queue to avoid flickering
+                                shouldUpdateAttribute = false;
                                 setTimeout(()=>{
                                     element.value = value;
                                 },0);
+                            } else if (element.tagName==="DIV"){
+                                shouldUpdateAttribute = false;
+                                if (!element.blockReadbacks){
+                                    element.innerHTML = value;
+                                }
                             }
-                        } else if(attr.name === "disabled") {
-                            if(value === "false") {
-                                element.removeAttribute(attr.name);
-                            }
+                        } else if(attr.name === "disabled" && value === "false") {
+                            // Don't move disabled=false over
+                            shouldUpdateAttribute = false;
+                            element.removeAttribute(attr.name);
+                        }
+                        if (shouldUpdateAttribute){
+                            element.setAttribute(attr.name, value);                            
                         }
                     });
                     this.addCleanup(element, ()=>{
@@ -950,6 +971,32 @@ class DOMView {
                             });
                         }                    
                     }
+                } else if (element.tagName==="DIV" && element.getAttribute("value") && element.getAttribute("contenteditable")!==null){
+                    let valueLookupName = self.getLookupNameFromAttribute(templateElement, "value");
+                    if (valueLookupName!==null){
+                        let binding = DOMView.getBindingFromScope(valueLookupName,scope);
+                        if (!(binding instanceof ConceptInstanceBinding)){
+                            console.warn("DOMView: Contenteditable DIV with value cannot be bound to something that is not a concept property", valueLookupName, templateElement);
+                        } else {
+                            let coalesceTimer = null;
+                            let needsAnotherUpdate = false;
+                            element.addEventListener("input", async ()=>{
+                                needsAnotherUpdate = true;
+                                if (!coalesceTimer){
+                                    coalesceTimer = setTimeout(async ()=>{
+                                        while (needsAnotherUpdate){
+                                            needsAnotherUpdate = false;
+                                            element.blockReadbacks = true; // Avoid reading our own changes back
+                                            await binding.setValueFor(valueLookupName, element.innerHTML);
+                                            element.blockReadbacks = false;
+                                        }
+                                        coalesceTimer = null;
+                                    }, 100);                                
+                                }
+                            });
+                        }                    
+                    }
+                    
                 }
 
                 topLevelResults.push(element);
@@ -978,12 +1025,12 @@ class DOMView {
                 return [];
             }
         }
-        
+
         let result = [];
         if(element != null && element.scope != null) {
             for (let binding of element.scope) {
                 if (binding instanceof ConceptInstanceBinding) {
-                    result.push(binding.uuid);
+                    result.push(binding);
                 }
             }
         }
@@ -1063,6 +1110,7 @@ class DOMView {
     }
     
     stubTriggerFullRebuild(templateNode, message=""){
+        let mark = VarvPerformance.start();
         // STUB: All rebuilds are full rebuilds rather than incremental rebuilds for now        
         if (DOMView.DEBUG) {
             console.warn("FIXME: Unimplemtented partial update logic triggered full DOMView rebuild", templateNode, message);
@@ -1072,6 +1120,7 @@ class DOMView {
         } else {
             this.rebuildView(cQuery(templateNode).closest("dom-view-template")[0]);
         }
+        VarvPerformance.stop("DOMView.stubTriggerFullRebuild", mark);
     }
 
     
@@ -1092,31 +1141,12 @@ class DOMView {
         if (attribute === null) return null;
         
         if (attribute.startsWith("{") && attribute.endsWith("}")) {
-            return attribute.substr(1, attribute.length - 2);
+            return attribute.substring(1, attribute.length - 1);
         } else {
             return null;
         }        
     }
 
-    /**
-     * Returns null if attribute does not exist, undefined if lookup does not exist
-     * @param {HTMLElement} templateElement
-     * @param {string} attributeName
-     * @param {type} scope
-     * @returns {undefined}
-     */
-    async evaluateAttribute(templateElement, attributeName, scope) {
-        let lookupName = this.getLookupNameFromAttribute(templateElement, attributeName);        
-        let result = undefined;
-        if (lookupName!==null) {
-            result = await this.evaluateValueInScope(lookupName, scope);
-        } else {
-            result = templateElement.getAttribute(attributeName);
-        }
-        if (result===null) return undefined;
-        return result;
-    };
-    
     static getBindingFromScope(bindingName, scope){
         for (let i = scope.length - 1; i >= 0; i--) {
             if (scope[i].hasBindingFor(bindingName)) {
@@ -1150,7 +1180,7 @@ class UpdatingStringEvaluation {
         // Prepare it once manually
         for(let token of this.tokens) {
             token = token.trim();
-            let lookupQuery = token.substr(1, token.length - 2);
+            let lookupQuery = token.substring(1, token.length - 1);
 
             let binding = null;
             let propertyName;
@@ -1176,8 +1206,11 @@ class UpdatingStringEvaluation {
             }
             if (binding && binding.concept){
                 let property = binding.concept.getProperty(propertyName);
-                let callback = async function updateUpdatingStringEvaluation(){
-                    await self.update();
+                let callback = async function updateUpdatingStringEvaluation(uuid){
+                    //Only update this stringEvaluation if the changed property was on the watched concept instance
+                    if(uuid === binding.uuid) {
+                        await self.update();
+                    }
                 };
                 property.addUpdatedCallback(callback);
                 this.updateCallbacks.push({property: property, callback: callback});
@@ -1187,12 +1220,14 @@ class UpdatingStringEvaluation {
             
     }
     
-    async update(){        
+    async update(){
+        let mark = VarvPerformance.start();
+
         try {
             let text = this.originalText;
             for(let token of this.tokens) {
                 token = token.trim();
-                let lookupQuery = token.substr(1, token.length - 2);
+                let lookupQuery = token.substring(1, token.length - 1);
 
                 let value = await this.bindings.get(lookupQuery)();
                 if (value !== undefined){
@@ -1204,8 +1239,10 @@ class UpdatingStringEvaluation {
         } catch (ex){
             console.error(ex);
         }
+
+        VarvPerformance.stop("UpdatingStringEvaluation.update", mark);
     }
-    
+
     destroy(){
         if (this.destroyed) {
             if (DOMView.DEBUG){
@@ -1224,6 +1261,7 @@ class UpdatingStringEvaluation {
 
 class ConceptInstance {
     constructor(concept, uuid) {
+
         if (!uuid) throw new Error("Invalid reference to concept instance with a null or undefined uuid '"+uuid+"' and concept '"+concept+"'");
         if (!concept) throw new Error("Invalid reference to unknown concept with uuid '"+uuid+"', concept is "+concept);
         this.concept = concept;
@@ -1244,14 +1282,14 @@ class PropertyBinding {
 }
 
 class ConceptInstanceBinding extends ConceptInstance {
-    constructor(uuid) {
-        super(VarvEngine.getConceptFromUUID(uuid), uuid);
+    constructor(concept, uuid) {
+        super(concept, uuid);
     }
 
     hasBindingFor(name) {
         let lookupName = name;
         if(lookupName.startsWith(this.concept.name+".")) {
-            lookupName = lookupName.substr(this.concept.name.length+1);
+            lookupName = lookupName.substring(this.concept.name.length+1);
         }
         
         try {
@@ -1267,7 +1305,7 @@ class ConceptInstanceBinding extends ConceptInstance {
     async getValueFor(name) {
         let lookupName = name;
         if(lookupName.startsWith(this.concept.name+".")) {
-            lookupName = lookupName.substr(this.concept.name.length+1);
+            lookupName = lookupName.substring(this.concept.name.length+1);
         }
         
         let property = null;
@@ -1285,12 +1323,12 @@ class ConceptInstanceBinding extends ConceptInstance {
         let value = await property.getValue(this.uuid);
         if (property.isConceptType()) {
             if (!value) return undefined; // No uuid set
-            return new ConceptInstanceBinding(value);
+            return await ConceptInstanceBinding.create(property.type, value);
         } else if (property.isConceptArrayType()) {
             let conceptArray = [];
-            value.forEach((entry) => {
-                conceptArray.push(new ConceptInstanceBinding(entry))
-            });
+            for(let entry of value) {
+                conceptArray.push(await ConceptInstanceBinding.create(property.options.items, entry));
+            }
             return conceptArray;
         } else {
             return value;
@@ -1299,7 +1337,15 @@ class ConceptInstanceBinding extends ConceptInstance {
     
     async setValueFor(name, value){
         const property = this.concept.getProperty(name);
-        property.setValue(this.uuid, property.typeCast(value));
+        await property.setValue(this.uuid, property.typeCast(value));
+    }
+
+    static async create(concept, uuid) {
+        if(typeof concept === "string") {
+            concept = VarvEngine.getConceptFromType(concept);
+        }
+
+        return new ConceptInstanceBinding(concept, uuid)
     }
 }
 

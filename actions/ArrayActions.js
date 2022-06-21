@@ -27,8 +27,13 @@
  */
 
 /**
+ * Actions that deal with arrays
+ * @namespace ArrayActions
+ */
+
+/**
  * Action "length" that can put the length of an array or string into a variable
- *
+ * @memberOf ArrayActions
  * @example
  * // Find the length of a property (array or string)
  * {
@@ -55,6 +60,18 @@
  *         "as": "myResultVariableName"
  *     }
  * }
+ *
+ * @example
+ * // Shorthand, set the variable "length" to the length of the property "myProperty"
+ * {
+ *     "length": "myProperty"
+ * }
+ *
+ * @example
+ * // Shorthand, set the variable "length" to the length of the variable "myVariable"
+ * {
+ *     "length": "$myVariable"
+ * }
  */
 class LengthAction extends Action {
     static options() {
@@ -72,7 +89,7 @@ class LengthAction extends Action {
                 //Shorthand lookup variable
                 options = {
                     of: {
-                        variable: options.trim().substr(1)
+                        variable: options.trim().substring(1)
                     }
                 }
             } else {
@@ -124,7 +141,7 @@ class LengthAction extends Action {
             if(options.of.property != null) {
                 // Length of property
 
-                const lookup = VarvEngine.lookupProperty(context.target, self.concept, options.of.property);
+                const lookup = await VarvEngine.lookupProperty(context.target, self.concept, options.of.property);
 
                 if(lookup == null) {
                     throw new Error("No property ["+options.of.property+"] found");
@@ -197,7 +214,7 @@ class AppendPrependAction extends Action {
             if(options.to.property != null) {
                 // Append to property array
 
-                const lookup = VarvEngine.lookupProperty(context.target, self.concept, options.to.property);
+                const lookup = await VarvEngine.lookupProperty(context.target, self.concept, options.to.property);
 
                 if(lookup == null) {
                     throw new Error("No property ["+options.of.property+"] found");
@@ -238,7 +255,7 @@ class AppendPrependAction extends Action {
 
 /**
  * An action "append" that can append an item to an array, the array can be from either a property or variable
- *
+ * @memberOf ArrayActions
  * @example
  * // Append a string item to an array inside a property
  * {
@@ -282,7 +299,7 @@ window.AppendAction = AppendAction;
 
 /**
  * An action "prepend" that can prepend an item to an array, the array can be from either a property or variable
- *
+ * @memberOf ArrayActions
  * @example
  * // Prepend a string item to an array inside a property
  * {
@@ -329,10 +346,10 @@ class RemoveFirstLastAction extends Action {
 
         //Shorthand { "remove-first": "propertyName" }
         if(typeof options === "string") {
-            if(options.startsWith("$")) {
+            if(options.trim().startsWith("$")) {
                 options = {
                     "of": {
-                        "variable": options.substr(1)
+                        "variable": options.trim().substring(1)
                     }
                 }
             } else {
@@ -386,7 +403,7 @@ class RemoveFirstLastAction extends Action {
             if(options.of.property != null) {
                 // remove of property
 
-                const lookup = VarvEngine.lookupProperty(context.target, self.concept, options.of.property);
+                const lookup = await VarvEngine.lookupProperty(context.target, self.concept, options.of.property);
 
                 if(lookup == null) {
                     throw new Error("No property ["+options.of.property+"] found");
@@ -445,7 +462,7 @@ class RemoveFirstLastAction extends Action {
 
 /**
  * An action "removeFirst" that can remove the first item of an array, and set a variable to the removed item
- *
+ * @memberOf ArrayActions
  * @example
  * // Remove the first item from an array property
  * {
@@ -465,7 +482,7 @@ class RemoveFirstLastAction extends Action {
  * }
  *
  * @example
- * // Remove the first item from an array property, shorthand notation, result will be in variable named "remove-first"
+ * // Remove the first item from an array property, shorthand notation, result will be in variable named "removeFirst"
  * {
  *     "removeFirst": "myArrayProperty"
  * }
@@ -495,7 +512,7 @@ window.RemoveFirstAction = RemoveFirstAction;
 
 /**
  * An action "removeLast" that can remove the last item of an array, and set a variable to the removed item
- *
+ * @memberOf ArrayActions
  * @example
  * // Remove the last item from an array property
  * {
@@ -515,7 +532,7 @@ window.RemoveFirstAction = RemoveFirstAction;
  * }
  *
  * @example
- * // Remove the last item from an array property, shorthand notation, result will be in variable named "remove-last"
+ * // Remove the last item from an array property, shorthand notation, result will be in variable named "removeLast"
  * {
  *     "removeLast": "myArrayProperty"
  * }
@@ -547,7 +564,7 @@ window.RemoveLastAction = RemoveLastAction;
  * An action "removeItem" that can remove 1 or X items from a given index in an array, the array can be in either a property or a variable
  *
  * If removeCount is 1, then the result will be just the item removed, if its > 1, then the result will be an array of the removed items
- *
+ * @memberOf ArrayActions
  * @example
  * //Remove 1 items starting from index 1 of an array property
  * {
@@ -638,7 +655,7 @@ class RemoveItemAction extends Action {
             }
 
             if(options.of.property != null) {
-                const lookup = VarvEngine.lookupProperty(context.target, self.concept, options.of.property);
+                const lookup = await VarvEngine.lookupProperty(context.target, self.concept, options.of.property);
 
                 if(lookup == null) {
                     throw new Error("No property ["+options.of.property+"] found");
@@ -700,11 +717,17 @@ window.RemoveItemAction = RemoveItemAction;
 
 /**
  * An action 'items' that extracts an array property or variable into another variable, optionally applying filtering
- *
+ * @memberOf ArrayActions
  * @example
- * //Shorthand, returns result into variable 'result' and applies no filtering
+ * //Shorthand, returns result into variable 'items' and applies no filtering
  * {
  *     "items": "myArrayProperty"
+ * }
+ *
+ * @example
+ * //Shorthand, returns result into variable 'items' and applies no filtering
+ * {
+ *     "items": "$myArrayVariable"
  * }
  *
  * @example
@@ -754,8 +777,14 @@ class ItemsAction extends Action {
     constructor(name, options, concept) {
         //Shorthand
         if(typeof options === "string") {
-            options = {
-                property: options
+            if(options.trim().startsWith("$")) {
+                options = {
+                    variable: options.trim().substring(1)
+                }
+            } else {
+                options = {
+                    property: options
+                }
             }
         }
 
@@ -779,7 +808,7 @@ class ItemsAction extends Action {
             let result = null;
 
             if(options.property != null) {
-                const lookup = VarvEngine.lookupProperty(context.target, self.concept, options.property);
+                const lookup = await VarvEngine.lookupProperty(context.target, self.concept, options.property);
 
                 if(lookup == null) {
                     throw new Error("No property ["+options.of.property+"] found");
@@ -809,7 +838,7 @@ class ItemsAction extends Action {
 
                 for(let v of result) {
                     //TODO: Might backfire if an array of strings contains the string equal to a concept?
-                    let concept = VarvEngine.getConceptFromUUID(v);
+                    let concept = await VarvEngine.getConceptFromUUID(v);
                     if(concept != null) {
                         v = {
                             target: v
@@ -835,3 +864,103 @@ class ItemsAction extends Action {
 }
 Action.registerPrimitiveAction("items", ItemsAction);
 window.ItemsAction = ItemsAction;
+
+/**
+ * An action 'join' that joins an array into a string and saves it in a variable, default separator: ","
+ * @memberOf ArrayActions
+ * @example
+ * {
+ *     "join": {
+ *         "property": "myProperty",
+ *         "separator": ","
+ *     }
+ * }
+ *
+ * @example
+ * {
+ *     "join": {
+ *         "variable": "myProperty",
+ *         "separator": ","
+ *     }
+ * }
+ *
+ * @example
+ * //Shorthand, joins the array in property "myArrayProperty" into a string
+ * {
+ *     "join": "myArrayProperty"
+ * }
+ *
+ * @example
+ * //Shorthand, joins the array in variable "myArrayVariable" into a string
+ * {
+ *     "join": "$myArrayVariable"
+ * }
+ */
+class JoinAction extends Action {
+    constructor(name, options, concept) {
+        if(typeof options === "string") {
+            if(options.trim().startsWith("$")) {
+                options = {
+                    variable: options.trim().substring(1)
+                }
+            } else {
+                options = {
+                    property: options
+                }
+            }
+        }
+
+        const defaultOptions = {
+            "separator": ","
+        }
+
+        super(name, Object.assign({}, defaultOptions, options), concept);
+    }
+
+    async apply(contexts, actionArguments = {}) {
+        const self = this;
+
+        return this.forEachContext(contexts, actionArguments, async (context, options)=>{
+
+            let result = null;
+
+            let inputArray = null;
+
+            if(options.property != null) {
+                let lookup = VarvEngine.lookupProperty(context.target, self.concept, options.property);
+
+                const concept = lookup.concept;
+                const property = lookup.property;
+                const target = lookup.target;
+
+                if(property.type !== "array") {
+                    throw new Error("Property ["+options.property+"] of ["+concept.name+"] is not an array");
+                }
+
+                inputArray = property.getValue(target);
+
+            } else if(options.variable != null) {
+                inputArray = Action.getVariable(context, options.variable);
+            } else {
+                throw new Error("'join' requires either option 'property' or option 'variable' to be present:"+JSON.stringify(options));
+            }
+
+            if(!Array.isArray(inputArray)) {
+                throw new Error("Targeted variable or property, did not result in an array: "+JSON.stringify(options));
+            }
+
+            if(inputArray != null) {
+                result = inputArray.join(options.separator);
+            }
+
+            let variableName = Action.defaultVariableName(self);
+            if(options.as != null) {
+                variableName = options.as;
+            }
+
+            Action.setVariable(context, variableName, result);
+
+            return context;
+        });
+    }
+}

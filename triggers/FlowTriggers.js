@@ -28,7 +28,7 @@
 
 /**
  * A trigger 'action' that triggers when an action is run
- *
+ * @memberOf Triggers
  * @example
  * //Trigger before action 'myActionName' is run
  * {

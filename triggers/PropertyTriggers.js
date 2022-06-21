@@ -28,7 +28,7 @@
 
 /**
  * A trigger "stateChanged" that listens for property state changes
- *
+ * @memberOf Triggers
  * @example
  * //Triggers the stateChanged event when myProperty has changed, only the first concept that has the property is checked.
  * {
@@ -162,7 +162,7 @@ class StateChangedTrigger extends Trigger {
                 console.log("StateChangedTrigger:", self.name, options, ""+context.target);
             }
 
-            let triggeringConcept = VarvEngine.getConceptFromUUID(context.target);
+            let triggeringConcept = await VarvEngine.getConceptFromUUID(context.target);
 
             if(triggeringConcept == null) {
                 throw new Error("Unknown concept for UUID: "+context.target);

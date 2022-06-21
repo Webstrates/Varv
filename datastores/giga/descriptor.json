@@ -1,0 +1,11 @@
+{
+    "friendlyName": "GigaVarv Websocket backend connector",
+    "description": "Allows datastores to talk to common database backend systems over a websocket",
+    "dependencies": [
+        "#varv-engine"
+    ],
+    "assets": [],
+    "license": "MIT",
+    "version": "0.1",
+    "changelog": {}
+}

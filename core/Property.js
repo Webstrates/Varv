@@ -122,10 +122,8 @@ class Property {
 
         if(this.derived != null) {
             if(this.derived.properties != null) {
-                this.derived.updateFunction = () => {
-                    self.updatedCallbacks.forEach((callback) => {
-                        callback();
-                    });
+                this.derived.updateFunction = (uuid) => {
+                    this.getValue(uuid);
                 }
 
                 try {
@@ -142,6 +140,10 @@ class Property {
 
     getType() {
         return this.type;
+    }
+
+    getArrayType() {
+        return this.options.items;
     }
 
     isConceptType() {
@@ -171,7 +173,7 @@ class Property {
             console.group("["+propertyConceptType+" - "+this.name+"] Removing references to ["+removeUuid+"]");
         }
 
-        for(let propertyConceptUUID of VarvEngine.getAllUUIDsFromType(propertyConceptType)) {
+        for(let propertyConceptUUID of await VarvEngine.getAllUUIDsFromType(propertyConceptType)) {
             let value = await this.getValue(propertyConceptUUID);
 
             if(this.type === "array") {
@@ -250,14 +252,16 @@ class Property {
         this.getCallbacks.splice(index, 1);
     }
 
-    validate(value) {
+    async validateInternal(value, type, options) {
+        const self = this;
+
         let validType = false;
 
         if(value === null) {
             return true;
         }
 
-        switch(this.type) {
+        switch(type) {
             case "number": {
                 validType = typeof value === "number";
                 break;
@@ -276,10 +280,10 @@ class Property {
             }
 
             default:
-                let typeConcept = VarvEngine.getConceptFromType(this.type);
+                let typeConcept = VarvEngine.getConceptFromType(type);
                 if( typeConcept != null) {
                     if(typeof value === "string") {
-                        let valueConcept = VarvEngine.getConceptFromUUID(value);
+                        let valueConcept = await VarvEngine.getConceptFromUUID(value);
 
                         //If valueconcept is null, we dont know what type it is, pretend its of the correct type.
                         //To fix this, all datastores need to report their known UUID's before they load values
@@ -289,43 +293,56 @@ class Property {
                         validType = false;
                     }
                 } else {
-                    console.warn("Unknown type to validate:", this.type);
+                    console.warn("Unknown type to validate:", type);
                 }
         }
 
-        // TODO validate value according to options
-
         let validValue = true;
-
-        if(this.type === "string") {
-            if(this.options.enum != null) {
-                validValue = this.options.enum.includes(value);
-            }
-            if(this.options.matches != null) {
-                const regexp = new RegExp(this.options.matches);
-                validValue = value.match(regexp);
+        if(type === "array" && options.items != null) {
+            for(let arrayValue of value) {
+                validValue = validValue && await self.validateInternal(arrayValue, options.items, null);
             }
         }
 
-        if(this.type === "number") {
-            if(this.options.max != null) {
-                validValue = validValue && value <= this.options.max;
+        // TODO validate value according to options
+        let validOptions = true;
+        //Validate options
+        if(options != null) {
+            if (type === "string") {
+                if (options.enum != null) {
+                    validOptions = options.enum.includes(value);
+                }
+                if (options.matches != null) {
+                    const regexp = new RegExp(options.matches);
+                    validOptions = value.match(regexp);
+                }
             }
-            if(this.options.min != null) {
-                validValue = validValue && value >= this.options.min;
+
+            if (type === "number") {
+                if (options.max != null) {
+                    validOptions = validOptions && value <= options.max;
+                }
+                if (options.min != null) {
+                    validOptions = validOptions && value >= options.min;
+                }
+            }
+
+            if (type === "array") {
+                if (options.max != null) {
+                    validOptions = value.length <= this.options.max;
+                }
             }
         }
 
-        if(this.type === "array") {
-            if(this.options.max != null) {
-                validValue = value.length <= this.options.max;
-            }
-        }
+        return validType && validValue && validOptions;
+    }
 
-        return validType && validValue;
+    async validate(value) {
+        return await this.validateInternal(value, this.type, this.options);
     }
 
     typeCast(inputValue, overrideType = null) {
+        let mark = VarvPerformance.start();
         if(inputValue == null) {
             return null;
         }
@@ -368,11 +385,22 @@ class Property {
                         return inputValue;
                     }
 
-                    const inputValueLower = inputValue.toLowerCase();
-                    if (inputValueLower !== "true" && inputValueLower !== "false") {
-                        throw new Error("Unable to typecast [" + inputValue + "] to [boolean]");
+                    if(typeof inputValue === "string") {
+                        const inputValueLower = inputValue.toLowerCase();
+                        if(inputValue !== "0" && inputValue !== "1" && inputValue !== "true" && inputValue !== "false"){
+                            throw new Error("Unable to typecast [" + inputValue + "] to [boolean]");
+                        }
+
+                        castedValue = (inputValue === "true" || inputValue === "1");
                     }
-                    castedValue = inputValueLower === "true";
+
+                    if(typeof inputValue === "number") {
+                        if(inputValue !== 0 && inputValue !== 1){
+                            throw new Error("Unable to typecast [" + inputValue + "] to [boolean]");
+                        }
+                        castedValue = inputValue === 1;
+                    }
+
                     break;
                 }
 
@@ -404,6 +432,8 @@ class Property {
                     throw new Error("Unknown how to type cast to type: " + type);
             }
 
+            VarvPerformance.stop("Property.typeCast", mark);
+
             return castedValue;
         } catch(e) {
             throw e;
@@ -411,12 +441,14 @@ class Property {
     }
 
     async setValue(uuid, value, skipStateChangeTrigger=false) {
+        let totalMark = VarvPerformance.start();
+
         if(this.isDerived()) {
             console.warn("setValue called on a derived property (Might be a left over property in DOMStore from when it was not derived?):", this.name, uuid, value);
             return;
         }
 
-        if(!this.validate(value)) {
+        if(!await this.validate(value)) {
             let type = typeof value;
             if(Array.isArray(value)){
                 type = "array";
@@ -428,33 +460,61 @@ class Property {
             throw new Error("No setCallbacks available for property ["+this.name+"]");
         }
 
-        let oldValue;
-        try {
-            oldValue = await this.getValue(uuid);
-        } catch (e) {
-            //Ignore?
-        }
+        let mark = VarvPerformance.start();
+
+        let promises = [];
 
         for(let setCallback of this.setCallbacks) {
-            await setCallback(uuid, value);
+            let result = setCallback(uuid, value);
+            if(result instanceof Promise) {
+                promises.push(result);
+            }
         }
 
-        await this.updated(uuid, oldValue, value, skipStateChangeTrigger);
+        if(promises.length > 0) {
+            await Promise.all(promises);
+        }
+
+        PropertyCache.setCachedProperty(uuid+"."+this.name, value);
+
+        VarvPerformance.stop("Property.setValue.callbacks", mark);
+
+        let markUpdated = VarvPerformance.start();
+        await this.updated(uuid, value, skipStateChangeTrigger);
+        VarvPerformance.stop("Property.setValue.updated", markUpdated);
+        VarvPerformance.stop("Property.setValue", totalMark);
     }
 
-    async updated(uuid, oldValue, value, skipStateChangeTrigger=false) {
+    async updated(uuid, value, skipStateChangeTrigger=false) {
+        let mark = VarvPerformance.start();
+        let promises = [];
         for(let updateCallback of this.updatedCallbacks.slice()) {
-            await updateCallback(uuid);
-        }
+            let result = updateCallback(uuid);
 
-        if(!skipStateChangeTrigger) {
-            await this.stateChanged(uuid, oldValue, value);
+            if(result instanceof Promise) {
+                promises.push(result);
+            }
         }
+        if(promises.length > 0) {
+            await Promise.all(promises);
+        }
+        VarvPerformance.stop("Property.updated.callbacks", mark);
+
+        let stateChangeMark = VarvPerformance.start();
+        if(!skipStateChangeTrigger) {
+            await this.stateChanged(uuid, value);
+        }
+        VarvPerformance.stop("Property.updated.stateChanged", stateChangeMark);
+        VarvPerformance.stop("Property.updated", mark);
     }
 
     async deriveValue(uuid) {
+        let mark = VarvPerformance.start();
         if(Property.DEBUG) {
             console.group("Deriving property ["+this.name+"] from ["+JSON.stringify(this.derived)+"]");
+            console.groupCollapsed("Trace");
+            console.trace();
+            console.groupEnd();
         }
 
         //Try to derive property
@@ -485,7 +545,13 @@ class Property {
                 let transformAction = Action.getPrimitiveAction(transformActionName, transformActionOptions);
 
                 await ActionTrigger.before(transformAction, currentFakeContext);
+                let mark = VarvPerformance.start();
                 currentFakeContext = await transformAction.apply(currentFakeContext);
+                if(transformAction.isPrimitive) {
+                    VarvPerformance.stop("PrimitiveAction-"+transformAction.name, mark);
+                } else {
+                    VarvPerformance.stop("CustomAction-"+transformAction.name, mark);
+                }
                 await ActionTrigger.after(transformAction, currentFakeContext);
 
                 if(Property.DEBUG) {
@@ -515,13 +581,15 @@ class Property {
         try {
             result = Action.getVariable(currentFakeContext[0], lastTransformOutputVariable);
         } catch(e) {
+            console.warn(e);
+
             switch(this.type) {
                 case "array":
                     result = [];
             }
         }
 
-        if(!this.validate(result)) {
+        if(!await this.validate(result)) {
             throw new Error("Derived value ["+result+"] does not validate against type ["+this.type+"]");
         }
 
@@ -530,17 +598,24 @@ class Property {
             console.groupEnd();
         }
 
+        VarvPerformance.stop("Property.deriveValue", mark);
+
         return result;
     }
 
     async getValue(uuid) {
+        let mark = VarvPerformance.start();
+
         if(this.derived != null) {
             const derivedOldValue = this.derivedOldValues.get(uuid);
             const derivedValue = await this.deriveValue(uuid);
             this.derivedOldValues.set(uuid, derivedValue);
-            if(typeof derivedOldValue !== "undefined" && derivedOldValue !== derivedValue) {
-                await this.updated(uuid, derivedOldValue, derivedValue, true);
+            if(typeof derivedOldValue !== "undefined" && !this.isSame(derivedValue, derivedOldValue)) {
+                await this.updated(uuid, derivedValue, true);
             }
+
+            VarvPerformance.stop("Property.getValue.derived", mark);
+
             return derivedValue;
         }
 
@@ -548,9 +623,21 @@ class Property {
             throw new Error("No getCallbacks available for property ["+this.name+"]");
         }
 
+        let cachedProperty = PropertyCache.getCachedProperty(uuid+"."+this.name);
+        if(cachedProperty != null) {
+            VarvPerformance.stop("Property.getValue.cached", mark);
+            return cachedProperty;
+        }
+
         for(let getCallback of this.getCallbacks) {
             try {
-                return this.typeCast(await getCallback(uuid));
+                let value = this.typeCast(await getCallback(uuid));
+
+                PropertyCache.setCachedProperty(uuid+"."+this.name, value);
+
+                VarvPerformance.stop("Property.getValue.nonCached", mark);
+
+                return value;
             } catch(e) {
                 //console.warn("Something went wrong (Using Default):", e);
 
@@ -581,16 +668,17 @@ class Property {
         throw new Error("Unable to get value for property ["+this.name+"] on ["+uuid+"]");
     }
 
-    async stateChanged(uuid, oldValue, value) {
+    async stateChanged(uuid, value) {
+        let mark = VarvPerformance.start();
         await Trigger.trigger("stateChanged", {
             target: uuid,
             property: this.name,
             variables: {
                 "currentValue": value,
-                "oldValue": oldValue,
                 "property": this.name
             }
         });
+        VarvPerformance.stop("Property.event.stateChanged", mark);
     }
 
     isSame(value1, value2) {
@@ -601,6 +689,14 @@ class Property {
                 return value1 === value2;
 
             case "array": {
+                if(value1 == null) {
+                    return value2 == null;
+                }
+
+                if(value2 == null) {
+                    return value1 == null;
+                }
+
                 //Check if values are no match
                 if(value1.length !== value2.length) {
                     return false;

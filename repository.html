@@ -12,10 +12,13 @@
             
             <div class="package" id="varv-engine">
                 <script src="core/descriptor.json" type="descriptor"></script>
+                <script src="core/VarvPerformance.js" type="disabled"></script>
                 <script src="core/YAMLJSONConverter.js" type="disabled"></script>
                 <script src="core/Concept.js" type="disabled"></script>
                 <script src="core/Property.js" type="disabled"></script>
+                <script src="core/PropertyCache.js" type="disabled"></script>
                 <script src="core/Datastore.js" type="disabled"></script>
+                <script src="core/DirectDatastore.js" type="disabled"></script>
                 <script src="core/Trigger.js" type="disabled"></script>
                 <script src="core/Filter.js" type="disabled"></script>
                 <script src="core/Action.js" type="disabled"></script>
@@ -31,9 +34,9 @@
                 <script src="actions/PropertyActions.js" type="disabled"></script>
                 <script src="actions/TextActions.js" type="disabled"></script>
                 <script src="actions/TimingActions.js" type="disabled"></script>
-                <script src="actions/DebugActions.js" type="disabled"></script>
                 <script src="actions/FlowActions.js" type="disabled"></script>
                 <script src="actions/CustomActions.js" type="disabled"></script>
+                <script src="actions/DebugActions.js" type="disabled"></script>
             </div>
             <div class="package" id="varv-builtin-triggers">
                 <script src="triggers/descriptor.json" type="descriptor"></script>
@@ -93,6 +96,31 @@
                 <script src="views/dom/inspector/descriptor.json" type="descriptor"></script>
                 <script src="views/dom/inspector/Inspector.js" type="disabled"></script>
             </div>
+            
+            <div class="package" id="varv-giga">
+                <script src="datastores/giga/descriptor.json" type="descriptor"></script>
+                <script src="datastores/giga/GigaVarvDatastore.js" type="disabled"></script>
+            </div>            
+            <div class="package" id="varv-lucene">
+                <script src="datastores/lucene/descriptor.json" type="descriptor"></script>
+                <script src="datastores/lucene/LuceneDataStore.js" type="disabled"></script>
+                <script src="datastores/lucene/LuceneFilter.js" type="disabled"></script>
+            </div>            
+            <div class="package" id="varv-sql">
+                <script src="datastores/sql/descriptor.json" type="descriptor"></script>
+                <script src="datastores/sql/SQLDataStore.js" type="disabled"></script>
+                <script src="datastores/sql/SQLFilter.js" type="disabled"></script>
+            </div>    
+            <div class="package" id="varv-location">
+                <script src="datastores/location/descriptor.json" type="descriptor"></script>
+                <script src="datastores/location/LocationDataStore.js" type="disabled"></script>
+            </div>              
+            
+           <div class="package" id="varvscript">
+                <script src="integration/varvscript/descriptor.json" type="descriptor"></script>
+                <script src="integration/varvscript/varvscript.js" type="disabled"></script>
+                <script src="integration/varvscript/VarvScriptFragment.js" type="disabled"></script>
+            </div>                        
         </div>
     </body> 
 </html> 

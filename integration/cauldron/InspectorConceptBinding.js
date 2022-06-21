@@ -26,6 +26,9 @@
  *  
  */
 
+/**
+ *
+ */
 class InspectorConceptBinding {
     /**
      * Inspects the given TreeNode and if supported, returns a map of editable attributes
@@ -183,8 +186,8 @@ class InspectorPropertyEditor extends Cauldron.InspectorElement {
         
         if(this.property.isConceptType()) {
             this.autocompleteDiv = document.createElement("div");
-            this.autocompleteDiv.classList.add("cauldron-inspector-element-autocomplete")
-            this.autocompleteDiv.classList.add("hidden")
+            this.autocompleteDiv.classList.add("cauldron-inspector-element-autocomplete");
+            this.autocompleteDiv.classList.add("hidden");
             this.editorContainer.appendChild(this.autocompleteDiv);
 
             this.editor.addEventListener("focus", ()=>{
@@ -221,6 +224,7 @@ class InspectorPropertyEditor extends Cauldron.InspectorElement {
 
         // Fetch changes from concept
         this.valueUpdaterCallback = async function onFieldUpdate(uuid, value){
+            let mark = VarvPerformance.start();
             if (uuid===self.conceptInstance.uuid){
                 if (property.type==="array"){
                     self.editor.innerHTML="";
@@ -279,6 +283,7 @@ class InspectorPropertyEditor extends Cauldron.InspectorElement {
                     }
                 }
             }
+            VarvPerformance.stop("InspectorConceptBinding.valueUpdaterCallback", mark);
         };
         
         property.getValue(conceptInstance.uuid).then((value)=>{
@@ -312,10 +317,10 @@ class InspectorPropertyEditor extends Cauldron.InspectorElement {
         };
     }
 
-    autoComplete() {
+    async autoComplete() {
         const self = this;
 
-        let allUUIDS = VarvEngine.getAllUUIDsFromType(this.property.type, true);
+        let allUUIDS = await VarvEngine.getAllUUIDsFromType(this.property.type, true);
 
         this.autocompleteDiv.innerHTML = "";
 
@@ -349,9 +354,7 @@ class InspectorPropertyEditor extends Cauldron.InspectorElement {
         let linker = IconRegistry.createIcon("mdc:gps_fixed");
         linker.style.cursor = "pointer";
         linker.addEventListener("click", ()=>{
-            console.log("Revealing ", uuid, this.browser);
             let treeNodes = this.browser.findTreeNode(uuid);
-            console.log("Found ", treeNodes);
             if(treeNodes.length > 0) {
                 let treeNode = treeNodes[0];
                 treeNode.reveal();

@@ -26,7 +26,9 @@
  *  
  */
 
-
+/**
+ *
+ */
 class Inspector {
     constructor() {
         const self = this;
@@ -47,7 +49,7 @@ class Inspector {
     }
 
     async handleContextMenu(evt) {
-        let concepts = DOMView.singleton.getConceptPath(evt.target);
+        let conceptBindings = DOMView.singleton.getConceptPath(evt.target);
         let properties = DOMView.singleton.getPropertyPath(evt.target);
         let templates = DOMView.singleton.getTemplatePath(evt.target);
 
@@ -68,8 +70,8 @@ class Inspector {
             });         
             
             // Concept path
-            for(let uuid of concepts.reverse()) {
-                let concept = VarvEngine.getConceptFromUUID(uuid);            
+            for(let conceptBinding of conceptBindings.reverse()) {
+                let concept = conceptBinding.concept;
                 let conceptMenu = MenuSystem.MenuManager.createMenu("ConceptInspectMenu");
                                 
                 if (typeof TreeBrowser !== "undefined"){
@@ -203,8 +205,9 @@ class Inspector {
 
 
         console.groupCollapsed("Concepts - Closest concept is last");
-        for(let uuid of concepts) {
-            let concept = VarvEngine.getConceptFromUUID(uuid);
+        for(let conceptBinding of conceptBindings) {
+            let concept = conceptBinding.concept;
+            let uuid = conceptBinding.uuid;
 
             console.group("Concept:", concept.name, uuid);
 

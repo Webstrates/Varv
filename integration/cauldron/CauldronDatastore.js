@@ -28,7 +28,10 @@
  *  
  */
 
-class CauldronDatastore extends Datastore {
+/**
+ *
+ */
+class CauldronDatastore extends DirectDatastore {
     constructor(name, options = {}) {        
         super(name, options);
         let self = this;
@@ -39,20 +42,20 @@ class CauldronDatastore extends Datastore {
         this.instanceRemovedCallbacks = new Map();
         
         this.appearCallback = VarvEngine.registerEventCallback("appeared", async (context)=> {
-            const concept = VarvEngine.getConceptFromUUID(context.target);
-            if (self.isConceptMapped(concept)){
-                let callbacks = self.instanceAddedCallbacks.get(concept.name);
+            let mark = VarvPerformance.start();
+            if (self.isConceptMapped(context.concept)){
+                let callbacks = self.instanceAddedCallbacks.get(context.concept.name);
                 if (callbacks){
                     for (let callback of callbacks){
                         callback(context.target);
                     }
                 }
             }
+            VarvPerformance.stop("CauldronDatastore.registerEventCallback.appeared", mark);
         });
         this.disappearCallback = VarvEngine.registerEventCallback("disappeared", async (context)=> {
-            const concept = VarvEngine.getConceptFromUUID(context.target);
-            if (self.isConceptMapped(concept)){
-                let callbacks = self.instanceRemovedCallbacks.get(concept.name);
+            if (self.isConceptMapped(context.concept)){
+                let callbacks = self.instanceRemovedCallbacks.get(context.concept.name);
                 if (callbacks){
                     for (let callback of callbacks){
                         callback(context.target);
@@ -65,6 +68,7 @@ class CauldronDatastore extends Datastore {
     destroy() {
         this.appearCallback.delete();
         this.disappearCallback.delete();
+        this.engineReloadedCallback.delete();
         for (let callback of this.destroyCallbacks){
             callback(this);
         }
@@ -77,16 +81,19 @@ class CauldronDatastore extends Datastore {
 
     async init() {        
         let self = this;
-        
-        // Inform trees about us        
-        for (let tree of window.ConceptTreeGenerator.instances){
-            tree.onAddDatastore(this);
-        }        
-        
-        // Listen for new ones
-        EventSystem.registerEventCallback("Varv.ConceptTreeGeneratorSpawned", (evt)=>{
-            evt.detail.onAddDatastore(self);
-        });        
+
+        this.engineReloadedCallback = VarvEngine.registerEventCallback("engineReloaded", ()=>{
+            console.log("Engine reloaded, register on trees!");
+            // Inform trees about us
+            for (let tree of window.ConceptTreeGenerator.instances){
+                tree.onAddDatastore(this);
+            }
+
+            // Listen for new ones
+            EventSystem.registerEventCallback("Varv.ConceptTreeGeneratorSpawned", (evt)=>{
+                evt.detail.onAddDatastore(self);
+            });
+        });
     }
     
     registerConceptAddedCallback(callback){
@@ -100,7 +107,7 @@ class CauldronDatastore extends Datastore {
         return callback;        
     }
     
-    registerConceptInstanceAddedCallback(concept, callback){
+    async registerConceptInstanceAddedCallback(concept, callback){
         if (!this.instanceAddedCallbacks.has(concept.name)){
             this.instanceAddedCallbacks.set(concept.name, []);
         }
@@ -109,11 +116,11 @@ class CauldronDatastore extends Datastore {
         callbacks.push(callback);
 
         // Pre-feed with currently mapped
-        for (const conceptUUID of VarvEngine.getAllUUIDsFromType(concept.name)){
+        for (const conceptUUID of await VarvEngine.getAllUUIDsFromType(concept.name)){
             callback(conceptUUID);
         }
-        
-        return callback;        
+
+        return callback;
     }    
     
     removeConceptInstanceAddedCallback(concept, callback){

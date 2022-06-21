@@ -26,6 +26,9 @@
  *  
  */
 
+/**
+ *
+ */
 class Concept {
     constructor(name) {
         this.name = name;
@@ -185,7 +188,7 @@ class Concept {
         this.deletedTriggerDeleter = Trigger.registerTriggerEvent("deleted", async (contexts)=>{
             for(let context of contexts) {
                 if(context.target != null) {
-                    let concept = VarvEngine.getConceptFromUUID(context.target);
+                    let concept = await VarvEngine.getConceptFromUUID(context.target);
                     if(concept != null) {
                         //A concept was deleted, check if we have any properties with the given concept
                         for(let property of self.properties.values()) {
@@ -215,13 +218,16 @@ class Concept {
     }
 
     async create(wantedUUID=null, properties=null){
+        let mark = VarvPerformance.start();
         if(wantedUUID == null) {
+            let uuidMark = VarvPerformance.start();
             wantedUUID = UUIDGenerator.generateUUID("concept");
+            VarvPerformance.stop("Concept.create.generateUUID", uuidMark);
         } else {
 
             // TODO is this correct?
 
-            let oldConcept = VarvEngine.getConceptFromUUID(wantedUUID);
+            let oldConcept = await VarvEngine.getConceptFromUUID(wantedUUID);
 
             //If already present, just return as if it has been created?
             if(oldConcept != null) {
@@ -233,7 +239,7 @@ class Concept {
             }
         }       
 
-        VarvEngine.registerConceptFromUUID(wantedUUID, this);
+        await VarvEngine.registerConceptFromUUID(wantedUUID, this);
         await this.appeared(wantedUUID);
 
         if (properties != null) {
@@ -244,7 +250,9 @@ class Concept {
             }
         }
 
-        await this.created(wantedUUID);        
+        await this.created(wantedUUID);
+
+        VarvPerformance.stop("Concept.create", mark);
 
         return wantedUUID;
     }
@@ -361,7 +369,7 @@ class Concept {
 
         this.otherConcepts.add(otherConcept.name);
         otherConcept.otherConcepts.forEach((otherConceptType)=>{
-            this.otherConcepts.add(otherConceptType);
+            self.otherConcepts.add(otherConceptType);
         })
 
         if(Concept.DEBUG) {
@@ -413,31 +421,41 @@ class Concept {
     }
 
     async deleted(uuid) {
+        let mark = VarvPerformance.start();
         await Trigger.trigger("deleted", {
             target: uuid
         });
+        VarvPerformance.stop("Concept.Event.deleted", mark);
     }
 
     async created(uuid) {
+        let mark = VarvPerformance.start();
         await Trigger.trigger("created", {
             target: uuid
         });
+        VarvPerformance.stop("Concept.Event.created", mark);
     }
 
     async appeared(uuid) {
+        let mark = VarvPerformance.start();
         // This instance just appeared in at least one datastore
         await VarvEngine.sendEvent("appeared", {
-            target: uuid
+            target: uuid,
+            concept: this
         });
+        VarvPerformance.stop("Concept.Event.appeared", mark);
     }
     async disappeared(uuid) {
+        let mark = VarvPerformance.start();
         // This instance just disappeared in at least one datastore
         await VarvEngine.sendEvent("disappeared", {
-            target: uuid
+            target: uuid,
+            concept: this
         });
 
         //Unregister the UUID
         VarvEngine.deregisterConceptFromUUID(uuid);
+        VarvPerformance.stop("Concept.Event.disappeared", mark);
     }
 
     async destroy() {

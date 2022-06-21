@@ -23,54 +23,189 @@
  *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
  *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
  *  THE SOFTWARE.
- *  
+ */
+
+/**
+ * @private
  */
 
 const RELOAD_TIMEOUT = 1000;
 
 class VarvEngine {
     static getConceptFromUUID(uuid) {
-        return VarvEngine.conceptUUIDMap.get(uuid);
+        let mark = VarvPerformance.start();
+
+        let cachedConcept = VarvEngine.conceptUUIDCache.get(uuid);
+        if(cachedConcept != null) {
+            VarvPerformance.stop("VarvEngine.getConceptFromUUID.cached", mark);
+            return cachedConcept;
+        }
+
+        return new Promise(async (resolve, reject)=>{
+            let promises = [];
+
+            try {
+                for(let ds of Datastore.getAllDatastores()) {
+                    promises.push(ds.lookupConcept(uuid));
+                }
+
+                let result = await Promise.any(promises);
+
+                if(result != null) {
+                    VarvEngine.conceptUUIDCache.set(uuid, result);
+                }
+
+                VarvPerformance.stop("VarvEngine.getConceptFromUUID.nonCached", mark);
+
+                resolve(result);
+            } catch(e) {
+                resolve(null);
+            }
+        });
     }
 
     static getConceptFromType(type) {
         return VarvEngine.conceptTypeMap.get(type);
     }
 
-    static getAllUUIDsFromType(type, includeOtherConcepts=false) {
-        let uuidSet = null;
+    static async countInstances(typeNames, query, context, localConcept) {
+        //TODO: What is correct here?
 
-        if(!includeOtherConcepts) {
-            uuidSet = VarvEngine.conceptTypeUUIDMap.get(type);
-        } else {
-            uuidSet = new Set();
+        let maxCount = 0;
 
-            //Find all concepts with type, including other concepts
-            VarvEngine.concepts.filter((concept)=>{
-                if(concept.name === type) {
-                    return true;
+        for(let datastore of Datastore.getAllDatastores()) {
+            let count = await datastore.countInstances(typeNames, query, context, localConcept);
+            maxCount = Math.max(count, maxCount);
+        }
+
+        return maxCount;
+    }
+
+    static async existsInstance(typeNames, query, context, localConcept) {
+        //TODO: What is correct here?
+
+        let exists = false;
+        for(let datastore of Datastore.getAllDatastores()) {
+            let result = await datastore.existsInstance(typeNames, query, context, localConcept);
+            if(result) {
+                exists = true;
+                break;
+            }
+        }
+
+        return exists;
+    }
+
+    /**
+     *
+     * @param {String|String[]}typeNames
+     * @param {Filter} query
+     * @param {VarvContext} context
+     * @param {number}limit
+     * @param {Concept} localConcept
+     * @returns {Promise<any[]>}
+     */
+    static async lookupInstances(typeNames, query, context, limit = 0, localConcept = null) {
+        if(!Array.isArray(typeNames)) {
+            typeNames = [typeNames];
+        }
+
+        const mark = VarvPerformance.start();
+
+        let result = new Set();
+        let promises = [];
+        for(let ds of Datastore.getAllDatastores()) {
+            promises.push(ds.lookupInstances(typeNames, query, context, limit, localConcept));
+        }
+
+        let promiseResults = await Promise.all(promises);
+
+        promiseResults.forEach((uuids)=>{
+            if(uuids != null) {
+                uuids.forEach((uuid)=>{
+                    result.add(uuid);
+                });
+            }
+        });
+        VarvPerformance.stop("VarvEngine.lookupInstances", mark, {typeNames, query, limit});
+
+        return Array.from(result);
+    }
+
+    static async getAllUUIDsFromType(type, includeOtherConcepts=false) {
+        if(VarvEngine.getAllUUIDsFromTypeWarningShowed !== true) {
+            console.groupCollapsed("%c DEPRECATED: [getAllUUIDsFromType] - consider rewriting ", "background: yellow; color: red;");
+            console.trace();
+            console.groupEnd();
+            VarvEngine.getAllUUIDsFromTypeWarningShowed = true;
+        }
+
+        const mark = VarvPerformance.start()
+
+        let uuidSet = new Set();
+
+        let lookupTypes = [type];
+
+        if(includeOtherConcepts) {
+            lookupTypes = VarvEngine.getAllImplementingConceptNames(type);
+        }
+
+        for(let ds of Datastore.getAllDatastores()) {
+            if(lookupTypes.find((type)=>{
+                return ds.isConceptTypeMapped(type);
+            }) != null) {
+                if(! (ds instanceof DirectDatastore)) {
+                    console.warn("getAllUUIDsFromType called on concept stored inside non DirectDatastore, potentially risky!");
                 }
 
-                if(concept.otherConcepts.has(type)) {
-                    return true;
-                }
-
-                return false;
-            }).forEach((concept)=>{
-                VarvEngine.getAllUUIDsFromType(concept.name).forEach((uuid)=>{
+                //Pretend filtering is not a thing atm
+                let uuids = await ds.lookupInstances(lookupTypes, null, null, 0, null);
+                uuids.forEach((uuid) => {
                     uuidSet.add(uuid);
                 });
-            });
+            }
         }
 
-        if (uuidSet == null) {
-            return [];
-        }
+        VarvPerformance.stop("VarvEngine.getAllUUIDsFromType", mark, {conceptType: type});
 
         return Array.from(uuidSet);
     }
 
+    static getAllImplementingConceptNames(primaryType) {
+        return VarvEngine.getAllImplementingConcepts(primaryType).map((concept)=>{
+            return concept.name;
+        });
+    }
+
+    /**
+     * Returns an array of Concept that implement the given type, starting with 
+     * the primary type itself
+     * @param {type} primaryTypeName
+     * @returns {Array}
+     */
+    static getAllImplementingConcepts(primaryTypeName){
+        // Find all concepts with type, including other concepts
+        let primaryConcept = null;
+        let otherConcepts = VarvEngine.concepts.filter((concept)=>{
+            if(concept.name === primaryTypeName) {
+                primaryConcept = concept;
+                return false; // This is prepended later
+            }
+
+            if(concept.otherConcepts.has(primaryTypeName)) {
+                return true;
+            }
+
+            return false;
+        }); 
+        
+        otherConcepts.unshift(primaryConcept);
+        return otherConcepts;
+    }
+
     static lookupAction(actionName, lookupConcepts = [], primitiveOptions = {}) {
+        let mark = VarvPerformance.start();
+
         //Filter null and undefined
         lookupConcepts = lookupConcepts.filter((concept)=>{
             return concept != null;
@@ -96,6 +231,8 @@ class VarvEngine {
             }
             console.groupEnd();
         }
+
+        VarvPerformance.stop("VarvEngine.lookupAction", mark, {actionName});
 
         return action;
     }
@@ -189,30 +326,26 @@ class VarvEngine {
     }
 
     static registerConceptFromUUID(uuid, concept) {
-        VarvEngine.conceptUUIDMap.set(uuid, concept);
-
-        let uuidSet = VarvEngine.conceptTypeUUIDMap.get(concept.name);
-        if(uuidSet == null) {
-            uuidSet = new Set();
-            VarvEngine.conceptTypeUUIDMap.set(concept.name, uuidSet);
+        let mark = VarvPerformance.start();
+        //Legacy register of all direct datastores
+        for(let ds of Datastore.getAllDatastores()) {
+            if(ds instanceof DirectDatastore) {
+                ds.registerConceptFromUUID(uuid, concept);
+            }
         }
 
-        uuidSet.add(uuid);
+        //Precache ourselves aswell
+        VarvEngine.conceptUUIDCache.set(uuid, concept);
+
+        VarvPerformance.stop("VarvEngine.registerConceptFromUUID", mark);
     }
 
     static deregisterConceptFromUUID(uuid) {
-        let concept = this.getConceptFromUUID(uuid);
-
-        VarvEngine.conceptUUIDMap.delete(uuid);
-
-        if(concept != null) {
-            let uuidSet = VarvEngine.conceptTypeUUIDMap.get(concept.name);
-            if (uuidSet == null) {
-                uuidSet = new Set();
-                VarvEngine.conceptTypeUUIDMap.set(concept.name, uuidSet);
+        //Legacy register of all direct datastores
+        for(let ds of Datastore.getAllDatastores()) {
+            if(ds instanceof DirectDatastore) {
+                ds.deregisterConceptFromUUID(uuid);
             }
-
-            uuidSet.delete(uuid);
         }
     }
 
@@ -227,9 +360,11 @@ class VarvEngine {
     }
 
     static deregisterConceptFromType(type) {
-        VarvEngine.getAllUUIDsFromType(type).forEach((uuid)=>{
-            VarvEngine.deregisterConceptFromUUID(uuid);
-        });
+        for(let ds of Datastore.getAllDatastores()) {
+            if(ds instanceof DirectDatastore) {
+                ds.deregisterConceptFromType(type);
+            }
+        }
 
         VarvEngine.conceptTypeMap.delete(type);
     }
@@ -243,7 +378,7 @@ class VarvEngine {
 
         let foundDefinitionFragments = [];
 
-        const live = new LiveElement("code-fragment[data-type='text/varv']");
+        const live = new LiveElement("code-fragment[data-type='text/varv'],code-fragment[data-type='text/varvscript']");
 
         let firstRun = true;
 
@@ -312,6 +447,10 @@ class VarvEngine {
             }
             Datastore.datastores.clear();
 
+            VarvEngine.conceptUUIDCache.clear();
+            VarvEngine.conceptTypeMap.clear();
+            PropertyCache.reset();
+
             if (VarvEngine.DEBUG) {
                 console.log("Merging definition fragments...");
             }
@@ -320,9 +459,9 @@ class VarvEngine {
 
             for (let fragment of foundDefinitionFragments) {
                 if (fragment.auto) {
-                    let convertResult = YAMLJSONConverter.loadFromString(fragment.raw);
+                    let varvJson = await fragment.require();
 
-                    combinedObj = VarvEngine.merge(combinedObj, convertResult.obj);
+                    combinedObj = VarvEngine.merge(combinedObj, varvJson);
 
                     //Attempt to merge conflicts we know how to handle:
                     VarvEngine.resolveMergeConflicts(combinedObj);
@@ -411,15 +550,19 @@ class VarvEngine {
         });
     }
 
-    static lookupTarget(concept) {
+    static async lookupTarget(concept) {
         let target = null;
 
-        let uuids = VarvEngine.getAllUUIDsFromType(concept.name);
+        let mark = VarvPerformance.start();
+
+        let uuids = await VarvEngine.lookupInstances(concept.name, null, null,2, null);
         if(uuids.length > 0) {
             target = uuids[0];
             if(uuids.length > 1) {
                 console.warn("[lookupTarget] Multiple uuid's exist for concept ["+concept.name+"]", uuids);
             }
+
+            VarvPerformance.stop("VarvEngine.lookupTarget", mark);
 
             return target;
         }
@@ -429,13 +572,15 @@ class VarvEngine {
 
     /**
      *
-     * @param {string} contextTarget
+     * @param {string|Concept} contextTarget
      * @param {Concept} localConcept
      * @param {string} propertyName
      * @returns {null|object}
      */
-    static lookupProperty(contextTarget, localConcept, propertyName) {
+    static async lookupProperty(contextTarget, localConcept, propertyName) {
         const DEBUG_LOOKUP_PROPERTY = false;
+
+        const mark = VarvPerformance.start();
 
         if(VarvEngine.DEBUG || DEBUG_LOOKUP_PROPERTY) {
             console.groupCollapsed("Looking up property:", propertyName, contextTarget, localConcept);
@@ -476,11 +621,11 @@ class VarvEngine {
 
                     let lookupTarget = null;
 
-                    if(contextTarget != null && VarvEngine.getConceptFromUUID(contextTarget).isA(conceptName)) {
+                    if(contextTarget != null && (await VarvEngine.getConceptFromUUID(contextTarget)).isA(conceptName)) {
                         //The current target was of this concept, lets assume that is the wanted target?
                         lookupTarget = contextTarget;
                     } else {
-                        lookupTarget = VarvEngine.lookupTarget(lookupConcept);
+                        lookupTarget = await VarvEngine.lookupTarget(lookupConcept);
                     }
 
                     if(VarvEngine.DEBUG || DEBUG_LOOKUP_PROPERTY) {
@@ -488,24 +633,40 @@ class VarvEngine {
                         console.groupEnd();
                     }
 
+                    VarvPerformance.stop("VarvEngine.lookupProperty", mark);
+
                     return {
                         property: lookupProperty,
                         concept: lookupConcept,
                         target: lookupTarget
                     }
+                } else {
+                    throw new Error("Lookup property on ["+split.join(".")+"], property does not exist: "+propertyName);
                 }
+            } else {
+                throw new Error("Lookup property on ["+split.join(".")+"], concept does not exist: "+conceptName);
             }
         }
 
         //Lookup on contextConcept
         try {
-            let contextConcept = VarvEngine.getConceptFromUUID(contextTarget);
+            let contextConcept = null;
+
+            if(contextTarget instanceof Concept) {
+                contextConcept = contextTarget;
+                contextTarget = null;
+            } else {
+                contextConcept = await VarvEngine.getConceptFromUUID(contextTarget);
+            }
+
             let property = contextConcept.getProperty(propertyName);
 
-            if(VarvEngine.DEBUG || DEBUG_LOOKUP_PROPERTY) {
+            if (VarvEngine.DEBUG || DEBUG_LOOKUP_PROPERTY) {
                 console.log("Found on contextConcept", contextConcept.name);
                 console.groupEnd();
             }
+
+            VarvPerformance.stop("VarvEngine.lookupProperty", mark);
 
             return {
                 property: property,
@@ -525,10 +686,12 @@ class VarvEngine {
                 console.groupEnd();
             }
 
+            VarvPerformance.stop("VarvEngine.lookupProperty", mark);
+
             return {
                 property: property,
                 concept: localConcept,
-                target: VarvEngine.lookupTarget(localConcept)
+                target: await VarvEngine.lookupTarget(localConcept)
             }
         } catch(e) {
             //Ignore
@@ -544,15 +707,19 @@ class VarvEngine {
                     console.groupEnd();
                 }
 
+                VarvPerformance.stop("VarvEngine.lookupProperty", mark);
+
                 return {
                     property: property,
                     concept: globalConcept,
-                    target: VarvEngine.lookupTarget(globalConcept)
+                    target: await VarvEngine.lookupTarget(globalConcept)
                 }
             } catch(e) {
                 //Ignore
             }
         }
+
+        VarvPerformance.stop("VarvEngine.lookupProperty", mark);
 
         if(VarvEngine.DEBUG || DEBUG_LOOKUP_PROPERTY) {
             console.log("Not found...");
@@ -570,6 +737,8 @@ class VarvEngine {
      * @returns {function|object|string} - An object containing the type of reference if known, or just the reference if still unknown
      */
     static lookupReference(reference, lookupConcepts = []) {
+        const mark = VarvPerformance.start();
+
         let allConcepts = new Set();
         if(lookupConcepts != null) {
             if(!Array.isArray(lookupConcepts)) {
@@ -585,7 +754,11 @@ class VarvEngine {
             allConcepts.add(concept);
         });
 
-        return VarvEngine.lookupReferenceInternal(reference, allConcepts);
+        let lookup = VarvEngine.lookupReferenceInternal(reference, allConcepts);
+
+        VarvPerformance.stop("VarvEngine.lookupReference", mark, {reference});
+
+        return lookup;
     }
 
     static lookupReferenceInternal(reference, lookupConcepts) {
@@ -903,7 +1076,9 @@ class VarvEngine {
         if(Datastore.DEBUG) {
             console.group("Sending varv engine event:", eventName, detail);
         }
+        let mark = VarvPerformance.start();
         await EventSystem.triggerEventAsync(VarvEngine.VarvEngineEventPrefix+eventName, detail);
+        VarvPerformance.stop("VarvEngine.sendEvent."+eventName, mark, detail);
         if(Datastore.DEBUG) {
             console.groupEnd();
         }
@@ -914,12 +1089,24 @@ class VarvEngine {
             await callback(evt.detail);
         });
     }
+
+    static handlePossibleAsync(possiblePromise, callback) {
+        if(possiblePromise instanceof Promise) {
+            //Was promise, so wait for actual value
+            possiblePromise.then((actualValue)=>{
+                callback(actualValue);
+            });
+        } else {
+            //No promise, so was actual value
+            callback(possiblePromise);
+        }
+    }
 }
+
 VarvEngine.concepts = [];
 VarvEngine.DEBUG = false;
 VarvEngine.VarvEngineEventPrefix = "VarvEngineEvent.";
-VarvEngine.conceptUUIDMap = new Map();
 VarvEngine.conceptTypeMap = new Map();
-VarvEngine.conceptTypeUUIDMap = new Map();
+VarvEngine.conceptUUIDCache = new Map();
 
 window.VarvEngine = VarvEngine;

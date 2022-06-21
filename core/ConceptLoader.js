@@ -149,6 +149,11 @@ class ConceptLoader {
 
                 // Find the mappings
                 concept.properties.forEach((property) => {
+                    //Dont map derived properties
+                    if(property.isDerived()) {
+                        return;
+                    }
+
                     let propertyName = property.name;
 
                     let propertyMappings = ConceptLoader.getMappingsForProperty(conceptJson, propertyName);
@@ -505,9 +510,16 @@ class ConceptLoader {
         // System-level default
         let propertyMappings = ConceptLoader.SystemDefaultMappings;
         
-        // TODO: Concept-level default
+        // If concept has defaultMappings, use those
+        if(conceptJson.defaultMappings != null) {
+            if(!Array.isArray(conceptJson.defaultMappings)) {
+                console.warn("concept defaultMappings must be an array");
+            } else {
+                propertyMappings = conceptJson.defaultMappings;
+            }
+        }
         
-        // Per-property override
+        // If property has mappings use those
         if (conceptJson.mappings && conceptJson.mappings[propertyName]) {
             propertyMappings = conceptJson.mappings[propertyName];
         }

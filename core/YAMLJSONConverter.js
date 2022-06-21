@@ -26,6 +26,9 @@
  *  
  */
 
+/**
+ *
+ */
 class YAMLJSONConverter {
     /**
      * True/False depending on if the string code can be parsed as YAML

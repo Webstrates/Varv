@@ -26,6 +26,9 @@
  *  
  */
 
+/**
+ *
+ */
 class ConceptDecorator {
     /**
      * Attempts to decorate the given TreeNode

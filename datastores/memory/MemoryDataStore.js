@@ -26,7 +26,10 @@
  *  
  */
 
-class MemoryDataStore extends Datastore {
+/**
+ * @memberOf Datastores
+ */
+class MemoryDataStore extends DirectDatastore {
     constructor(name, options = {}) {
         super(name, options);
 
@@ -51,11 +54,9 @@ class MemoryDataStore extends Datastore {
                 console.log("Saw disappeared UUID (MemoryDataStore):", context.target);
             }
 
-            const concept = VarvEngine.getConceptFromUUID(context.target);
-
-            concept.properties.forEach((property)=>{
-                if(self.isPropertyMapped(concept, property)) {
-                    let data = self.internalPropertyTrackingData(concept, property);
+            context.concept.properties.forEach((property) => {
+                if (self.isPropertyMapped(context.concept, property)) {
+                    let data = self.internalPropertyTrackingData(context.concept, property);
                     delete data[context.target];
                 }
             });
@@ -65,13 +66,13 @@ class MemoryDataStore extends Datastore {
             if(MemoryDataStore.DEBUG) {
                 console.log("Saw appeared UUID (MemoryDataStore):", context.target);
             }
-
-            const concept = VarvEngine.getConceptFromUUID(context.target);
-            if (self.isConceptMapped(concept) && !self.getStorage().has(context.target)){
+            let mark = VarvPerformance.start();
+            if (self.isConceptMapped(context.concept) && !self.getStorage().has(context.target)){
                 self.getStorage().set(context.target, {
-                    [self.typeVariable]: concept.name
+                    [self.typeVariable]: context.concept.name
                 });
             }
+            VarvPerformance.stop("MemoryDataStore.registerEventCallback.appeared", mark);
         }));
     }
     
@@ -88,18 +89,23 @@ class MemoryDataStore extends Datastore {
         if (this.isPropertyMapped(concept,property)) return;
                 
         let setter = (uuid, value) => {
+            let mark = VarvPerformance.start();
             if (!self.getStorage().has(uuid)){
                 throw new Error("Tried to set concept in memory that never appeared: "+concept.name+"."+property.name);
             }
             
             let data = self.getStorage().get(uuid);
             data[property.name] = value;
+            VarvPerformance.stop("MemoryDataStore.setter", mark);
         };
         let getter = (uuid) => {
+            let mark = VarvPerformance.start();
             let data = self.getStorage().get(uuid);
             if (!data) throw new Error("Tried to get concept from memory that was never set: "+concept.name+"."+property.name);
             if (!data.hasOwnProperty(property.name)) throw new Error("Tried to get property from memory that was never set: "+concept.name+"."+property.name);
-            return data[property.name];
+            let result = data[property.name];
+            VarvPerformance.stop("MemoryDataStore.getter", mark);
+            return result;
         };
         property.addSetCallback(setter);
         property.addGetCallback(getter);
@@ -132,17 +138,11 @@ class MemoryDataStore extends Datastore {
             }
             
             // Check if already registered and only generate an appear event if not
-            let conceptByUUID = VarvEngine.getConceptFromUUID(uuid);
+            let conceptByUUID = await VarvEngine.getConceptFromUUID(uuid);
             let concept = VarvEngine.getConceptFromType(type);                        
             
-            if (conceptByUUID){
-                if (MemoryDataStore.DEBUG){
-                    console.warn("Notice: Memory concept found for already existing concept "+conceptByUUID.name +" with uuid "+uuid+", this may be perfectly fine for multi-backed concepts but for now we throw this notice when it happens");
-                }
-            } else {
-                VarvEngine.registerConceptFromUUID(uuid, concept);
-            }
-            
+            this.registerConceptFromUUID(uuid, concept);
+
             // Stil set the properties that we know about
             for (const [propertyName,value] of Object.entries(storedConcept)){
                 if (propertyName !== this.typeVariable){

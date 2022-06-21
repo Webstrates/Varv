@@ -27,8 +27,13 @@
  */
 
 /**
+ * Actions that handle custom code
+ * @namespace CustomActions
+ */
+
+/**
  * An action 'customJS' that can run a custom piece of javascript code on the current context, the function must be a function on the window object
- *
+ * @memberOf CustomActions
  * @example
  * //Runs window.myFunction
  * {

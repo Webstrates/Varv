@@ -27,8 +27,13 @@
  */
 
 /**
+ * Actions that deal with time
+ * @namespace TimingActions
+ */
+
+/**
  * An action "wait" that waits for a given duration before continuing
- *
+ * @memberOf TimingActions
  * @example
  * //Wait for 100ms
  * {

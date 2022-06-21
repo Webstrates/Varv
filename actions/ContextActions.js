@@ -26,6 +26,11 @@
  *  
  */
 
+/**
+ * Actions that change the current context
+ * @namespace ContextActions
+ */
+
 // gate(filter) // filter context
 // gate(filter... or=[])
 
@@ -42,7 +47,7 @@
  * <li>forEach (false): If true the select action is run 1 time for each currently selected concept</li>
  * <li>stopIfEmpty (false): If true, the action chain stops if nothing is selected</li>
  * </ul>
- *
+ * @memberOf ContextActions
  * @example
  * //Select all concepts of a type
  * {
@@ -160,22 +165,66 @@ class SelectAction extends Action {
     async apply(contexts, actionArguments) {
         const self = this;
 
+        const DEBUG_SELECT = false;
+
         async function doSelect(context, options, originalOptions) {
+            let mark = VarvPerformance.start();
+
+            if(DEBUG_SELECT) {
+                console.group("doSelect");
+                console.log("Context:", context);
+                console.log("Options:", options);
+                console.log("Where:", self.wherePart);
+            }
 
             let conceptUUIDs = [];
+            let doFilter = true;
 
             if(options.concept != null) {
-                conceptUUIDs = VarvEngine.getAllUUIDsFromType(options.concept, true);
+                //Select concept from type
+                if(DEBUG_SELECT) {
+                    console.log("Concept selection...");
+                }
+
+                doFilter = false;
+
+                let filter = null;
+
+                if(self.wherePart) {
+                    let clonedVariables = Object.assign({}, context.variables);
+
+                    let filterContext = {target: null, lastTarget: context.target, variables: clonedVariables};
+
+                    let lookupWhereWithArguments = await Action.lookupArguments(self.wherePart, actionArguments);
+
+                    let lookupWhereOptions = await Action.lookupVariables(lookupWhereWithArguments, filterContext);
+
+                    filter = await FilterAction.constructFilter(lookupWhereOptions);
+                }
+
+                let limit = 0;
+
+                if(options.limit != null) {
+                    limit = options.limit;
+                }
+
+                conceptUUIDs = await VarvEngine.lookupInstances(VarvEngine.getAllImplementingConceptNames(options.concept), filter, context, limit, self.concept);
+
             } else if(options.target != null) {
+                //Select concept from target
                 if (Array.isArray(options.target)) {
                     conceptUUIDs.push(...options.target);
                 } else {
                     conceptUUIDs.push(options.target);
                 }
             } else if(options.property != null) {
-                let lookup = VarvEngine.lookupProperty(context.target, self.concept, options.property);
+                //Select concept from property of type concept or concept[]
+                let lookup = await VarvEngine.lookupProperty(context.target, self.concept, options.property);
 
                 if(lookup == null) {
+                    if(DEBUG_SELECT) {
+                        console.groupEnd();
+                    }
                     throw new Error("No property ["+options.property+"] found!");
                 }
 
@@ -186,43 +235,67 @@ class SelectAction extends Action {
                     let value = await lookup.property.getValue(lookup.target)
                     conceptUUIDs.push(...value);
                 } else {
+                    if(DEBUG_SELECT) {
+                        console.groupEnd();
+                    }
                     throw new Error("Only able to select properties that are of concept or concept array type: ["+options.property+":"+lookup.property.type+"]");
                 }
 
             } else {
+                if(DEBUG_SELECT) {
+                    console.groupEnd();
+                }
                 throw new Error("Missing option 'concept' or 'target' on select action");
             }
 
-            let filteredUUIDs = [];
+            //Filtering already done?
 
-            for(let uuid of conceptUUIDs) {
-                if(self.wherePart != null) {
-                    let clonedVariables = Object.assign({}, context.variables);
+            if(doFilter) {
+                let filterMark= VarvPerformance.start();
+                let filteredUUIDs = [];
 
-                    let filterContext = {target: uuid, lastTarget: context.target, variables: clonedVariables};
+                for (let uuid of conceptUUIDs) {
+                    if (self.wherePart != null) {
+                        let clonedVariables = Object.assign({}, context.variables);
 
-                    let lookupWhereWithArguments = await Action.lookupArguments(self.wherePart, actionArguments);
+                        let filterContext = {target: uuid, lastTarget: context.target, variables: clonedVariables};
 
-                    let lookupWhereOptions = await Action.lookupVariables(lookupWhereWithArguments, filterContext);
+                        let lookupWhereWithArguments = await Action.lookupArguments(self.wherePart, actionArguments);
 
-                    let filter = await FilterAction.constructFilter(lookupWhereOptions);
+                        let lookupWhereOptions = await Action.lookupVariables(lookupWhereWithArguments, filterContext);
 
-                    if(await filter.filter(filterContext, self.concept)) {
+                        let filter = await FilterAction.constructFilter(lookupWhereOptions);
+
+                        if (await filter.filter(filterContext, self.concept)) {
+                            filteredUUIDs.push(uuid);
+                        }
+                    } else {
                         filteredUUIDs.push(uuid);
                     }
-                } else {
-                    filteredUUIDs.push(uuid);
                 }
+                VarvPerformance.stop("SelectAction.doSelect.filtering", filterMark, {filter: self.wherePart, numConcepts: conceptUUIDs.length});
+
+                conceptUUIDs = filteredUUIDs;
             }
 
-            if(options.as) {
-                Action.setVariable(context, options.as, filteredUUIDs);
-            }
-
-            return filteredUUIDs.map((uuid)=>{
+            let result = conceptUUIDs.map((uuid)=>{
                 // Turn into context
                 return Object.assign({}, context, {target: uuid});
             });
+
+            if(options.as) {
+                result.forEach((resultContext)=>{
+                    Action.setVariable(resultContext, options.as, conceptUUIDs);
+                });
+            }
+
+            VarvPerformance.stop("SelectAction.doSelect", mark);
+
+            if(DEBUG_SELECT) {
+                console.groupEnd();
+            }
+
+            return result;
         }
 
         let result = [];
@@ -269,7 +342,7 @@ window.SelectAction = SelectAction;
 
 /**
  * An action 'storeSelection' that stores the current concept selection as a variable
- *
+ * @memberOf ContextActions
  * @example
  * {
  *     "storeSelection": {
@@ -331,7 +404,7 @@ window.StoreSelectionAction = StoreSelectionAction;
 
 /**
  * An action "limit" that limits the current selected concepts to a given count, starting from first or last
- *
+ * @memberOf ContextActions
  * @example
  * //Limit concepts to 1, starting from first
  * {
@@ -419,7 +492,7 @@ window.LimitAction = LimitAction;
  * <li>"includes" - "string", "array"</li>
  * <li>"matches" - "string"</li>
  * </ul>
- *
+ * @memberOf ContextActions
  * @example
  * {
  *     "where": {
@@ -477,10 +550,14 @@ class FilterAction extends Action {
         const self = this;
 
         let result = await this.forEachContext(contexts, actionArguments, async (context, options)=>{
+            let mark = VarvPerformance.start();
+
             try {
                 let filter = FilterAction.constructFilter(options);
 
                 let shouldKeep = await filter.filter(context, this.concept);
+
+                VarvPerformance.stop("FilterAction.forEachContext.loop", mark);
 
                 if (shouldKeep) {
                     return context;
@@ -502,31 +579,24 @@ class FilterAction extends Action {
     }
 
     static constructFilter(options) {
-        function hasOperator(options) {
-            let found = false;
-            Object.keys(FilterOps).forEach((op) => {
-                if(options[op] != null) {
-                    found = true;
-                }
-            });
-            return found;
-        }
+        let filter = FilterAction.constructFilterInternal(options);
+        filter.constructOptions = options;
+        return filter;
+    }
 
+    static constructFilterInternal(options) {
         try {
-            if (hasOperator(options)) {
-                let operator = null;
-                let value = null;
+            let operator = false;
 
-                Object.keys(FilterOps).forEach((op) => {
-                    if (options[op] != null) {
-                        if (operator != null) {
-                            console.warn("Already set an operator for this property filter:", options);
-                        }
+            for(let op in FilterOps) {
+                if(options[op] != null) {
+                    operator = op;
+                    break;
+                }
+            }
 
-                        operator = op;
-                        value = options[op];
-                    }
-                });
+            if (operator !== false) {
+                let value = options[operator];
 
                 if(options.calculation != null) {
                     //Property defined, this is a property filter
@@ -586,7 +656,7 @@ window.FilterAction = FilterAction;
 
 /**
  * An action "new" that creates a new concept, optionally setting properties on it as well
- *
+ * @memberOf ContextActions
  * @example
  * {
  *      "new": {
@@ -688,8 +758,8 @@ Action.registerPrimitiveAction("new", NewAction);
 window.NewAction = NewAction;
 
 /**
- * An action "remove" that removes a concept from the state
- *
+ * An action "remove" that removes instances of concepts
+ * @memberOf ContextActions
  * @example
  * //Remove the current context target
  * {
@@ -739,7 +809,8 @@ class RemoveAction extends Action {
             }
 
             for(let uuid of removeUuids) {
-                await VarvEngine.getConceptFromUUID(uuid).delete(uuid);
+                let concept = await VarvEngine.getConceptFromUUID(uuid);
+                concept.delete(uuid);
             }
 
             //Return null, to signal that this target/context is now invalid.
@@ -752,7 +823,7 @@ window.RemoveAction = RemoveAction;
 
 /**
  * An action "eval" that takes a filter, and sets a variable to true/false, depending on if the filter matched or not
- *
+ * @memberOf ContextActions
  * @example
  * {
  *     "eval": {
@@ -798,9 +869,10 @@ Action.registerPrimitiveAction("eval", EvalAction);
 window.EvalAction = EvalAction;
 
 /**
- * An action "count" that runs a select, and sets a variable to the number of instances found
- *
+ * An action "count" that counts how many concepts exists with the given where filter. Sets a variable to the count
+ * @memberOf ContextActions
  * @example
+ * // Counts how many "myConcept" that matches the given "where" filter, and saves the result as "myResultVariableName"
  * {
  *     "count": {
  *         "concept": "myConcept",
@@ -811,11 +883,17 @@ window.EvalAction = EvalAction;
  *         "as": "myResultVariableName"
  *     }
  * }
+ *
+ * @example
+ * // Counts how many "myConcept" there is, and saves the result as "count"
+ * {
+ *     "count": "myConcept
+ * }
  */
 class CountAction extends SelectAction {
     static options() {
         return {
-            "$selectType": "enumValue[concept,property,variable]",
+            "$selectType": "enumValue[concept]",
             "where": "filter",
             "as": "@string",
             "forEach": "boolean%false"
@@ -823,17 +901,47 @@ class CountAction extends SelectAction {
     }
 
     constructor(name, options, concept) {
+        if(typeof options === "string") {
+            options = {
+                concept: options
+            }
+        }
+
         super(name, options, concept);
     }
 
     async apply(contexts, actionArguments) {
         const self = this;
 
-        if(this.options.forEach) {
+        let optionsWithArguments = await Action.lookupArguments(this.options, actionArguments);
+
+        async function doCount(context, options) {
+            if(options.concept == null) {
+                throw new Error("Count requires an option 'concept'");
+            }
+
+            let filter = null;
+
+            if(self.wherePart) {
+                let clonedVariables = Object.assign({}, context.variables);
+
+                let filterContext = {target: null, lastTarget: context.target, variables: clonedVariables};
+
+                let lookupWhereWithArguments = await Action.lookupArguments(self.wherePart, actionArguments);
+
+                let lookupWhereOptions = await Action.lookupVariables(lookupWhereWithArguments, filterContext);
+
+                filter = await FilterAction.constructFilter(lookupWhereOptions);
+            }
+
+            return await VarvEngine.countInstances(VarvEngine.getAllImplementingConceptNames(options.concept), filter, context, 0, self.concept);
+        }
+
+        if(optionsWithArguments.forEach) {
             return this.forEachContext(contexts, actionArguments, async (context, options)=>{
                 let clonedContext = Action.cloneContext(context);
-                let selectResult = await super.apply([clonedContext], actionArguments);
-                let count = selectResult.length;
+
+                let count = await doCount(clonedContext, options);
 
                 let variableName = Action.defaultVariableName(self);
 
@@ -846,13 +954,25 @@ class CountAction extends SelectAction {
                 return context;
             });
         } else {
-            let clonedContexts = contexts.map((context)=>{
-                return Action.cloneContext(context);
+            //Bulk mode
+            //Find any common variables and keep
+            let commonVariables = Action.getCommonVariables(contexts);
+
+            let commonTarget = -1;
+
+            contexts.forEach((context)=>{
+                if(commonTarget === -1) {
+                    commonTarget = context.target;
+                } else {
+                    if(commonTarget !== context.target) {
+                        commonTarget = null;
+                    }
+                }
             });
 
-            //Bulk mode, check if extist, and set true/false on all
-            let selectResult = await super.apply(clonedContexts, actionArguments);
-            let count = selectResult.length;
+            let optionsWithVariablesAndArguments = await Action.lookupVariables(optionsWithArguments, {target: commonTarget, variables: commonVariables});
+
+            let count = await doCount({target: commonTarget, variables: commonVariables}, optionsWithVariablesAndArguments);
 
             return this.forEachContext(contexts, actionArguments, async (context, options)=>{
                 let variableName = Action.defaultVariableName(self);
@@ -872,9 +992,10 @@ Action.registerPrimitiveAction("count", CountAction);
 window.CountAction = CountAction;
 
 /**
- * An action "exists" that runs a select, and sets a variable to true/false depending on if any instance was found
- *
+ * An action "exists" that checks if any concepts exists with the given where filter. Sets a variable to true/false depending.
+ * @memberOf ContextActions
  * @example
+ * // Sets a variable "myResultVariableName" to true/false depending on if any "myConcept" that matches the where filter exists
  * {
  *     "exists": {
  *         "concept": "myConcept",
@@ -885,11 +1006,17 @@ window.CountAction = CountAction;
  *         "as": "myResultVariableName"
  *     }
  * }
+ *
+ * @example
+ * // Sets a variable "exists" to true/false depending on if any "myConcept" exists
+ * {
+ *     "exists": "myConcept"
+ * }
  */
 class ExistsAction extends SelectAction {
     static options() {
         return {
-            "$selectType": "enumValue[concept,property,variable]",
+            "$selectType": "enumValue[concept]",
             "where": "filter",
             "as": "@string",
             "forEach": "boolean%false"
@@ -897,17 +1024,47 @@ class ExistsAction extends SelectAction {
     }
 
     constructor(name, options, concept) {
+        if(typeof options === "string") {
+            options = {
+                concept: options
+            }
+        }
+
         super(name, options, concept);
     }
 
     async apply(contexts, actionArguments) {
         const self = this;
 
-        if(this.options.forEach) {
+        let optionsWithArguments = await Action.lookupArguments(this.options, actionArguments);
+
+        async function doExists(context, options) {
+            if(options.concept == null) {
+                throw new Error("Exists requires an option 'concept'")
+            }
+
+            let filter = null;
+
+            if(self.wherePart) {
+                let clonedVariables = Object.assign({}, context.variables);
+
+                let filterContext = {target: null, lastTarget: context.target, variables: clonedVariables};
+
+                let lookupWhereWithArguments = await Action.lookupArguments(self.wherePart, actionArguments);
+
+                let lookupWhereOptions = await Action.lookupVariables(lookupWhereWithArguments, filterContext);
+
+                filter = await FilterAction.constructFilter(lookupWhereOptions);
+            }
+
+            return await VarvEngine.existsInstance(VarvEngine.getAllImplementingConceptNames(options.concept), filter, context, 1, self.concept);
+        }
+
+        if(optionsWithArguments.forEach) {
             return this.forEachContext(contexts, actionArguments, async (context, options)=>{
                 let clonedContext = Action.cloneContext(context);
-                let selectResult = await super.apply([clonedContext], actionArguments);
-                let exists = selectResult.length > 0;
+
+                let exists = await doExists(clonedContext, options);
 
                 let variableName = Action.defaultVariableName(self);
 
@@ -920,13 +1077,25 @@ class ExistsAction extends SelectAction {
                 return context;
             });
         } else {
-            let clonedContexts = contexts.map((context)=>{
-                return Action.cloneContext(context);
+            //Bulk mode
+            //Find any common variables and keep
+            let commonVariables = Action.getCommonVariables(contexts);
+
+            let commonTarget = -1;
+
+            contexts.forEach((context)=>{
+                if(commonTarget === -1) {
+                    commonTarget = context.target;
+                } else {
+                    if(commonTarget !== context.target) {
+                        commonTarget = null;
+                    }
+                }
             });
 
-            //Bulk mode, check if extist, and set true/false on all
-            let selectResult = await super.apply(clonedContexts, actionArguments);
-            let exists = selectResult.length > 0;
+            let optionsWithVariablesAndArguments = await Action.lookupVariables(optionsWithArguments, {target: commonTarget, variables: commonVariables});
+
+            let exists = await doExists({target: commonTarget, variables: commonVariables}, optionsWithVariablesAndArguments);
 
             return this.forEachContext(contexts, actionArguments, async (context, options)=>{
                 let variableName = Action.defaultVariableName(self);
@@ -949,7 +1118,7 @@ window.ExistsAction = ExistsAction;
  * An action 'sort' that sorts the selected concepts naturally based on a property/variable, can be sorted either ascending or descending.
  *
  * Always sorts "naturally", and only supports string, number and boolean types.
- *
+ * @memberOf ContextActions
  * @example
  * {"sort: {
  *     "property": "myProperty",
@@ -984,8 +1153,12 @@ class SortAction extends Action {
     async apply(contexts, actionArguments) {
         const self = this;
 
-        const sortedContexts = [];
-        sortedContexts.push(...contexts);
+        const sortedContexts = await Promise.all(contexts.map(async (context)=> {
+            return {
+                c: context,
+                t: await VarvEngine.getConceptFromUUID(context.target)
+            };
+        }));
 
         let optionsWithArguments = await Action.lookupArguments(this.options, actionArguments);
 
@@ -993,15 +1166,16 @@ class SortAction extends Action {
             throw new Error("Missing option property or variable on sort action");
         }
 
-        sortedContexts.sort((c1, c2)=>{
+        sortedContexts.sort(async (c1, c2)=>{
             let s1 = null;
             let s2 = null;
 
             if(optionsWithArguments.property) {
                 //We have an invariant that says that all selected concepts are of same type
-                const concept = VarvEngine.getConceptFromUUID(c1.target);
+                console.warn("TODO: Implement some fix for polymorphism enabled sort");
+                const concept = c1.t;
                 if(concept == null) {
-                    throw new Error("Unable to find concept for uuid ["+c1.target+"]");
+                    throw new Error("Unable to find concept for uuid ["+c1.c.target+"]");
                 }
 
                 const property = concept.getProperty(optionsWithArguments.property);
@@ -1009,12 +1183,12 @@ class SortAction extends Action {
                     throw new Error("Unable to find property ["+optionsWithArguments.property+"] on ["+concept.name+"]");
                 }
 
-                s1 = property.getValue(c1.target);
-                s2 = property.getValue(c2.target);
+                s1 = property.getValue(c1.c.target);
+                s2 = property.getValue(c2.c.target);
             } else {
                 //Variable
-                s1 = Action.getVariable(c1, optionsWithArguments.variable);
-                s2 = Action.getVariable(c2, optionsWithArguments.variable);
+                s1 = Action.getVariable(c1.c, optionsWithArguments.variable);
+                s2 = Action.getVariable(c2.c, optionsWithArguments.variable);
             }
 
             if(typeof s1 !== typeof s2) {
@@ -1032,7 +1206,9 @@ class SortAction extends Action {
             }
         });
 
-        return sortedContexts;
+        return sortedContexts.map((o)=>{
+            return o.c;
+        });
     }
 }
 Action.registerPrimitiveAction("sort", SortAction);

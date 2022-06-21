@@ -28,7 +28,7 @@
 
 /**
  * A trigger 'interval' that triggers at a given interval, this trigger event has no target.
- *
+ * @memberOf Triggers
  * @example
  * //Trigger every 10 seconds
  * {

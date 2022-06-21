@@ -26,6 +26,9 @@
  *  
  */
 
+/**
+ *
+ */
 class Behaviour {
     constructor(name, triggers, actions, concept, overrideActionName=null) {
         const self = this;
@@ -150,7 +153,13 @@ class Behaviour {
     async onTrigger(triggerName, context) {
         try {
             await ActionTrigger.before(this.actionChain, context);
+            let mark = VarvPerformance.start();
             let resultContext = await this.actionChain.apply(context);
+            if(this.actionChain.isPrimitive) {
+                VarvPerformance.stop("PrimitiveAction-"+this.actionChain.name, mark);
+            } else {
+                VarvPerformance.stop("CustomAction-"+this.actionChain.name, mark);
+            }
             await ActionTrigger.after(this.actionChain, resultContext);
         } catch(e) {
             if(e instanceof StopError) {

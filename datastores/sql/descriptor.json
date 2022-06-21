@@ -1,0 +1,11 @@
+{
+    "friendlyName": "Varv SQL Data Store",
+    "description": "SQL-database datastore",
+    "dependencies": [
+        "#varv-giga"
+    ],
+    "assets": [],
+    "license": "MIT",
+    "version": "0.1",
+    "changelog": {}
+}

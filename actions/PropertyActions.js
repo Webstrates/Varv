@@ -27,8 +27,13 @@
  */
 
 /**
+ * Actions that operate on properties
+ * @namespace PropertyActions
+ */
+
+/**
  * An action "set" that sets a property or variable to a given value
- *
+ * @memberOf PropertyActions
  * @example
  * //Set property to a given value
  * {
@@ -88,7 +93,7 @@ class SetAction extends Action {
 
             if(key.trim().startsWith("$")) {
                 options = {
-                    variable: key.trim().substr(1),
+                    variable: key.trim().substring(1),
                     value: value
                 }
             } else {
@@ -105,6 +110,8 @@ class SetAction extends Action {
     async apply(contexts, actionArguments) {
         const self = this;
 
+        const mark = "action-set-start-"+performance.now();
+
         if(this.options.property == null && this.options.variable == null) {
             throw new Error("Missing option 'property' or 'variable' on 'set' action: "+JSON.stringify(this.options, null, 2));
         }
@@ -114,8 +121,10 @@ class SetAction extends Action {
         }
 
         return this.forEachContext(contexts, actionArguments, async (context, options)=>{
+            let mark = VarvPerformance.start();
+
             if(options.property) {
-                let lookup = VarvEngine.lookupProperty(context.target, self.concept, options.property);
+                let lookup = await VarvEngine.lookupProperty(context.target, self.concept, options.property);
 
                 if(lookup == null) {
                     throw new Error("No property [" + options.property + "] found on any concept");
@@ -126,6 +135,8 @@ class SetAction extends Action {
                 Action.setVariable(context, options.variable, options.value);
             }
 
+            VarvPerformance.stop("SetAction.forEachContext.loop", mark);
+
             return context;
         });
     }
@@ -135,7 +146,7 @@ window.SetAction = SetAction;
 
 /**
  * An action 'get' that extracts a property and saves it in a variable
- *
+ * @memberOf PropertyActions
  * @example
  * {
  *     "get": {
@@ -185,7 +196,7 @@ class GetAction extends Action {
                 throw new Error("Missing option 'property' on 'get' action");
             }
 
-            let lookup = VarvEngine.lookupProperty(context.target, self.concept, options.property);
+            let lookup = await VarvEngine.lookupProperty(context.target, self.concept, options.property);
 
             if(lookup == null) {
                 throw new Error("Unable to find property: "+options.property);
@@ -209,7 +220,7 @@ window.GetAction = GetAction;
 
 /**
  * An action "toggle" that toggles a boolean property or variable
- *
+ * @memberOf PropertyActions
  * @example
  * //Toggle a boolean property
  * {
@@ -278,7 +289,7 @@ class ToggleAction extends Action {
 
         return this.forEachContext(contexts, actionArguments, async (context, options) => {
             if(options.property != null) {
-                const lookup = VarvEngine.lookupProperty(context.target, self.concept, options.property);
+                const lookup = await VarvEngine.lookupProperty(context.target, self.concept, options.property);
 
                 if(lookup == null) {
                     throw new Error("No property ["+options.of.property+"] found");
@@ -314,7 +325,7 @@ window.ToggleAction = ToggleAction;
 
 /**
  * An action 'enums' that sets a variable to all possible values of an enum string type.
- *
+ * @memberOf PropertyActions
  * @example
  * //Fetch all enum values for myEnumProperty and save in variable $enum
  * {
@@ -376,7 +387,7 @@ class EnumsAction extends Action {
                 throw new Error("Missing 'target' option for 'enums' action")
             }
 
-            const lookup = VarvEngine.lookupProperty(context.target, self.concept, options.property);
+            const lookup = await VarvEngine.lookupProperty(context.target, self.concept, options.property);
 
             if(lookup == null) {
                 throw new Error("No property ["+options.of.property+"] found");

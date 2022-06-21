@@ -26,6 +26,9 @@
  *  
  */
 
+/**
+ *
+ */
 class ConceptTreeGenerator extends TreeGenerator {
     constructor(parentNode) {
         super();
@@ -74,7 +77,7 @@ class ConceptTreeGenerator extends TreeGenerator {
                     }
                 });
                 node.cleanup = [()=>{
-                    datastore.removeConceptInstanceRemovedCallback(instanceRemovedCallback);
+                    datastore.removeConceptInstanceRemovedCallback(concept, instanceRemovedCallback);
                 }];
             });
             

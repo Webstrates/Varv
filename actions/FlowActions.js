@@ -27,8 +27,13 @@
  */
 
 /**
+ * Actions that control the flow of the program
+ * @namespace FlowActions
+ */
+
+/**
  * An action 'run' that runs another action, and continuing no matter the outcome of the other action.
- *
+ * @memberOf FlowActions
  * @example
  * {
  *     "run": {
@@ -58,7 +63,8 @@ class RunAction extends Action {
         }
 
         const defaultOptions = {
-            lookupActionArguments: {}
+            lookupActionArguments: {},
+            stopOnError: true
         };
 
         super(name, Object.assign({}, defaultOptions, options), concept);
@@ -76,7 +82,7 @@ class RunAction extends Action {
         //TODO: We assume that all concepts are of the same type, this is probabely wrong with otherConcepts being in play...
         let contextConcept = null;
         if(contexts.length > 0) {
-            contextConcept = VarvEngine.getConceptFromUUID(contexts[0].target);
+            contextConcept = await VarvEngine.getConceptFromUUID(contexts[0].target);
         }
 
         let action = VarvEngine.lookupAction(optionsWithArguments.action, [contextConcept, self.concept]);
@@ -94,13 +100,21 @@ class RunAction extends Action {
 
         try {
             await ActionTrigger.before(action, clonedContexts);
+            let mark = VarvPerformance.start();
             let runContextsResult = await action.apply(clonedContexts, optionsWithArguments.lookupActionArguments);
+            if(action.isPrimitive) {
+                VarvPerformance.stop("PrimitiveAction-"+action.name, mark);
+            } else {
+                VarvPerformance.stop("CustomAction-"+action.name, mark);
+            }
             await ActionTrigger.after(action, runContextsResult);
         } catch(e) {
             if(e instanceof StopError) {
                 //console.log("Run Action was stopped: " + e.message);
             } else {
-                throw e;
+                if(this.options.stopOnError === true) {
+                    throw e;
+                }
             }
         }
 
@@ -113,6 +127,10 @@ RunAction.DEBUG = false;
 
 /**
  * An action 'exit' that stops the action chain as soon as it is encountered
+ * @memberOf FlowActions
+ *
+ * @example
+ * "exit"
  */
 class ExitAction extends Action {
     static options() {
@@ -140,7 +158,7 @@ window.ExitAction = ExitAction;
  * Default is to break after a branch matches, but if "break": false is added as an option, it will continue to next branch
  *
  * If a branch has no where option, it is always executed if no branch has breaked until it is reached.
- *
+ * @memberOf FlowActions
  * @example
  * {
  *     "switch": [
@@ -230,7 +248,13 @@ class SwitchAction extends Action {
                 let action = ConceptLoader.parseAction(UUIDGenerator.generateUUID("SwitchCaseAction"), actions, this.concept);
 
                 await ActionTrigger.before(action,  [clonedContext]);
+                let mark = VarvPerformance.start();
                 clonedContext = await action.apply([clonedContext]);
+                if(action.isPrimitive) {
+                    VarvPerformance.stop("PrimitiveAction-"+action.name, mark);
+                } else {
+                    VarvPerformance.stop("CustomAction-"+action.name, mark);
+                }
                 await ActionTrigger.after(action, [clonedContext]);
 
                 let doBreak = true;
@@ -260,3 +284,4 @@ class SwitchAction extends Action {
 }
 Action.registerPrimitiveAction("switch", SwitchAction);
 window.SwitchAction = SwitchAction;
+

@@ -27,8 +27,13 @@
  */
 
 /**
- * An action "textTransform" that can transform a string to either "uppercase", "lowercase" or "capitalize"
- *
+ * Actions that operate on strings
+ * @namespace TextActions
+ */
+
+/**
+ * An action "textTransform" that can transform a string to either "uppercase", "lowercase", "capitalize"
+ * @memberOf TextActions
  * @example
  * // Uppercase a string in a property
  * {
@@ -70,7 +75,7 @@ class TextTransformAction extends Action {
 
         return this.forEachContext(contexts, actionArguments, async (context, options)=>{
             if(options.property != null) {
-                const lookup = VarvEngine.lookupProperty(context.target, self.concept, options.property);
+                const lookup = await VarvEngine.lookupProperty(context.target, self.concept, options.property);
 
                 if(lookup == null) {
                     throw new Error("No property ["+options.of.property+"] found");
@@ -135,8 +140,8 @@ Action.registerPrimitiveAction("textTransform", TextTransformAction);
 window.TextTransformAction = TextTransformAction;
 
 /**
- * An action "concat" that concatinates an array of strings and saves the result in a variable
- *
+ * An action "concat" that concatenates an array of strings and saves the result in a variable
+ * @memberOf TextActions
  * @example
  * {
  *     "concat": [
@@ -227,7 +232,7 @@ class ConcatAction extends Action {
                     if(s.variable != null) {
                         s = Action.getVariable(context, s.variable);
                     } else if(s.property != null) {
-                        const lookup = VarvEngine.lookupProperty(context.target, self.concept, s.property);
+                        const lookup = await VarvEngine.lookupProperty(context.target, self.concept, s.property);
 
                         if(lookup == null) {
                             throw new Error("No property ["+options.of.property+"] found");
@@ -254,3 +259,111 @@ class ConcatAction extends Action {
 }
 Action.registerPrimitiveAction("concat", ConcatAction);
 window.ConcatAction = ConcatAction;
+
+/**
+ * An action 'split' that splits a String into an array, based on the given delimiter. Default delimiter is ","
+ * @memberOf TextActions
+ * @example
+ * //Split the string in "myStringProperty" at the delimiter ";" and save the result in the variable "myArrayVariable"
+ * {
+ *     "split": {
+ *         "property": "myStringProperty",
+ *         "delimiter": ";",
+ *         "as": "myArrayVariable"
+ *     }
+ * }
+ *
+ * @example
+ * //Split the string in "myStringVariable" at the delimiter ";" and save the result in the variable "myArrayVariable"
+ * {
+ *     "split": {
+ *         "variable": "myStringVariable",
+ *         "delimiter": ";",
+ *         "as": "myArrayVariable"
+ *     }
+ * }
+ *
+ * @example
+ * //Shorthand example, splitting property using delimiter "," and saving result in variable "split"
+ * {
+ *     "split": "myStringProperty"
+ * }
+ *
+ * @example
+ * //Shorthand example, splitting variable using delimiter "," and saving result in variable "split"
+ * {
+ *     "split": "$myStringVariable"
+ * }
+ */
+class TextSplitAction extends Action {
+    constructor(name, options, concept) {
+        if(typeof options === "string") {
+            if(options.startsWith("$")) {
+                options = {
+                    "variable": options
+                }
+            } else {
+                options = {
+                    "property": options
+                }
+            }
+        }
+
+        const defaultOptions = {
+            delimiter: ","
+        }
+
+        super(name, Object.assign({}, defaultOptions, options), concept);
+    }
+
+    async apply(contexts, actionArguments = {}) {
+        const self = this;
+
+        return this.forEachContext(contexts, actionArguments, async (context, options)=>{
+            let result = null;
+
+            if(options.property != null) {
+                const lookup = await VarvEngine.lookupProperty(context.target, self.concept, options.property);
+
+                if(lookup == null) {
+                    throw new Error("No property ["+options.of.property+"] found");
+                }
+
+                const concept = lookup.concept;
+                const property = lookup.property;
+                const target = lookup.target;
+
+                if (property.type !== "string") {
+                    throw new Error("Unable to apply split on non string property [" + options.property + "] on [" + concept.name + "]");
+                }
+
+                let currentValue = await property.getValue(target);
+
+                result = currentValue.split(options.delimiter);
+
+            } else if(options.variable != null) {
+                let value = Action.getVariable(context, options.variable);
+
+                if (typeof value !== "string") {
+                    throw new Error("Unable to apply textTransform on non string variable [" + options.variable + "]");
+                }
+
+                result = value.split(options.delimiter);
+            }
+
+            if(result != null) {
+                let resultName = Action.defaultVariableName(self);
+
+                if (options.as != null) {
+                    resultName = options.as;
+                }
+
+                Action.setVariable(context, resultName, result);
+            }
+
+            return context;
+        });
+    }
+}
+window.TextSplitAction = TextSplitAction;
+Action.registerPrimitiveAction("split", TextSplitAction);

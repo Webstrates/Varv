@@ -1,0 +1,11 @@
+{
+    "friendlyName": "Varv Lucene Data Store",
+    "description": "Searchable database datastore",
+    "dependencies": [
+        "#varv-giga"
+    ],
+    "assets": [],
+    "license": "MIT",
+    "version": "0.1",
+    "changelog": {}
+}
