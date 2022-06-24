@@ -9940,6 +9940,13 @@ window.StateChangedTrigger = StateChangedTrigger;
  *     }
  * }
  *
+ * //Trigger after any of multiple actions are run
+ * {
+ *     "action": {
+ *         "action": ["myActionName", "mySecondActionName", "myThirdActionName"],
+ *         "hook": "after"
+ *     }
+ * }
  * //Shorthand, trigger after 'myActionName' is run
  * {
  *     "action": "myActionName"
@@ -9984,34 +9991,42 @@ class ActionTrigger extends Trigger {
             //Only 1 context
             let context = contexts[0];
 
-            let actionPart = self.options.action;
-            let conceptPart = null;
+            let actions = self.options.action;
 
-            let split = self.options.action.split(".");
-            if(split.length === 2) {
-                //Action was on the form, concept.action
-                actionPart = split[1];
-                conceptPart = split[0];
+            if(!Array.isArray(actions)) {
+                actions = [actions];
             }
 
-            if(conceptPart != null && context.actionConcept !== conceptPart) {
-                //Not the concept we are looking for, skip
-                return;
+            for(let actionEntry of actions) {
+                let actionPart = actionEntry;
+                let conceptPart = null;
+
+                let split = actionEntry.split(".");
+                if(split.length === 2) {
+                    //Action was on the form, concept.action
+                    actionPart = split[1];
+                    conceptPart = split[0];
+                }
+
+                if(conceptPart != null && context.actionConcept !== conceptPart) {
+                    //Not the concept we are looking for, skip
+                    continue;
+                }
+
+                if(context.actionName !== actionPart) {
+                    //Not the action we are looking for, skip
+                    continue;
+                }
+
+                if(context.hook !== self.options.hook) {
+                    //Not the hook we are looking at, skip
+                    continue;
+                }
+
+                let clonedContexts = Action.cloneContext(context.actionContext);
+
+                await Trigger.trigger(self.name, clonedContexts);
             }
-
-            if(context.actionName !== actionPart) {
-                //Not the action we are looking for, skip
-                return;
-            }
-
-            if(context.hook !== self.options.hook) {
-                //Not the hook we are looking at, skip
-                return;
-            }
-
-            let clonedContexts = Action.cloneContext(context.actionContext);
-
-            await Trigger.trigger(self.name, clonedContexts);
         });
     }
 
