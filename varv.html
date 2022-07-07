@@ -14280,6 +14280,34 @@ MenuSystem.MenuManager.registerMenuItem("TreeBrowser.TreeNode.ContextMenu", {
     }
 });
 
+MenuSystem.MenuManager.registerMenuItem("TreeBrowser.TreeNode.ContextMenu", {
+    label: "Clone",
+    group: "ConceptActions",
+    groupOrder: 0,
+    icon: IconRegistry.createIcon("mdc:copy"),                                
+    onOpen: (menu)=>{
+        return menu.context.type == "ConceptInstanceNode";
+    },
+    onAction: async (menuItem) =>{
+        console.log(menuItem.menu.context.context);
+        menuItem.menu.context.context.concept.clone(menuItem.menu.context.context.uuid);
+    }
+});
+
+MenuSystem.MenuManager.registerMenuItem("TreeBrowser.TreeNode.ContextMenu", {
+    label: "Clone (Deep)",
+    group: "ConceptActions",
+    groupOrder: 0,
+    icon: IconRegistry.createIcon("mdc:copy"),                                
+    onOpen: (menu)=>{
+        return menu.context.type == "ConceptInstanceNode";
+    },
+    onAction: async (menuItem) =>{
+        console.log(menuItem.menu.context.context);
+        menuItem.menu.context.context.concept.clone(menuItem.menu.context.context.uuid, true);
+    }
+});
+
 MenuSystem.MenuManager.registerMenuItem("Cauldron.Help.Documentation", {
     label: "Varv",
     icon: IconRegistry.createIcon("webstrates:varv"),    
