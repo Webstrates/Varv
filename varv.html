@@ -622,12 +622,26 @@ class Concept {
         let clonedProperties = {};
         for (const [propertyName, property] of this.properties){
             clonedProperties[propertyName] = await property.getValue(sourceUUID);
-        };
-        
-        if (deep){
-            // TODO
-            throw new Error("FIXME: Deep clone not implemented yet");
+            
+            console.log("Doing deep "+deep);
+            if (deep){
+                // Referenced Concepts and Concept reference lists should also be cloned
+                if (property.isConceptType()){
+                    let propertyConcept = await VarvEngine.getConceptFromType(property.getType());      
+                    let propertyActualConcept = await VarvEngine.getConceptFromUUID(clonedProperties[propertyName]);
+                    if (!propertyActualConcept) {
+                        console.warn("Invalid reference to UUID '"+clonedProperties[propertyName]+"' while deep-cloning property "+propertyName+" on "+propertyConcept.name+", the property was left as is (invalid)");
+                        continue;
+                    }
+                    if (clonedProperties[propertyName]===sourceUUID) throw new Error("Currently no support for deep cloning of concept instances with properties that contain cyclic reference trees");
+                    clonedProperties[propertyName] = await propertyConcept.clone(clonedProperties[propertyName], true);
+                }
+                if (property.isConceptArrayType()){
+                    
+                }
+            };
         }        
+
         return this.create(null, clonedProperties);
     }
 
@@ -7402,6 +7416,7 @@ class CloneAction extends Action {
         return this.forEachContext(contexts, actionArguments, async (context, options)=>{
 
             let cloneUUIDs = options.of;
+            console.log(options);
 
             if(cloneUUIDs == null) {
                 if(context.target == null) {
