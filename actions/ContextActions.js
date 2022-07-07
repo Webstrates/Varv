@@ -1251,7 +1251,6 @@ class CloneAction extends Action {
         return this.forEachContext(contexts, actionArguments, async (context, options)=>{
 
             let cloneUUIDs = options.of;
-            console.log(options);
 
             if(cloneUUIDs == null) {
                 if(context.target == null) {

@@ -262,26 +262,43 @@ class Concept {
      * @param {type} sourceUUID
      * @returns {@var;wantedUUID}
      */
-    async clone(sourceUUID, deep=false){
+    async clone(sourceUUID, deep=false, alreadyClonedReferences={}){
         let clonedProperties = {};
         for (const [propertyName, property] of this.properties){
             clonedProperties[propertyName] = await property.getValue(sourceUUID);
             
-            console.log("Doing deep "+deep);
             if (deep){
+                async function cloneUUID(propertyConcept, uuid){
+                    let propertyActualConcept = await VarvEngine.getConceptFromUUID(uuid);
+                    if (!propertyActualConcept) {
+                        console.warn("Invalid reference to UUID '"+uuid+"' while deep-cloning property "+propertyName+" on "+propertyConcept.name+", the property was left as is (invalid)");
+                        return uuid;
+                    }
+                    if (uuid===sourceUUID) throw new Error("Currently no support for deep cloning of concept instances with properties that contain direct self-references");
+                    // TODO: cycles too
+                    
+                    // Check if we already cloned it, if not do so
+                    if (alreadyClonedReferences[uuid]){
+                        return alreadyClonedReferences[uuid];                        
+                    } else {
+                        let theClone = await propertyConcept.clone(uuid, true);
+                        alreadyClonedReferences[uuid] = theClone;
+                        return theClone;
+                    }
+                }
+                
                 // Referenced Concepts and Concept reference lists should also be cloned
                 if (property.isConceptType()){
-                    let propertyConcept = await VarvEngine.getConceptFromType(property.getType());      
-                    let propertyActualConcept = await VarvEngine.getConceptFromUUID(clonedProperties[propertyName]);
-                    if (!propertyActualConcept) {
-                        console.warn("Invalid reference to UUID '"+clonedProperties[propertyName]+"' while deep-cloning property "+propertyName+" on "+propertyConcept.name+", the property was left as is (invalid)");
-                        continue;
-                    }
-                    if (clonedProperties[propertyName]===sourceUUID) throw new Error("Currently no support for deep cloning of concept instances with properties that contain cyclic reference trees");
-                    clonedProperties[propertyName] = await propertyConcept.clone(clonedProperties[propertyName], true);
+                    let propertyConcept = await VarvEngine.getConceptFromType(property.getType());   
+                    clonedProperties[propertyName] = await cloneUUID(propertyConcept, clonedProperties[propertyName]);
                 }
                 if (property.isConceptArrayType()){
-                    
+                    let propertyConcept = await VarvEngine.getConceptFromType(property.getArrayType());      
+                    let newPropertyValue = [];
+                    for(let i = 0; i < clonedProperties[propertyName].length; i++) {
+                        newPropertyValue.push(await cloneUUID(propertyConcept, clonedProperties[propertyName][i]));
+                    }
+                    clonedProperties[propertyName] = newPropertyValue;
                 }
             };
         }        
