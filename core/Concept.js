@@ -456,7 +456,7 @@ class Concept {
                 if(datastore != null) {
                     datastore.createBackingStore(this, property);
                 } else {
-                    // TODO: Throw an error here?
+                    throw new Error("["+self.name+"] is attempting to map ["+propertyName+"] to a non existing datastore ["+datastoreName+"]");
                 }
             });
         });
