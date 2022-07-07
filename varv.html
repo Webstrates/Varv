@@ -11272,7 +11272,7 @@ class KeyTrigger extends Trigger {
                 console.log("Key trigger:", context, self.options);
             }
 
-            if(self.options.key != null && self.options.key !== context.variables.key) {
+            if(self.options.key != null && self.options.key.toLowerCase() !== context.variables.key.toLowerCase()) {
                 //Key does not match
                 if(DOMTriggers.DEBUG) {
                     console.log("key does not match!");
