@@ -39,8 +39,13 @@
 
 class LocalStorageDataStore extends DirectDatastore {
     constructor(name, options = {}) {
-        super(name, options);
-        this.storagePrefix = "varv-data";
+        super(name, options);        
+        if (typeof webstrate !== "undefined"){
+            console.log("Using ws");
+            this.storagePrefix = webstrate.webstrateId+"-datastore";
+        } else {            
+            this.storagePrefix = "varv-data";
+        }
         this.entities = {};
 
         if (this.options.storageName) this.storagePrefix = this.options.storageName;
