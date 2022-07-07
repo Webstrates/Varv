@@ -1258,7 +1258,6 @@ class CloneAction extends Action {
 
                 // No clone option specified, clone current target
                 cloneUUIDs = context.target;
-                context.target = null;
             }
 
             if(!Array.isArray(cloneUUIDs)) {
@@ -1274,9 +1273,8 @@ class CloneAction extends Action {
             // Handle "as"
             if(options.as != null) {
                 Action.setVariable(context, options.as, newUUIDs);
-            } else {
-                context.target = newUUIDs;
             }
+            context.target = newUUIDs;
             return context;
         });
     }
