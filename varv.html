@@ -3048,6 +3048,8 @@ class Action {
 
                 if(conceptName === "lastTarget") {
                     result = await VarvEngine.lookupProperty(context.lastTarget, null, propertyName);
+                } else if(conceptName === "target") {
+                    result = await VarvEngine.lookupProperty(context.target, null, propertyName);
                 } else {
                     result = await VarvEngine.lookupProperty(context.target, null, variableName);
                 }
