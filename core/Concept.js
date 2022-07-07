@@ -256,6 +256,24 @@ class Concept {
 
         return wantedUUID;
     }
+    
+    /**
+     * Clones the given UUID into a new one
+     * @param {type} sourceUUID
+     * @returns {@var;wantedUUID}
+     */
+    async clone(sourceUUID, deep=false){
+        let clonedProperties = {};
+        for (const [propertyName, property] of this.properties){
+            clonedProperties[propertyName] = await property.getValue(sourceUUID);
+        };
+        
+        if (deep){
+            // TODO
+            throw new Error("FIXME: Deep clone not implemented yet");
+        }        
+        return this.create(null, clonedProperties);
+    }
 
     finishSetup(debug) {
         if(debug) {

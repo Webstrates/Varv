@@ -612,6 +612,24 @@ class Concept {
 
         return wantedUUID;
     }
+    
+    /**
+     * Clones the given UUID into a new one
+     * @param {type} sourceUUID
+     * @returns {@var;wantedUUID}
+     */
+    async clone(sourceUUID, deep=false){
+        let clonedProperties = {};
+        for (const [propertyName, property] of this.properties){
+            clonedProperties[propertyName] = await property.getValue(sourceUUID);
+        };
+        
+        if (deep){
+            // TODO
+            throw new Error("FIXME: Deep clone not implemented yet");
+        }        
+        return this.create(null, clonedProperties);
+    }
 
     finishSetup(debug) {
         if(debug) {
@@ -7346,6 +7364,72 @@ class SortAction extends Action {
 }
 Action.registerPrimitiveAction("sort", SortAction);
 window.SortAction = SortAction;
+
+
+/**
+ * An action "clone" that copies instances of concepts
+ * @memberOf ContextActions
+ * @example
+ * // Clone the current context target
+ * {
+ *     "clone"
+ * }
+ * 
+ *  * @example
+ * {"clone: {
+ *     "deep": true,
+ *     "as": "myVariable"
+ * }}
+ * 
+ */
+class CloneAction extends Action {
+    static options() {
+        return {
+            "target": "@string"
+        };
+    }
+
+    constructor(name, options, concept) {
+        if(typeof options === "string") {
+            options = {
+                of: options
+            }
+        }
+        super(name, options, concept);
+    }
+
+    async apply(contexts, actionArguments) {
+        return this.forEachContext(contexts, actionArguments, async (context, options)=>{
+
+            let cloneUUIDs = options.of;
+
+            if(cloneUUIDs == null) {
+                if(context.target == null) {
+                    throw new Error("No uuid's in 'of' option supplied to be cloned, and context.target is non existant");
+                }
+
+                // No clone option specified, clone current target
+                cloneUUIDs = context.target;
+                context.target = null;
+            }
+
+            if(!Array.isArray(cloneUUIDs)) {
+                cloneUUIDs = [cloneUUIDs];
+            }
+
+            let newUUIDs = [];
+            for(let uuid of cloneUUIDs) {
+                let concept = await VarvEngine.getConceptFromUUID(uuid);
+                newUUIDs.push(concept.clone(uuid, options.deep));
+            }
+            
+            // TODO: Handle "as"
+            return newUUIDs;
+        });
+    }
+}
+Action.registerPrimitiveAction("clone", CloneAction);
+window.CloneAction = CloneAction;
 
 </script>
 
