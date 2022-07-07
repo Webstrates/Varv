@@ -68,6 +68,15 @@ class Behaviour {
                 }
             }
 
+            let originalStringTrigger = null;
+
+            if(typeof triggerJson === "string") {
+                originalStringTrigger = triggerJson;
+
+                triggerJson = {};
+                triggerJson[originalStringTrigger] = {};
+            }
+
             if(typeof triggerJson !== "string") {
 
                 let triggerName = UUIDGenerator.generateUUID("trigger-");
@@ -78,7 +87,11 @@ class Behaviour {
 
                     return triggerName;
                 } else {
-                    console.warn("Unable to parse anonymous trigger:", triggerJson);
+                    if(originalStringTrigger == null) {
+                        console.warn("Unable to parse anonymous trigger:", triggerJson);
+                    } else {
+                        return originalStringTrigger;
+                    }
                 }
 
                 return null;

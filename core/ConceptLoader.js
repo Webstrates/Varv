@@ -529,6 +529,10 @@ class ConceptLoader {
     
 
     static parseTrigger(triggerName, triggerJson) {
+        if(ConceptLoader.DEBUG) {
+            console.log("Parsing trigger:", triggerName, triggerJson);
+        }
+
         let triggerType = Object.keys(triggerJson)[0];
         let triggerOptions = triggerJson[triggerType];
 
