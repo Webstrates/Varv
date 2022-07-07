@@ -1249,7 +1249,6 @@ class CloneAction extends Action {
 
     async apply(contexts, actionArguments) {
         return this.forEachContext(contexts, actionArguments, async (context, options)=>{
-
             let cloneUUIDs = options.of;
 
             if(cloneUUIDs == null) {
@@ -1269,11 +1268,16 @@ class CloneAction extends Action {
             let newUUIDs = [];
             for(let uuid of cloneUUIDs) {
                 let concept = await VarvEngine.getConceptFromUUID(uuid);
-                newUUIDs.push(concept.clone(uuid, options.deep));
+                newUUIDs.push(await concept.clone(uuid, options.deep));
             }
             
-            // TODO: Handle "as"
-            return newUUIDs;
+            // Handle "as"
+            if(options.as != null) {
+                Action.setVariable(context, options.as, newUUIDs);
+            } else {
+                context.target = newUUIDs;
+            }
+            return context;
         });
     }
 }
