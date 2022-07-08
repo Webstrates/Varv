@@ -1041,7 +1041,7 @@ class Property {
         if(this.derived != null) {
             if(this.derived.properties != null) {
                 this.derived.updateFunction = (uuid) => {
-                    this.getValue(uuid);
+                    this.getValue(uuid, true);
                 }
 
                 try {
@@ -1521,11 +1521,16 @@ class Property {
         return result;
     }
 
-    async getValue(uuid) {
+    async getValue(uuid, forceDerivedReload) {
         let mark = VarvPerformance.start();
 
         if(this.derived != null) {
             const derivedOldValue = this.derivedOldValues.get(uuid);
+
+            if(typeof derivedOldValue !== "undefined" && !forceDerivedReload) {
+                return derivedOldValue;
+            }
+
             const derivedValue = await this.deriveValue(uuid);
             this.derivedOldValues.set(uuid, derivedValue);
             if(typeof derivedOldValue !== "undefined" && !this.isSame(derivedValue, derivedOldValue)) {
