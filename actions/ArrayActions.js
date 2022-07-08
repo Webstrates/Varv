@@ -901,13 +901,33 @@ class JoinAction extends Action {
         if(typeof options === "string") {
             if(options.trim().startsWith("$")) {
                 options = {
-                    variable: options.trim().substring(1)
+                    of: {
+                        variable: options.trim().substring(1)
+                    }
                 }
             } else {
                 options = {
-                    property: options
+                    of: {
+                        property: options
+                    }
                 }
             }
+        }
+
+        if(options.property != null) {
+            options.of = {
+                property: options.property
+            }
+
+            delete options.property;
+        }
+
+        if(options.variable != null) {
+            options.of = {
+                variable: options.variable
+            }
+
+            delete options.variable;
         }
 
         const defaultOptions = {
@@ -926,23 +946,23 @@ class JoinAction extends Action {
 
             let inputArray = null;
 
-            if(options.property != null) {
-                let lookup = VarvEngine.lookupProperty(context.target, self.concept, options.property);
+            if(options?.of.property != null) {
+                let lookup = VarvEngine.lookupProperty(context.target, self.concept, options.of.property);
 
                 const concept = lookup.concept;
                 const property = lookup.property;
                 const target = lookup.target;
 
                 if(property.type !== "array") {
-                    throw new Error("Property ["+options.property+"] of ["+concept.name+"] is not an array");
+                    throw new Error("Property ["+options.of.property+"] of ["+concept.name+"] is not an array");
                 }
 
                 inputArray = property.getValue(target);
 
-            } else if(options.variable != null) {
-                inputArray = Action.getVariable(context, options.variable);
+            } else if(options?.of.variable != null) {
+                inputArray = Action.getVariable(context, options.of.variable);
             } else {
-                throw new Error("'join' requires either option 'property' or option 'variable' to be present:"+JSON.stringify(options));
+                throw new Error("'join' requires either option 'of.property' or option 'of.variable' to be present:"+JSON.stringify(options));
             }
 
             if(!Array.isArray(inputArray)) {
@@ -966,3 +986,126 @@ class JoinAction extends Action {
 }
 window.JoinAction = JoinAction;
 Action.registerPrimitiveAction("join", JoinAction);
+
+/**
+ * An action 'slice' that slices a string or an array.
+ *
+ * @example
+ * //Slices mySliceableProperty starting from 0, ending with 10, saving the result in "myResultVariable"
+ * {
+ *     "slice": {
+ *         "of": {
+ *             "property": "mySliceableProperty"
+ *         },
+ *         "start": 0,
+ *         "end": 10,
+ *         "as": "myResultVariable"
+ *     }
+ * }
+ *
+ * @example
+ * //Shorthand: Slices the variable "mySliceableVariable", from 0 to end, which in practice, means its a copy of the whole thing
+ * {
+ *     "slice: "mySliceableVariable"
+ * }
+ */
+class SliceAction extends Action {
+    constructor(name, options, concept) {
+        if(typeof options === "string") {
+            if(options.startsWith("$")) {
+                options = {
+                    "of": {
+                        "variable": options.trim().substring(1)
+                    }
+                }
+            } else {
+                options = {
+                    "of": {
+                        "property": options
+                    }
+                }
+            }
+        }
+
+        if(options.property != null) {
+            options.of = {
+                property: options.property
+            }
+
+            delete options.property;
+        }
+
+        if(options.variable != null) {
+            options.of = {
+                variable: options.variable
+            }
+
+            delete options.variable;
+        }
+
+        super(name, options, concept);
+    }
+
+    async apply(contexts, actionArguments = {}) {
+        const self = this;
+        return this.forEachContext(contexts, actionArguments, async (context, options)=> {
+            let theThingToSlice = null;
+
+            if(options.of == null) {
+                throw new Error("'slice' requires option 'of' to be present:"+JSON.stringify(options));
+            }
+
+            if(options.of.variable != null) {
+                //Handle variable
+                theThingToSlice = Action.getVariable(context, options.of.variable);
+            } else if(options.of.property != null) {
+                //Handle property
+                let lookup = VarvEngine.lookupProperty(context.target, self.concept, options.of.property);
+
+                const concept = lookup.concept;
+                const property = lookup.property;
+                const target = lookup.target;
+
+                if(property.type !== "array") {
+                    throw new Error("Property ["+options.property+"] of ["+concept.name+"] is not an array");
+                }
+
+                theThingToSlice = property.getValue(target);
+            } else {
+                throw new Error("'slice' requires option 'of.variable' or 'of.property' to be present:"+JSON.stringify(options));
+            }
+
+            if(theThingToSlice == null) {
+                throw new Error("'slice' the choosen array was null: "+JSON.stringify(options));
+            }
+
+            if(theThingToSlice.slice == null) {
+                throw new Error("'slice' unable to slice on type: "+(typeof theThingToSlice));
+            }
+
+            let start = 0;
+            let end = theThingToSlice.length;
+
+            if(options.start != null) {
+                start = options.start;
+            }
+
+            if(options.end != null) {
+                end = options.end;
+            }
+
+            let result = theThingToSlice.slice(start, end);
+
+            let variableName = Action.defaultVariableName(self);
+            if(options.as != null) {
+                variableName = options.as;
+            }
+
+            Action.setVariable(context, variableName, result);
+
+            return context;
+        });
+    }
+}
+window.SliceAction = SliceAction;
+Action.registerPrimitiveAction("slice", SliceAction);

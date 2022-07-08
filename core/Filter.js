@@ -81,7 +81,11 @@ class Filter {
         } else {
             switch (op) {
                 case FilterOps.equals: {
-                    pass = value === compareValue;
+                    if(Array.isArray(value) && Array.isArray(compareValue)) {
+                        pass = JSON.stringify(value) === JSON.stringify(compareValue);
+                    } else {
+                        pass = value === compareValue;
+                    }
                     break;
                 }
                 case FilterOps.unequals: {
@@ -187,7 +191,7 @@ class FilterProperty extends Filter {
     allowedTypes() {
         switch(this.op) {
             case FilterOps.equals: {
-                return ["boolean", "number", "string", "concept"];
+                return ["boolean", "number", "string", "concept", "array"];
             }
             case FilterOps.matches: {
                 return ["string"];
@@ -280,7 +284,7 @@ class FilterVariable extends Filter {
     allowedTypes() {
         switch(this.op) {
             case FilterOps.equals: {
-                return ["boolean", "number", "string"];
+                return ["boolean", "number", "string", "array"];
             }
             case FilterOps.matches: {
                 return ["string"];
