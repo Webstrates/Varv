@@ -231,6 +231,12 @@ class CalculateAction extends Action {
             }
         }
 
+        if(Array.isArray((options))) {
+            options = {
+                expression: options.join(";")
+            }
+        }
+
         super(name, options, concept);
     }
 
