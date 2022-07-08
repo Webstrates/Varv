@@ -964,3 +964,5 @@ class JoinAction extends Action {
         });
     }
 }
+window.JoinAction = JoinAction;
+Action.registerPrimitiveAction("join", JoinAction);

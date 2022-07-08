@@ -240,6 +240,16 @@ class CalculateAction extends Action {
         super(name, options, concept);
     }
 
+    static evaluate(expression) {
+        let result = math.evaluate(expression);
+        if (typeof result === "object" && Array.isArray(result.entries) && result.entries.length>0){
+            // Collapse to single value if parser switched to multi-expression evaluation mode
+            result = result.entries[0];
+        }
+
+        return result;
+    }
+
     async apply(contexts, actionArguments) {
         const self = this;
 
@@ -251,11 +261,8 @@ class CalculateAction extends Action {
                 resultName = options.as;
             }
 
-            let result = math.evaluate(options.expression);
-            if (typeof result === "object" && Array.isArray(result.entries) && result.entries.length>0){
-                    // Collapse to single value if parser switched to multi-expression evaluation mode
-                    result = result.entries[0];
-            }
+            let result = CalculateAction.evaluate(options.expression);
+
             Action.setVariable(context, resultName, result);
 
             return context;
