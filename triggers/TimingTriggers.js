@@ -65,7 +65,9 @@ class IntervalTrigger extends Trigger {
         this.intervalId = setInterval(async ()=>{
             await Trigger.trigger(self.name, {
                 target: null,
-                repetition: currentRepetition
+                variables:{
+                    repetition: currentRepetition
+                }
             });
 
             currentRepetition++;
