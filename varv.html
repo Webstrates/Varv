@@ -12483,7 +12483,8 @@ class DOMView {
                                     // STUB: No sorting of concepts in SPEC?
                                     for(let uuid of conceptUUIDs) {
                                         let childScope = currentScope.slice(); // Copy current
-                                        childScope.push(await ConceptInstanceBinding.create(concept, uuid)); // Add this new concept to lookup scope but with the concrete type
+                                        let concreteConceptType = await VarvEngine.getConceptFromUUID(uuid);
+                                        childScope.push(await ConceptInstanceBinding.create(concreteConceptType, uuid)); // Add this new concept to lookup scope but with the concrete type
                                         childScope.push(new ValueBinding({
                                             'concept::uuid': uuid
                                         })); // Make the uuid referenceable for debug etc
