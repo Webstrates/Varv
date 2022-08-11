@@ -90,6 +90,19 @@ MenuSystem.MenuManager.registerMenuItem("TreeBrowser.TreeNode.ContextMenu", {
     }
 });
 
+MenuSystem.MenuManager.registerMenuItem("TreeBrowser.TreeNode.ContextMenu", {
+    label: "Copy ID",
+    group: "ConceptActions",
+    groupOrder: 0,
+    icon: IconRegistry.createIcon("mdc:copy"),                                
+    onOpen: (menu)=>{
+        return menu.context.type == "ConceptInstanceNode";
+    },
+    onAction: async (menuItem) =>{
+        await navigator.clipboard.writeText(menuItem.menu.context.context.uuid);
+    }
+});
+
 MenuSystem.MenuManager.registerMenuItem("Cauldron.Help.Documentation", {
     label: "Varv",
     icon: IconRegistry.createIcon("webstrates:varv"),    
