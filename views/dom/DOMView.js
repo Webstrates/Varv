@@ -643,6 +643,9 @@ class DOMView {
                                                         childScope.push(new ValueBinding({
                                                             'concept::uuid': arrayEntry.uuid
                                                         })); // Make the uuid referenceable for debug etc
+                                                        childScope.push(new ValueBinding({
+                                                            'concept::name': arrayEntry.concept.name
+                                                        })); // Make the concept.name referenceable for debug etc
                                                         newBinding[propertyType + ".value"] = arrayEntry.uuid;
                                                     } else {
                                                         newBinding[propertyType + ".value"] = arrayEntry; // otherwise then the value becomes bound under X.value
@@ -663,9 +666,12 @@ class DOMView {
                                                 }
                                                 let newBinding = {'concept::uuid': propertyValue.uuid};
                                                 newBinding[propertyType + ".value"] = propertyValue.uuid;
+                                                let newBinding2 = {'concept::name': propertyValue.concept.name};
+                                                newBinding2[propertyType + ".value"] = propertyValue.concept.name;
                                                 clonedScope.push(await ConceptInstanceBinding.create(propertyValue.concept, propertyValue.uuid));
                                                 clonedScope.push(new PropertyBinding(binding.concept.getProperty(propertyType), binding.uuid));
                                                 clonedScope.push(new ValueBinding(newBinding));
+                                                clonedScope.push(new ValueBinding(newBinding2));
                                                 await conditionalIf(handle, outerPropertyHandleChildren, clonedScope);
                                             }
                                         }
@@ -740,6 +746,9 @@ class DOMView {
                                         childScope.push(new ValueBinding({
                                             'concept::uuid': uuid
                                         })); // Make the uuid referenceable for debug etc
+                                        childScope.push(new ValueBinding({
+                                            'concept::name': concreteConceptType.name
+                                        })); // Make the concept.name referenceable for debug etc
 
                                         await splitProperty(conceptHandle, conceptChildren, childScope);
                                     }
