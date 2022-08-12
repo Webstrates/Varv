@@ -95,14 +95,14 @@ class Trigger {
      * @param {object} options - The options to pass along to the trigger
      * @returns {Trigger} - The newly created trigger
      */
-    static getTrigger(type, name, options) {
+    static getTrigger(type, name, options, concept) {
         let triggerClass = Trigger.triggers.get(type);
 
         if (triggerClass == null) {
             throw new Error("Unknown trigger [" + type + "]");
         }
 
-        return new triggerClass(name, options);
+        return new triggerClass(name, options, concept);
     }
 
     static registerTriggerEvent(triggerName, callback) {

@@ -1264,18 +1264,25 @@ class CloneAction extends Action {
                 cloneUUIDs = [cloneUUIDs];
             }
 
+            let resultingContexts = [];
+
             let newUUIDs = [];
             for(let uuid of cloneUUIDs) {
                 let concept = await VarvEngine.getConceptFromUUID(uuid);
-                newUUIDs.push(await concept.clone(uuid, options.deep));
+                let clone = await concept.clone(uuid, options.deep);
+                newUUIDs.push(clone);
+
+                let resultContext = Action.cloneContext(context);
+                resultContext.target = clone;
+                resultingContexts.push(resultContext);
             }
-            
+
             // Handle "as"
             if(options.as != null) {
                 Action.setVariable(context, options.as, newUUIDs);
             }
-            context.target = newUUIDs;
-            return context;
+
+            return resultingContexts;
         });
     }
 }

@@ -528,7 +528,7 @@ class ConceptLoader {
     }
     
 
-    static parseTrigger(triggerName, triggerJson) {
+    static parseTrigger(triggerName, triggerJson, concept) {
         if(ConceptLoader.DEBUG) {
             console.log("Parsing trigger:", triggerName, triggerJson);
         }
@@ -537,7 +537,7 @@ class ConceptLoader {
         let triggerOptions = triggerJson[triggerType];
 
         try {
-            return Trigger.getTrigger(triggerType, triggerName, triggerOptions);
+            return Trigger.getTrigger(triggerType, triggerName, triggerOptions, concept);
         } catch (e) {
             console.warn(e);
         }

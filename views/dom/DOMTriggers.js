@@ -75,6 +75,18 @@ class MouseTrigger extends Trigger {
 
             let resultContext = Action.cloneContext(context);
 
+            if(context.target != null) {
+                let targetConcept = await VarvEngine.getConceptFromUUID(context.target);
+
+                //If context.target has a concept type, and trigger has a concept type, make sure they match?
+                if(targetConcept != null && self.concept != null) {
+                    if(targetConcept.name !== self.concept.name) {
+                        console.warn("Trigger was from concept:", self.concept.name, "But mouseevent was inside concept:", targetConcept.name);
+                        return;
+                    }
+                }
+            }
+
             //Check if this context matches our options
             if(options.concept != null) {
                 //Reset target, we will set it if matching concept is found

@@ -2076,14 +2076,14 @@ class Trigger {
      * @param {object} options - The options to pass along to the trigger
      * @returns {Trigger} - The newly created trigger
      */
-    static getTrigger(type, name, options) {
+    static getTrigger(type, name, options, concept) {
         let triggerClass = Trigger.triggers.get(type);
 
         if (triggerClass == null) {
             throw new Error("Unknown trigger [" + type + "]");
         }
 
-        return new triggerClass(name, options);
+        return new triggerClass(name, options, concept);
     }
 
     static registerTriggerEvent(triggerName, callback) {
@@ -3411,7 +3411,7 @@ class Behaviour {
             if(typeof triggerJson !== "string") {
 
                 let triggerName = UUIDGenerator.generateUUID("trigger-");
-                let trigger = ConceptLoader.parseTrigger(triggerName, triggerJson);
+                let trigger = ConceptLoader.parseTrigger(triggerName, triggerJson, concept);
 
                 if(trigger != null) {
                     self.concept.addTrigger(trigger);
@@ -4068,7 +4068,7 @@ class ConceptLoader {
     }
     
 
-    static parseTrigger(triggerName, triggerJson) {
+    static parseTrigger(triggerName, triggerJson, concept) {
         if(ConceptLoader.DEBUG) {
             console.log("Parsing trigger:", triggerName, triggerJson);
         }
@@ -4077,7 +4077,7 @@ class ConceptLoader {
         let triggerOptions = triggerJson[triggerType];
 
         try {
-            return Trigger.getTrigger(triggerType, triggerName, triggerOptions);
+            return Trigger.getTrigger(triggerType, triggerName, triggerOptions, concept);
         } catch (e) {
             console.warn(e);
         }
@@ -7651,18 +7651,25 @@ class CloneAction extends Action {
                 cloneUUIDs = [cloneUUIDs];
             }
 
+            let resultingContexts = [];
+
             let newUUIDs = [];
             for(let uuid of cloneUUIDs) {
                 let concept = await VarvEngine.getConceptFromUUID(uuid);
-                newUUIDs.push(await concept.clone(uuid, options.deep));
+                let clone = await concept.clone(uuid, options.deep);
+                newUUIDs.push(clone);
+
+                let resultContext = Action.cloneContext(context);
+                resultContext.target = clone;
+                resultingContexts.push(resultContext);
             }
-            
+
             // Handle "as"
             if(options.as != null) {
                 Action.setVariable(context, options.as, newUUIDs);
             }
-            context.target = newUUIDs;
-            return context;
+
+            return resultingContexts;
         });
     }
 }
@@ -10562,8 +10569,6 @@ class DOMDataStore extends DirectDatastore {
             console.log("Got remote mutation", mutationList);
         }
         for(let mutation of mutationList) {
-            console.log("Mutations:", mutationList);
-
             switch (mutation.type) {
                 case 'childList':
                     // Look for newly added concept instances first
@@ -10918,7 +10923,9 @@ class DOMDataStore extends DirectDatastore {
         // Lookup concept
         let conceptElement = propertyElement.parentElement;
 
-        console.log("Synchronizing:", conceptElement, propertyElement);
+        if(DOMDataStore.DEBUG) {
+            console.log("Synchronizing:", conceptElement, propertyElement);
+        }
 
         let conceptInstance = this.getConceptInstanceFromConceptElement(conceptElement);
         
@@ -11127,6 +11134,18 @@ class MouseTrigger extends Trigger {
             context = context[0];
 
             let resultContext = Action.cloneContext(context);
+
+            if(context.target != null) {
+                let targetConcept = await VarvEngine.getConceptFromUUID(context.target);
+
+                //If context.target has a concept type, and trigger has a concept type, make sure they match?
+                if(targetConcept != null && self.concept != null) {
+                    if(targetConcept.name !== self.concept.name) {
+                        console.warn("Trigger was from concept:", self.concept.name, "But mouseevent was inside concept:", targetConcept.name);
+                        return;
+                    }
+                }
+            }
 
             //Check if this context matches our options
             if(options.concept != null) {

@@ -145,8 +145,6 @@ class DOMDataStore extends DirectDatastore {
             console.log("Got remote mutation", mutationList);
         }
         for(let mutation of mutationList) {
-            console.log("Mutations:", mutationList);
-
             switch (mutation.type) {
                 case 'childList':
                     // Look for newly added concept instances first
@@ -501,7 +499,9 @@ class DOMDataStore extends DirectDatastore {
         // Lookup concept
         let conceptElement = propertyElement.parentElement;
 
-        console.log("Synchronizing:", conceptElement, propertyElement);
+        if(DOMDataStore.DEBUG) {
+            console.log("Synchronizing:", conceptElement, propertyElement);
+        }
 
         let conceptInstance = this.getConceptInstanceFromConceptElement(conceptElement);
         

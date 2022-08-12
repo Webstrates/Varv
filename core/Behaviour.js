@@ -80,7 +80,7 @@ class Behaviour {
             if(typeof triggerJson !== "string") {
 
                 let triggerName = UUIDGenerator.generateUUID("trigger-");
-                let trigger = ConceptLoader.parseTrigger(triggerName, triggerJson);
+                let trigger = ConceptLoader.parseTrigger(triggerName, triggerJson, concept);
 
                 if(trigger != null) {
                     self.concept.addTrigger(trigger);
