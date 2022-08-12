@@ -168,6 +168,11 @@ class StateChangedTrigger extends Trigger {
                 throw new Error("Unknown concept for UUID: "+context.target);
             }
 
+            if(triggeringConcept.name !== self.concept.name) {
+                console.warn("Trigger was not from owning concept!");
+                return;
+            }
+
             if(options.concept != null) {
                 let filterConcepts = options.concept;
                 if(!Array.isArray(filterConcepts)) {
