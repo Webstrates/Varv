@@ -548,7 +548,7 @@ class Concept {
                     if(concept != null) {
                         //A concept was deleted, check if we have any properties with the given concept
                         for(let property of self.properties.values()) {
-                            if(property.holdsConceptOfType(concept.name)) {
+                            if(property.holdsConceptOfType(concept)) {
                                 await property.removeAllReferences(self.name, context.target);
                             }
                         }
@@ -1127,8 +1127,19 @@ class Property {
         }
     }
 
-    holdsConceptOfType(type) {
-        return this.type === type || (this.type === "array" && this.options.items === type);
+    holdsConceptOfType(concept) {
+        let types = [concept.name];
+        concept.otherConcepts.forEach((otherConcept)=>{
+            types.push(otherConcept);
+        });
+
+        let handlesType = false;
+
+        for(let type of types) {
+            handlesType = handlesType || this.type === type || (this.type === "array" && this.options.items === type);
+        }
+
+        return handlesType;
     }
 
     addUpdatedCallback(callback) {

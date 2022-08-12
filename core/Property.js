@@ -209,8 +209,19 @@ class Property {
         }
     }
 
-    holdsConceptOfType(type) {
-        return this.type === type || (this.type === "array" && this.options.items === type);
+    holdsConceptOfType(concept) {
+        let types = [concept.name];
+        concept.otherConcepts.forEach((otherConcept)=>{
+            types.push(otherConcept);
+        });
+
+        let handlesType = false;
+
+        for(let type of types) {
+            handlesType = handlesType || this.type === type || (this.type === "array" && this.options.items === type);
+        }
+
+        return handlesType;
     }
 
     addUpdatedCallback(callback) {

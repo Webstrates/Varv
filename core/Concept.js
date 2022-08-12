@@ -192,7 +192,7 @@ class Concept {
                     if(concept != null) {
                         //A concept was deleted, check if we have any properties with the given concept
                         for(let property of self.properties.values()) {
-                            if(property.holdsConceptOfType(concept.name)) {
+                            if(property.holdsConceptOfType(concept)) {
                                 await property.removeAllReferences(self.name, context.target);
                             }
                         }
