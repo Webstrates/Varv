@@ -107,7 +107,7 @@ MenuSystem.MenuManager.registerMenuItem("Cauldron.Help.Documentation", {
     label: "Varv",
     icon: IconRegistry.createIcon("webstrates:varv"),    
     onAction: () => {
-        window.open("http://when-js.projects.cavi.au.dk/varv/");
+        window.open("https://varv.projects.cavi.au.dk/api/varv/");
     }
 });
 
