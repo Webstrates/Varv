@@ -10196,7 +10196,7 @@ class StateChangedTrigger extends Trigger {
                 let found = filterConcepts.length === 0;
 
                 for(let filterConcept of filterConcepts) {
-                    if(triggeringConcept.name === filterConcept) {
+                    if(triggeringConcept.isA(filterConcept)) {
                         found = true;
                         break;
                     }
