@@ -1264,6 +1264,11 @@ class CloneAction extends Action {
                 cloneUUIDs = [cloneUUIDs];
             }
 
+            // Handle "as" before creating result contexts as it needs to be on all of them.
+            if(options.as != null) {
+                Action.setVariable(context, options.as, newUUIDs);
+            }
+
             let resultingContexts = [];
 
             let newUUIDs = [];
@@ -1275,11 +1280,6 @@ class CloneAction extends Action {
                 let resultContext = Action.cloneContext(context);
                 resultContext.target = clone;
                 resultingContexts.push(resultContext);
-            }
-
-            // Handle "as"
-            if(options.as != null) {
-                Action.setVariable(context, options.as, newUUIDs);
             }
 
             return resultingContexts;
