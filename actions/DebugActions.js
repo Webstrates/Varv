@@ -545,9 +545,7 @@ AssertAction.total = 0;
  * @example
  * {
  *     "assertException": {
- *         "action": {
- *             "myExceptionThrowingAction":{}
- *         }
+ *         "action": "myExceptionThrowingAction"
  *     }
  * }
  */

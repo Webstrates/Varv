@@ -5660,6 +5660,131 @@ class PrependAction extends AppendPrependAction {
 Action.registerPrimitiveAction("prepend", PrependAction)
 window.PrependAction = PrependAction;
 
+/**
+ * An action "insert" that inserts an 'item' or 'items' into an array property or variable, at a given index.
+ * @memberOf ArrayActions
+ * @example
+ * {
+ *      /Insert "myNewItem" at index 2, in the array at myArrayProperty
+ *     "insert": {
+ *         "to": {"property": "myArrayProperty"},
+ *         "index": 2,
+ *         "item": "myNewItem"
+ *     }
+ * }
+ *
+ * @example
+ * {
+ *      /Insert "myNewItem" at index 2, in the array at myVariableArray
+ *     "insert": {
+ *         "to": {"variable": "myVariableArray"},
+ *         "index": 2,
+ *         "item": "myNewItem"
+ *     }
+ * }
+ *
+ * @example
+ * {
+ *      /Insert multiple items at index 3, in the array at myVariableArray
+ *     "insert": {
+ *         "to": {"variable": "myVariableArray"},
+ *         "index": 3,
+ *         "items": ["myNewItem", "mySecondNewItem"]
+ *     }
+ * }
+ */
+class InsertAction extends Action {
+    constructor(name, options, concept) {
+        super(name, options, concept);
+
+        if(this.options.to == null) {
+            if(this.options.property != null) {
+                this.options.to = {
+                    property: this.options.property
+                }
+
+                delete this.options.property;
+            } else if(this.options.variable != null) {
+                this.options.to = {
+                    variable: this.options.variable
+                }
+
+                delete this.options.variable;
+            }
+        }
+    }
+
+    async apply(contexts, actionArguments = {}) {
+        if(this.options.to == null) {
+            throw new Error("Missing option 'to' on "+(this.prepend?"prepend":"append")+" action");
+        }
+
+        if(this.options.index == null) {
+            throw new Error("Missing option 'index' on insert action");
+        }
+
+        if(this.options.to.property == null && this.options.to.variable == null) {
+            throw new Error("Missing option 'to.property' or 'to.variable' on "+(this.prepend?"prepend":"append")+" action");
+        }
+
+        return this.forEachContext(contexts, actionArguments, async (context, options)=>{
+            if(options.index < 0) {
+                throw new Error("Option 'index' can not be less than 0: "+options.index);
+            }
+
+            let array = null;
+
+            if(options.to.property != null) {
+                // Append to property array
+
+                const lookup = await VarvEngine.lookupProperty(context.target, self.concept, options.to.property);
+
+                if (lookup == null) {
+                    throw new Error("No property [" + options.of.property + "] found");
+                }
+
+                const concept = lookup.concept;
+                const property = lookup.property;
+                const target = lookup.target;
+
+                if (property.type !== "array") {
+                    throw new Error("Unable to " + (this.prepend ? "prepend" : "append") + " to non array type property [" + property.name + "] on [" + concept.name + "]");
+                }
+
+                array = await property.getValue(target);
+            } else if(options.to.variable != null) {
+                array = Action.getVariable(context, options.to.variable);
+            }
+
+            if(array == null) {
+                throw new Error("Unable to find array: "+JSON.stringify(options, null, 2)+" in 'insert'");
+            }
+
+            if(options.index > array.length) {
+                throw new Error("Option 'index' can not be more than array length: "+array.length);
+            }
+
+            let items = [];
+
+            if(options.item != null) {
+                items.push(options.item);
+            } else if(options.items != null) {
+                items.push(...options.items);
+            } else {
+                throw new Error("Missing option either 'item' or 'items' on insert action");
+            }
+
+            items.reverse().forEach((item)=>{
+                array.splice(options.index, 0, item);
+            });
+
+            return context;
+        });
+    }
+}
+Action.registerPrimitiveAction("insert", InsertAction)
+window.InsertAction = InsertAction;
+
 class RemoveFirstLastAction extends Action {
     constructor(name, options, concept, removeFirst = false) {
 
@@ -9068,6 +9193,8 @@ class RunAction extends Action {
             contextConcept = await VarvEngine.getConceptFromUUID(contexts[0].target);
         }
 
+        console.log("Looking up action: ", optionsWithArguments.action);
+
         let action = VarvEngine.lookupAction(optionsWithArguments.action, [contextConcept, self.concept]);
 
         if(action == null) {
@@ -9905,9 +10032,7 @@ AssertAction.total = 0;
  * @example
  * {
  *     "assertException": {
- *         "action": {
- *             "myExceptionThrowingAction":{}
- *         }
+ *         "action": "myExceptionThrowingAction"
  *     }
  * }
  */
