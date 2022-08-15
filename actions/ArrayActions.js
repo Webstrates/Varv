@@ -211,6 +211,16 @@ class AppendPrependAction extends Action {
         }
 
         return this.forEachContext(contexts, actionArguments, async (context, options) =>{
+            let items = [];
+
+            if(options.item != null) {
+                items.push(options.item);
+            } else if(options.items != null) {
+                items.push(...options.items);
+            } else {
+                throw new Error("Missing 'item' or 'items' option on Append/Prepend action.");
+            }
+
             if(options.to.property != null) {
                 // Append to property array
 
@@ -231,9 +241,13 @@ class AppendPrependAction extends Action {
                 let value = await property.getValue(target);
 
                 if(self.prepend) {
-                    value.unshift(options.item);
+                    items.reverse().forEach((item)=>{
+                        value.unshift(item);
+                    });
                 } else {
-                    value.push(options.item);
+                    items.forEach((item)=>{
+                        value.push(item);
+                    });
                 }
 
                 await property.setValue(target, value);
@@ -242,9 +256,13 @@ class AppendPrependAction extends Action {
                 let array = Action.getVariable(context, options.to.variable);
 
                 if(self.prepend) {
-                    array.unshift(options.item);
+                    items.reverse().forEach((item)=>{
+                        array.unshift(item);
+                    });
                 } else {
-                    array.push(options.item);
+                    items.forEach((item)=>{
+                        array.push(item);
+                    });
                 }
             }
 
@@ -254,7 +272,7 @@ class AppendPrependAction extends Action {
 }
 
 /**
- * An action "append" that can append an item to an array, the array can be from either a property or variable
+ * An action "append" that can append an 'item' or a number of 'items' to an array, the array can be from either a property or a variable
  * @memberOf ArrayActions
  * @example
  * // Append a string item to an array inside a property
@@ -282,6 +300,15 @@ class AppendPrependAction extends Action {
  *         "item": "myStringItem"
  *     }
  * }
+ *
+ * @example
+ * // Append a number of string items to an array inside a variable
+ * {
+ *     "append": {
+ *         "to": {"variable": "myStringArrayVariable"},
+ *         "items": ["myStringItem1", "myStringItem2"]
+ *     }
+ * }
  */
 class AppendAction extends AppendPrependAction {
     static options() {
@@ -298,7 +325,7 @@ Action.registerPrimitiveAction("append", AppendAction)
 window.AppendAction = AppendAction;
 
 /**
- * An action "prepend" that can prepend an item to an array, the array can be from either a property or variable
+ * An action "prepend" that can prepend an 'item' or a number of 'items' to an array, the array can be from either a property or a variable
  * @memberOf ArrayActions
  * @example
  * // Prepend a string item to an array inside a property
@@ -324,6 +351,15 @@ window.AppendAction = AppendAction;
  *     "prepend": {
  *         "to": {"variable": "myStringArrayVariable"},
  *         "item": "myStringItem"
+ *     }
+ * }
+ *
+ * @example
+ * // Prepend a number of string items to an array inside a variable
+ * {
+ *     "prepend": {
+ *         "to": {"variable": "myStringArrayVariable"},
+ *         "items": ["myStringItem1", "myStringItem2"]
  *     }
  * }
  */
