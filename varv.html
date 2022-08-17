@@ -10750,7 +10750,6 @@ class DOMDataStore extends DirectDatastore {
                 case 'childList':
                     // Look for newly added concept instances first
                     let propertyChangedNodes = [];
-                    let newlyAppereadConceptInstances = [];
                     for(let node of mutation.addedNodes) {
                         try {
                             if (node.tagName==="CONCEPT"){
@@ -10763,8 +10762,18 @@ class DOMDataStore extends DirectDatastore {
                                 // Check if already exists (this would be a bit weird but could happen in multi-backed concepts where the other backing already registered their part)
                                 let conceptByUUID = await VarvEngine.getConceptFromUUID(uuid);
                                 // Check if a duplicate already exists in the DOM marshalled data, since that is definitely a mistake
-                                if (this.backingElement.querySelectorAll('concept[uuid="'+uuid+'"]').length > 1){
+                                let foundConcepts = self.backingElement.querySelectorAll('concept[uuid="'+uuid+'"]');
+                                if (foundConcepts.length > 1){
                                     console.warn("Warning: More than one DOM concept node found for "+conceptByUUID.name +" - only one element is allowed per uuid, this is bad, ignoring one of them");
+
+                                    self.executeObserverless(()=>{
+                                        //Clean everything but the first occurrence?
+                                        Array.from(foundConcepts).slice(1).forEach((conceptElement)=>{
+                                            console.log("Removing extra concept instance:", conceptElement);
+                                            conceptElement.remove();
+                                        });
+                                    });
+
                                     continue;
                                 }
 
@@ -10835,6 +10844,12 @@ class DOMDataStore extends DirectDatastore {
                                 let concept =  self.getConceptFromUUID(uuid);
                                 if (!concept ){
                                     console.warn("Notice: DOM concept node removed for concept with uuid "+uuid+" that we didn't know about, this inconsistency is odd");
+                                    return;
+                                }
+
+                                let foundConcepts = self.backingElement.querySelectorAll('concept[uuid="'+uuid+'"]');
+                                if(foundConcepts.length > 0) {
+                                    console.warn("Notice: Node with uuid "+uuid+" still exists in DOM, not calling disappear");
                                     return;
                                 }
 
