@@ -138,17 +138,112 @@ class DOMDataStore extends DirectDatastore {
         }));
     }
 
+    async addConcept(node, uuid) {
+        let propertyChangedNodes = [];
+
+        let self = this;
+
+        // Check if already exists (this would be a bit weird but could happen in multi-backed concepts where the other backing already registered their part)
+        let conceptByUUID = await VarvEngine.getConceptFromUUID(uuid);
+        // Check if a duplicate already exists in the DOM marshalled data, since that is definitely a mistake
+        let foundConcepts = self.backingElement.querySelectorAll('concept[uuid="'+uuid+'"]');
+        if (foundConcepts.length > 1){
+            console.warn("Warning: More than one DOM concept node found for "+conceptByUUID.name +" - only one element is allowed per uuid, this is bad, ignoring one of them");
+
+            self.executeObserverless(()=>{
+                //Clean everything but the first occurrence?
+                Array.from(foundConcepts).slice(1).forEach((conceptElement)=>{
+                    console.log("Removing extra concept instance:", conceptElement);
+                    conceptElement.remove();
+                });
+            });
+
+            return;
+        }
+
+        // Check if the concept type is available and mapped
+        let conceptType = node.getAttribute("type");
+        if (conceptType===null) {
+            console.warn("DOM concept node added without type, ignoring for now - not sure how to handle it");
+            return;
+        }
+        let concept = VarvEngine.getConceptFromType(conceptType);
+        if (!concept){
+            console.warn("Warning: DOM concept node added for concept of unknown type '"+conceptType+"', ignoring");
+            return;
+        }
+        if (conceptByUUID && concept.name !== conceptByUUID.name){
+            console.warn("Warning: DOM concept node added which specified different type than the one registered in the current mapping, ignoring it");
+            return;
+        }
+        if (!self.isConceptMapped(concept)){
+            console.warn("Warning: DOM concept node added for concept for which there are no DOM-mapped properties in the current mapping, ignoring it");
+            return;
+        }
+
+        // Everything checks out, let's add it then'
+        if(DOMDataStore.DEBUG) {
+            console.log("DOM saw " + uuid + " of type "+conceptType);
+        }
+        self.registerConceptFromUUID(uuid, concept);
+
+        // Concepts can only exist as top-level but when added they can already carry properties as children nodes
+        Array.from(node.children).forEach((childNode)=>{
+            if (childNode.tagName==="PROPERTY"){
+                // Make sure to import those property values if they exist
+                propertyChangedNodes.push(childNode);
+            }
+        });
+
+        // Signal that someone made a new concept instance appear for the first time
+        if(conceptByUUID == null) {
+            console.log("Signalling appeared..");
+            await concept.appeared(uuid);
+            console.log("Appeared done!");
+        }
+
+        return propertyChangedNodes;
+    }
+
+    async removeConcept(node, uuid) {
+        let self = this;
+
+        let concept =  self.getConceptFromUUID(uuid);
+        if (!concept ){
+            console.warn("Notice: DOM concept node removed for concept with uuid "+uuid+" that we didn't know about, this inconsistency is odd");
+            return;
+        }
+
+        let foundConcepts = self.backingElement.querySelectorAll('concept[uuid="'+uuid+'"]');
+        if(foundConcepts.length > 0) {
+            console.warn("Notice: Node with uuid "+uuid+" still exists in DOM, not calling disappear");
+            return;
+        }
+
+        // Someone deleted this concept instance, let's tell everyone to delete it here too
+        console.log("Calling disappeared...");
+        await concept.disappeared(uuid);
+        console.log("Disappeared done!");
+    }
+
     async mutationCallback(mutationList) {
         const self = this;
+
+        console.log("Got mutations:", mutationList);
 
         if(DOMDataStore.DEBUG) {
             console.log("Got remote mutation", mutationList);
         }
+
+        let addedConcepts = new Map();
+        let removedConcepts = new Map();
+        let propertyChangedNodes = [];
+
         for(let mutation of mutationList) {
+            console.log("Mutation:", mutation);
             switch (mutation.type) {
                 case 'childList':
                     // Look for newly added concept instances first
-                    let propertyChangedNodes = [];
                     for(let node of mutation.addedNodes) {
                         try {
                             if (node.tagName==="CONCEPT"){
@@ -158,62 +253,9 @@ class DOMDataStore extends DirectDatastore {
                                     continue;
                                 }
 
-                                // Check if already exists (this would be a bit weird but could happen in multi-backed concepts where the other backing already registered their part)
-                                let conceptByUUID = await VarvEngine.getConceptFromUUID(uuid);
-                                // Check if a duplicate already exists in the DOM marshalled data, since that is definitely a mistake
-                                let foundConcepts = self.backingElement.querySelectorAll('concept[uuid="'+uuid+'"]');
-                                if (foundConcepts.length > 1){
-                                    console.warn("Warning: More than one DOM concept node found for "+conceptByUUID.name +" - only one element is allowed per uuid, this is bad, ignoring one of them");
-
-                                    self.executeObserverless(()=>{
-                                        //Clean everything but the first occurrence?
-                                        Array.from(foundConcepts).slice(1).forEach((conceptElement)=>{
-                                            console.log("Removing extra concept instance:", conceptElement);
-                                            conceptElement.remove();
-                                        });
-                                    });
-
-                                    continue;
-                                }
-
-                                // Check if the concept type is available and mapped
-                                let conceptType = node.getAttribute("type");
-                                if (conceptType===null) {
-                                    console.warn("DOM concept node added without type, ignoring for now - not sure how to handle it");
-                                    continue;
-                                }
-                                let concept = VarvEngine.getConceptFromType(conceptType);
-                                if (!concept){
-                                    console.warn("Warning: DOM concept node added for concept of unknown type '"+conceptType+"', ignoring");
-                                    continue;
-                                }
-                                if (conceptByUUID && concept.name !== conceptByUUID.name){
-                                    console.warn("Warning: DOM concept node added which specified different type than the one registered in the current mapping, ignoring it");
-                                    continue;
-                                }
-                                if (!self.isConceptMapped(concept)){
-                                    console.warn("Warning: DOM concept node added for concept for which there are no DOM-mapped properties in the current mapping, ignoring it");
-                                    continue;
-                                }
-
-                                // Everything checks out, let's add it then'
-                                if(DOMDataStore.DEBUG) {
-                                    console.log("DOM saw " + uuid + " of type "+conceptType);
-                                }
-                                self.registerConceptFromUUID(uuid, concept);
-
-                                // Concepts can only exist as top-level but when added they can already carry properties as children nodes
-                                Array.from(node.children).forEach((childNode)=>{
-                                    if (childNode.tagName==="PROPERTY"){
-                                        // Make sure to import those property values if they exist
-                                        propertyChangedNodes.push(childNode);
-                                    }
-                                });
-
-                                // Signal that someone made a new concept instance appear for the first time
-                                if(conceptByUUID == null) {
-                                    await concept.appeared(uuid);
-                                }
+                                addedConcepts.set(uuid, node);
+                                //Since we saw this node added, it is no longer in queue to be removed
+                                removedConcepts.delete(uuid);
                             }
 
                             // A property could also be added (set) directly by someone for the first time
@@ -224,11 +266,6 @@ class DOMDataStore extends DirectDatastore {
                             console.error("Unhandled exception in DOM node adding handler", ex);
                         }
                     }
-                    
-                    // Array property had one or more new child nodes added to it
-                    if (mutation.target.tagName==="PROPERTY"){
-                        propertyChangedNodes.push(mutation.target);
-                    }                      
 
                     // Removals
                     for(let node of mutation.removedNodes) {
@@ -240,49 +277,56 @@ class DOMDataStore extends DirectDatastore {
                                     console.warn("DOM concept node removed without uuid, ignored for now - not sure what to do about it");
                                     return;
                                 }
-                                let concept =  self.getConceptFromUUID(uuid);
-                                if (!concept ){
-                                    console.warn("Notice: DOM concept node removed for concept with uuid "+uuid+" that we didn't know about, this inconsistency is odd");
-                                    return;
-                                }
 
-                                let foundConcepts = self.backingElement.querySelectorAll('concept[uuid="'+uuid+'"]');
-                                if(foundConcepts.length > 0) {
-                                    console.warn("Notice: Node with uuid "+uuid+" still exists in DOM, not calling disappear");
-                                    return;
-                                }
-
-                                // Someone deleted this concept instance, let's tell everyone to delete it here too
-                                await concept.disappeared(uuid);
+                                removedConcepts.set(uuid, node);
+                                //Since we just removed this concept, it is no longer added
+                                addedConcepts.delete(uuid);
                             }
                         } catch (ex){
                             console.error("Unhandled exception in DOM node remove handler", ex);
                         }                        
                     }
-                    // An array property had one or more children removed
+
+                    // Array property had one or more new child nodes added to it
                     if (mutation.target.tagName==="PROPERTY"){
                         propertyChangedNodes.push(mutation.target);
-                    }
-
-                                            
-                    // Any changed properties either from new concepts or direct changes should be imported to their local concepts
-                    for(let node of propertyChangedNodes) {
-                        try {
-                            await self.syncronizePropertyElementFromDOM(node);
-                        } catch (ex){
-                            console.error("Failed to push concept property from DOM node to concept", node, ex);
-                        }
                     }
 
                     break;
                 case 'attributes':
                     // - Simple property value change
                     if (mutation.attributeName==="value" && mutation.target.tagName==="PROPERTY"){
-                        await self.syncronizePropertyElementFromDOM(mutation.target);
+                        console.log("Synchronizing property inside attribute mutation:", mutation.target);
+                        propertyChangedNodes.push(mutation.target);
                     }
                     
                     // TODO: uuid and/or type added to concept that was previously missing it and was thus ignored
                     break;
+            }
+        }
+
+        console.log("Added concepts:", addedConcepts);
+        for(let entry of addedConcepts.entries()) {
+            propertyChangedNodes.push(... await self.addConcept(entry[1], entry[0]));
+        }
+        console.log("Removed concepts:", removedConcepts);
+        for(let entry of removedConcepts.entries()) {
+            await self.removeConcept(entry[1], entry[0]);
+
+            //Filter property changes, so we dont run the ones where we removed the concept!
+            propertyChangedNodes = propertyChangedNodes.filter((propertyNode)=>{
+                let conceptElement = propertyNode.parentElement;
+                let conceptUUID = conceptElement.getAttribute("uuid");
+
+                return conceptUUID != entry[0];
+            });
+        }
+        console.log("Property changes:", propertyChangedNodes.slice());
+        for(let propertyNode of propertyChangedNodes) {
+            try {
+                await self.syncronizePropertyElementFromDOM(propertyNode);
+            } catch(e) {
+                console.error(e);
             }
         }
     }
@@ -388,6 +432,7 @@ class DOMDataStore extends DirectDatastore {
             conceptElement.setAttribute("type", concept.name, { approved: true });
             conceptElement.setAttribute("uuid", uuid, { approved: true });
             this.backingElement.appendChild(conceptElement);
+            console.log("Created new element:", conceptElement);
         }
         VarvPerformance.stop("DOMDataStore.getConceptElementOrCreate", mark);
         return conceptElement;
@@ -514,6 +559,11 @@ class DOMDataStore extends DirectDatastore {
         // Lookup concept
         let conceptElement = propertyElement.parentElement;
 
+        if(conceptElement.parentElement == null) {
+            console.warn("Parent was not inside dom, skipping synchronize!");
+            return;
+        }
+
         if(DOMDataStore.DEBUG) {
             console.log("Synchronizing:", conceptElement, propertyElement);
         }
@@ -563,7 +613,7 @@ class DOMDataStore extends DirectDatastore {
         return {concept: concept, uuid: uuid};
     }
 }
-DOMDataStore.DEBUG = false;
+DOMDataStore.DEBUG = true;
 window.DOMDataStore = DOMDataStore;
 
 //Register default dom datastore
