@@ -53,7 +53,11 @@ class LocalStorageDataStore extends DirectDatastore {
 
         this.deleteCallbacks = [];
     }
-    
+
+    isShared() {
+        return false;
+    }
+
     async init(){
         const self = this;
 

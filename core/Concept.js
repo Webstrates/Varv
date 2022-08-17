@@ -451,14 +451,25 @@ class Concept {
                 console.log(propertyName, propertyMappings);
             }
 
+            let sharedDataStores = [];
+
             propertyMappings.forEach((datastoreName)=>{
                 let datastore = Datastore.getDatastoreFromName(datastoreName);
+
                 if(datastore != null) {
+                    if(datastore.isShared()) {
+                        sharedDataStores.push(datastoreName);
+                    }
+
                     datastore.createBackingStore(this, property);
                 } else {
                     console.warn("["+self.name+"] is attempting to map ["+propertyName+"] to a non existing datastore ["+datastoreName+"]");
                 }
             });
+
+            if(sharedDataStores.length > 1) {
+                console.log("%c Property "+self.name+"."+propertyName+" is mapped to multiple shared datastores ["+sharedDataStores+"], this can create race conditions in multi user use cases.", "background: yellow; color: red;");
+            }
         });
     }
 

@@ -83,6 +83,10 @@ class Datastore {
         throw new Error("removeBackingStore, should always be overridden in Datastore subclass");
     }
 
+    isShared() {
+        return true;
+    }
+
     async init() {
         throw new Error("init, should always be overridden in Datastore subclass");
     }

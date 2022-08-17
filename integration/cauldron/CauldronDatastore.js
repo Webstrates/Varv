@@ -65,6 +65,10 @@ class CauldronDatastore extends DirectDatastore {
         });                        
     }
 
+    isShared() {
+        return false;
+    }
+
     destroy() {
         this.appearCallback.delete();
         this.disappearCallback.delete();

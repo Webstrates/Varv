@@ -36,6 +36,10 @@ class MemoryDataStore extends DirectDatastore {
         this.deleteCallbacks = [];
     }
 
+    isShared() {
+        return false;
+    }
+
     destroy() {
         this.deleteCallbacks.forEach((deleteCallback)=>{
             deleteCallback.delete();
