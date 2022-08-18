@@ -10764,12 +10764,11 @@ class DOMDataStore extends DirectDatastore {
         // Check if a duplicate already exists in the DOM marshalled data, since that is definitely a mistake
         let foundConcepts = self.backingElement.querySelectorAll('concept[uuid="'+uuid+'"]');
         if (foundConcepts.length > 1){
-            console.warn("Warning: More than one DOM concept node found for "+conceptByUUID.name +" - only one element is allowed per uuid, this is bad, ignoring one of them");
+            console.warn("Warning: More than one DOM concept node found for "+conceptByUUID.name +" - only one element is allowed per uuid, this is bad, deleting extra");
 
             self.executeObserverless(()=>{
                 //Clean everything but the first occurrence?
                 Array.from(foundConcepts).slice(1).forEach((conceptElement)=>{
-                    console.log("Removing extra concept instance:", conceptElement);
                     conceptElement.remove();
                 });
             });
@@ -10813,9 +10812,7 @@ class DOMDataStore extends DirectDatastore {
 
         // Signal that someone made a new concept instance appear for the first time
         if(conceptByUUID == null) {
-            console.log("Signalling appeared..");
             await concept.appeared(uuid);
-            console.log("Appeared done!");
         }
 
         return propertyChangedNodes;
@@ -10837,15 +10834,11 @@ class DOMDataStore extends DirectDatastore {
         }
 
         // Someone deleted this concept instance, let's tell everyone to delete it here too
-        console.log("Calling disappeared...");
         await concept.disappeared(uuid);
-        console.log("Disappeared done!");
     }
 
     async mutationCallback(mutationList) {
         const self = this;
-
-        console.log("Got mutations:", mutationList);
 
         if(DOMDataStore.DEBUG) {
             console.log("Got remote mutation", mutationList);
@@ -10856,7 +10849,6 @@ class DOMDataStore extends DirectDatastore {
         let propertyChangedNodes = [];
 
         for(let mutation of mutationList) {
-            console.log("Mutation:", mutation);
             switch (mutation.type) {
                 case 'childList':
                     // Look for newly added concept instances first
@@ -10912,7 +10904,6 @@ class DOMDataStore extends DirectDatastore {
                 case 'attributes':
                     // - Simple property value change
                     if (mutation.attributeName==="value" && mutation.target.tagName==="PROPERTY"){
-                        console.log("Synchronizing property inside attribute mutation:", mutation.target);
                         propertyChangedNodes.push(mutation.target);
                     }
                     
@@ -10921,15 +10912,13 @@ class DOMDataStore extends DirectDatastore {
             }
         }
 
-        console.log("Added concepts:", addedConcepts);
         for(let entry of addedConcepts.entries()) {
             propertyChangedNodes.push(... await self.addConcept(entry[1], entry[0]));
         }
-        console.log("Removed concepts:", removedConcepts);
         for(let entry of removedConcepts.entries()) {
             await self.removeConcept(entry[1], entry[0]);
 
-            //Filter property changes, so we dont run the ones where we removed the concept!
+            //Filter property changes, don't run the ones where we removed the concept!
             propertyChangedNodes = propertyChangedNodes.filter((propertyNode)=>{
                 let conceptElement = propertyNode.parentElement;
                 let conceptUUID = conceptElement.getAttribute("uuid");
@@ -10937,12 +10926,11 @@ class DOMDataStore extends DirectDatastore {
                 return conceptUUID != entry[0];
             });
         }
-        console.log("Property changes:", propertyChangedNodes.slice());
         for(let propertyNode of propertyChangedNodes) {
             try {
-                await self.syncronizePropertyElementFromDOM(propertyNode);
+                await self.synchronizePropertyElementFromDOM(propertyNode);
             } catch(e) {
-                console.error(e);
+                console.error("Error synchronizing property element from dom: ", e);
             }
         }
     }
@@ -11048,7 +11036,6 @@ class DOMDataStore extends DirectDatastore {
             conceptElement.setAttribute("type", concept.name, { approved: true });
             conceptElement.setAttribute("uuid", uuid, { approved: true });
             this.backingElement.appendChild(conceptElement);
-            console.log("Created new element:", conceptElement);
         }
         VarvPerformance.stop("DOMDataStore.getConceptElementOrCreate", mark);
         return conceptElement;
@@ -11149,7 +11136,7 @@ class DOMDataStore extends DirectDatastore {
             propertyElement.querySelectorAll(":scope > entry").forEach((childNode) => {
                 let entryValue = childNode.getAttribute("value");
                 if (entryValue === null)
-                    throw new Error("Illegal array entry stored in DOM, cannot unmarsharl " + concept.name + "." + propertyObject.name);
+                    throw new Error("Illegal array entry stored in DOM, cannot unmarshal " + concept.name + "." + propertyObject.name);
                 value.push(entryValue);
             });
 
@@ -11169,7 +11156,7 @@ class DOMDataStore extends DirectDatastore {
      * to the concept
      * @param {element} propertyElement The element with the property to push to concept
      */
-    syncronizePropertyElementFromDOM(propertyElement){
+    synchronizePropertyElementFromDOM(propertyElement){
         const self = this;
 
         // Lookup concept
@@ -11229,7 +11216,7 @@ class DOMDataStore extends DirectDatastore {
         return {concept: concept, uuid: uuid};
     }
 }
-DOMDataStore.DEBUG = true;
+DOMDataStore.DEBUG = false;
 window.DOMDataStore = DOMDataStore;
 
 //Register default dom datastore
