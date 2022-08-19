@@ -13407,11 +13407,11 @@ class ConceptInstanceBinding extends ConceptInstance {
         let value = await property.getValue(this.uuid);
         if (property.isConceptType()) {
             if (!value) return undefined; // No uuid set
-            return await ConceptInstanceBinding.create(property.type, value);
+            return await ConceptInstanceBinding.create(VarnEngine.getConceptFromUUID(value), value);
         } else if (property.isConceptArrayType()) {
             let conceptArray = [];
             for(let entry of value) {
-                conceptArray.push(await ConceptInstanceBinding.create(property.options.items, entry));
+                conceptArray.push(await ConceptInstanceBinding.create(VarvEngine.getConceptFromUUID(entry), entry));
             }
             return conceptArray;
         } else {
