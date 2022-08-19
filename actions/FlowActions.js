@@ -85,8 +85,6 @@ class RunAction extends Action {
             contextConcept = await VarvEngine.getConceptFromUUID(contexts[0].target);
         }
 
-        console.log("Looking up action: ", optionsWithArguments.action);
-
         let action = VarvEngine.lookupAction(optionsWithArguments.action, [contextConcept, self.concept]);
 
         if(action == null) {

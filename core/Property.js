@@ -206,6 +206,11 @@ class Property {
     }
 
     async removeAllReferences(propertyConceptType, removeUuid) {
+        //Dont remove from derived
+        if(this.isDerived()) {
+            return;
+        }
+
         if(Property.DEBUG) {
             console.group("["+propertyConceptType+" - "+this.name+"] Removing references to ["+removeUuid+"]");
         }

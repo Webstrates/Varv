@@ -255,6 +255,10 @@ class Concept {
 
         VarvPerformance.stop("Concept.create", mark);
 
+        for(let callback of this.addedRemovedCallbacks) {
+            await callback(wantedUUID, this);
+        }
+
         return wantedUUID;
     }
     
@@ -479,6 +483,10 @@ class Concept {
         await this.deleted(uuid);
 
         await this.disappeared(uuid);
+
+        for(let callback of this.addedRemovedCallbacks) {
+            await callback(uuid, this);
+        }
     }
 
     addAddedRemovedCallback(callback) {
@@ -490,9 +498,6 @@ class Concept {
         await Trigger.trigger("deleted", {
             target: uuid
         });
-        for(let callback of this.addedRemovedCallbacks) {
-            await callback(uuid, this);
-        }
         VarvPerformance.stop("Concept.Event.deleted", mark);
     }
 
@@ -501,9 +506,6 @@ class Concept {
         await Trigger.trigger("created", {
             target: uuid
         });
-        for(let callback of this.addedRemovedCallbacks) {
-            await callback(uuid, this);
-        }
         VarvPerformance.stop("Concept.Event.created", mark);
     }
 
