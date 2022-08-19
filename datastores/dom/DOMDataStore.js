@@ -301,7 +301,6 @@ class DOMDataStore extends DirectDatastore {
         }
 
         for(let entry of addedConcepts.entries()) {
-            console.log("HAHA", entry);
             let possibleChangedPropertyNodes = await self.addConcept(entry[1], entry[0]);
             if(possibleChangedPropertyNodes != null) {
                 propertyChangedNodes.push(...possibleChangedPropertyNodes);
