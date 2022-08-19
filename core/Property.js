@@ -105,7 +105,18 @@ class Property {
 
             if(this.options.derive.properties) {
                 this.derived.properties = this.options.derive.properties;
+                if(!Array.isArray(this.derived.properties)) {
+                    this.derived.properties = [this.derived.properties];
+                }
             }
+
+            if(this.options.derive.concepts) {
+                this.derived.concepts = this.options.derive.concepts;
+                if(!Array.isArray(this.derived.concepts)) {
+                    this.derived.properties = [this.derived.concepts];
+                }
+            }
+
             this.derived.transform = this.options.derive.transform;
         }
     }
@@ -121,15 +132,41 @@ class Property {
         const self = this;
 
         if(this.derived != null) {
-            if(this.derived.properties != null) {
-                this.derived.updateFunction = (uuid) => {
-                    this.getValue(uuid, true);
-                }
+            async function updateFunction(uuid) {
+                await self.getValue(uuid, true);
+            }
 
+            async function resetFunction() {
+                let uuids = await VarvEngine.getAllUUIDsFromType(concept.name, true);
+                for(let uuid of uuids) {
+                    await self.getValue(uuid, true);
+                }
+            }
+
+            if(this.derived.properties != null) {
                 try {
                     this.derived.properties.forEach((propertyName) => {
+                        VarvEngine.lookupProperty(null, concept, propertyName).then((lookupResult) => {
+                            if(lookupResult.property != null) {
+                                lookupResult.property.addUpdatedCallback(resetFunction);
+                            }
+                        });
+
                         let property = concept.getProperty(propertyName);
-                        property.addUpdatedCallback(self.derived.updateFunction);
+                        if(property != null) {
+                            property.addUpdatedCallback(updateFunction);
+                        }
+                    });
+                } catch(e) {
+                    console.warn(e);
+                }
+            }
+
+            if(this.derived.concepts != null) {
+                try {
+                    this.derived.concepts.forEach((conceptName) => {
+                        let concept = VarvEngine.getConceptFromType(conceptName);
+                        concept.addAddedRemovedCallback(resetFunction);
                     });
                 } catch(e) {
                     console.warn(e);
@@ -500,7 +537,7 @@ class Property {
         let mark = VarvPerformance.start();
         let promises = [];
         for(let updateCallback of this.updatedCallbacks.slice()) {
-            let result = updateCallback(uuid);
+            let result = await updateCallback(uuid);
 
             if(result instanceof Promise) {
                 promises.push(result);

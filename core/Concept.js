@@ -39,6 +39,7 @@ class Concept {
         this.mappings = new Map();
 
         this.otherConcepts = new Set();
+        this.addedRemovedCallbacks = [];
     }
 
     addTrigger(trigger, removeOld=false) {
@@ -480,11 +481,18 @@ class Concept {
         await this.disappeared(uuid);
     }
 
+    addAddedRemovedCallback(callback) {
+        this.addedRemovedCallbacks.push(callback);
+    }
+
     async deleted(uuid) {
         let mark = VarvPerformance.start();
         await Trigger.trigger("deleted", {
             target: uuid
         });
+        for(let callback of this.addedRemovedCallbacks) {
+            await callback(uuid, this);
+        }
         VarvPerformance.stop("Concept.Event.deleted", mark);
     }
 
@@ -493,6 +501,9 @@ class Concept {
         await Trigger.trigger("created", {
             target: uuid
         });
+        for(let callback of this.addedRemovedCallbacks) {
+            await callback(uuid, this);
+        }
         VarvPerformance.stop("Concept.Event.created", mark);
     }
 

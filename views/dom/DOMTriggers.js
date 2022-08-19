@@ -75,6 +75,7 @@ class MouseTrigger extends Trigger {
 
             let resultContext = Action.cloneContext(context);
 
+            /*
             if(context.target != null) {
                 let targetConcept = await VarvEngine.getConceptFromUUID(context.target);
 
@@ -86,6 +87,7 @@ class MouseTrigger extends Trigger {
                     }
                 }
             }
+            */
 
             //Check if this context matches our options
             if(options.concept != null) {
