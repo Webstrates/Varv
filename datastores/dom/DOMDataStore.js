@@ -145,6 +145,7 @@ class DOMDataStore extends DirectDatastore {
 
         // Check if already exists (this would be a bit weird but could happen in multi-backed concepts where the other backing already registered their part)
         let conceptByUUID = await VarvEngine.getConceptFromUUID(uuid);
+
         // Check if a duplicate already exists in the DOM marshalled data, since that is definitely a mistake
         let foundConcepts = self.backingElement.querySelectorAll('concept[uuid="'+uuid+'"]');
         if (foundConcepts.length > 1){
@@ -166,15 +167,18 @@ class DOMDataStore extends DirectDatastore {
             console.warn("DOM concept node added without type, ignoring for now - not sure how to handle it");
             return;
         }
+
         let concept = VarvEngine.getConceptFromType(conceptType);
         if (!concept){
             console.warn("Warning: DOM concept node added for concept of unknown type '"+conceptType+"', ignoring");
             return;
         }
+
         if (conceptByUUID && concept.name !== conceptByUUID.name){
             console.warn("Warning: DOM concept node added which specified different type than the one registered in the current mapping, ignoring it");
             return;
         }
+
         if (!self.isConceptMapped(concept)){
             console.warn("Warning: DOM concept node added for concept for which there are no DOM-mapped properties in the current mapping, ignoring it");
             return;
@@ -297,8 +301,13 @@ class DOMDataStore extends DirectDatastore {
         }
 
         for(let entry of addedConcepts.entries()) {
-            propertyChangedNodes.push(... await self.addConcept(entry[1], entry[0]));
+            console.log("HAHA", entry);
+            let possibleChangedPropertyNodes = await self.addConcept(entry[1], entry[0]);
+            if(possibleChangedPropertyNodes != null) {
+                propertyChangedNodes.push(...possibleChangedPropertyNodes);
+            }
         }
+
         for(let entry of removedConcepts.entries()) {
             await self.removeConcept(entry[1], entry[0]);
 
