@@ -5102,6 +5102,12 @@ class VarvEngine {
                     }
 
                     merged = replaceInSpec(prefix, json.mergeConflict.part2);
+                } else if(prefix.endsWith(".when")) {
+                    if(DEBUG_MERGE) {
+                        console.log("Action when merge!");
+                    }
+
+                    merged = replaceInSpec(prefix, json.mergeConflict.part2);
                 } else if(prefix.match(/actions\.\S+$/)) {
                     if(DEBUG_MERGE) {
                         console.log("Action array merge!");
