@@ -124,7 +124,7 @@ class StateChangedTrigger extends Trigger {
             //Always only 1 entry in array
             context = context[0];
 
-            let options = self.options;
+            let options = Object.assign({}, self.options);
 
             if(options.runtimeLookup != null) {
                 let lookedUpReferences = [];
@@ -134,7 +134,7 @@ class StateChangedTrigger extends Trigger {
                 });
 
                 //Set options to the looked up references
-                options = lookedUpReferences;
+                options = Object.assign(options, lookedUpReferences);
             }
 
             //Check if options array shorthand
@@ -168,9 +168,9 @@ class StateChangedTrigger extends Trigger {
                 throw new Error("Unknown concept for UUID: "+context.target);
             }
 
-            if(triggeringConcept.name !== self.concept.name) {
-                console.warn("Trigger was not from owning concept!");
-                return;
+            if(options.exactConceptMatch && options.concept == null) {
+                //We are matching excact on concept, but have no concept, use owning concept
+                options.concept = self.concept.name;
             }
 
             if(options.concept != null) {
@@ -182,9 +182,16 @@ class StateChangedTrigger extends Trigger {
                 let found = filterConcepts.length === 0;
 
                 for(let filterConcept of filterConcepts) {
-                    if(triggeringConcept.isA(filterConcept)) {
-                        found = true;
-                        break;
+                    if(options.exactConceptMatch) {
+                        if (triggeringConcept.name === filterConcept) {
+                            found = true;
+                            break;
+                        }
+                    } else {
+                        if (triggeringConcept.isA(filterConcept)) {
+                            found = true;
+                            break;
+                        }
                     }
                 }
 

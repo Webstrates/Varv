@@ -63,11 +63,11 @@ class MouseTrigger extends Trigger {
 
         this.triggerDelete = Trigger.registerTriggerEvent(this.type, async (context)=> {
             //Try looking up shorthand
-            let options = this.options;
+            let options = Object.assign({}, this.options);
 
             if(options.runtimeLookup != null) {
                 let lookupResult = VarvEngine.lookupReference(options.runtimeLookup, self.concept);
-                options = Object.assign({}, options, lookupResult);
+                options = Object.assign(options, lookupResult);
             }
 
             //Always only 1 entry in array
@@ -75,19 +75,10 @@ class MouseTrigger extends Trigger {
 
             let resultContext = Action.cloneContext(context);
 
-            /*
-            if(context.target != null) {
-                let targetConcept = await VarvEngine.getConceptFromUUID(context.target);
-
-                //If context.target has a concept type, and trigger has a concept type, make sure they match?
-                if(targetConcept != null && self.concept != null) {
-                    if(targetConcept.name !== self.concept.name) {
-                        console.warn("Trigger was from concept:", self.concept.name, "But mouseevent was inside concept:", targetConcept.name);
-                        return;
-                    }
-                }
+            if(options.exactConceptMatch && options.concept == null) {
+                //We are matching excact on concept, but have no concept, use owning concept
+                options.concept = self.concept.name;
             }
-            */
 
             //Check if this context matches our options
             if(options.concept != null) {
@@ -98,8 +89,19 @@ class MouseTrigger extends Trigger {
                     let uuid = context.conceptUUIDs[i];
                     let concept = await VarvEngine.getConceptFromUUID(uuid);
 
-                    if(concept != null && concept.name === options.concept) {
-                        resultContext.target = uuid;
+                    if(concept != null) {
+                        if(options.exactConceptMatch) {
+                            //Exact match
+                            if(concept.name === options.concept) {
+                                resultContext.target = uuid;
+                                break;
+                            }
+                        } else {
+                            if(concept.isA(options.concept)) {
+                                resultContext.target = uuid;
+                                break;
+                            }
+                        }
                     }
                 }
 
@@ -196,6 +198,14 @@ class MouseTrigger extends Trigger {
  *     }
  * }
  * @example
+ * //Match concept exact, not allowing any injected concepts to match
+ * {
+ *     "click": {
+ *         "concept": "theConceptIWantToHearClickTriggerOn",
+ *         "exactConceptMatch": true
+ *     }
+ * }
+ * @example
  * {
  *     "click": {
  *         "view": "aViewBindingIWantToHearClickTriggerOn"
@@ -223,6 +233,14 @@ window.ClickTrigger = ClickTrigger;
  * {
  *     "mousedown": {
  *         "concept": "theConceptIWantToHearMousedownTriggerOn"
+ *     }
+ * }
+ * @example
+ * //Match concept exact, not allowing any injected concepts to match
+ * {
+ *     "mousedown": {
+ *         "concept": "theConceptIWantToHearMousedownTriggerOn",
+ *         "exactConceptMatch": true
  *     }
  * }
  * @example
@@ -256,6 +274,14 @@ window.MousedownTrigger = MousedownTrigger;
  *     }
  * }
  * @example
+ * //Match concept exact, not allowing any injected concepts to match
+ * {
+ *     "mouseup": {
+ *         "concept": "theConceptIWantToHearMouseupTriggerOn",
+ *         "exactConceptMatch": true
+ *     }
+ * }
+ * @example
  * {
  *     "mouseup": {
  *         "view": "aViewBindingIWantToHearMouseupTriggerOn"
@@ -283,6 +309,14 @@ window.MouseupTrigger = MouseupTrigger;
  * {
  *     "contextmenu": {
  *         "concept": "theConceptIWantToHearMouseupTriggerOn"
+ *     }
+ * }
+ * @example
+ * //Match concept exact, not allowing any injected concepts to match
+ * {
+ *     "contextmenu": {
+ *         "concept": "theConceptIWantToHearMouseupTriggerOn",
+ *         "exactConceptMatch": true
  *     }
  * }
  * @example
@@ -316,6 +350,14 @@ window.ContextmenuTrigger = ContextmenuTrigger;
  *     }
  * }
  * @example
+ * //Match concept exact, not allowing any injected concepts to match
+ * {
+ *     "mousemove": {
+ *         "concept": "theConceptIWantToHearMousemoveTriggerOn",
+ *         "exactConceptMatch": true
+ *     }
+ * }
+ * @example
  * {
  *     "mousemove": {
  *         "view": "aViewBindingIWantToHearMousemoveTriggerOn"
@@ -343,6 +385,14 @@ window.MousemoveTrigger = MousemoveTrigger;
  * {
  *     "wheel": {
  *         "concept": "theConceptIWantToHearWheelTriggerOn"
+ *     }
+ * }
+ * @example
+ * //Match concept exact, not allowing any injected concepts to match
+ * {
+ *     "wheel": {
+ *         "concept": "theConceptIWantToHearWheelTriggerOn",
+ *         "exactConceptMatch": true
  *     }
  * }
  * @example
@@ -378,6 +428,7 @@ window.WheelTrigger = WheelTrigger;
  * <li>shift - If shift should be pressed or not (If omitted, then state of shift is not checked)</li>
  * <li>meta - If meta should be pressed or not (If omitted, then state of meta is not checked)</li>
  * <li>focus - If anything should be in focus for the event to trigger, supports concept and view</li>
+ * <li>focus.exactConceptMatch - Should an exact match on concept be enforced. If no focus.concept is defined, the owning concept is used instead.</li>
  * </ul>
  * @memberOf Triggers
  * @example
@@ -397,6 +448,16 @@ window.WheelTrigger = WheelTrigger;
  *         "key": "Enter",
  *         "ctrl": true,
  *         "focus": {"view": "myView"}
+ *     }
+ * }
+ *
+ * //Trigger when key "Enter" is pressed and ctrl is held, and view 'myView' is in focus, and owning concept matches exact on focused concept
+ * {
+ *     "key": {
+ *         "event": "keyPress",
+ *         "key": "Enter",
+ *         "ctrl": true,
+ *         "focus": {"view": "myView", "exactConceptMatch": true}
  *     }
  * }
  */
@@ -489,12 +550,24 @@ class KeyTrigger extends Trigger {
                     focusOptions = VarvEngine.lookupReference(self.options.focus, self.concept);
                 }
 
+                if(self.options.focus.exactConceptMatch && focusOptions.concept == null) {
+                    focusOptions.concept = self.concept.name;
+                }
+
                 if(focusOptions.concept != null) {
                     let foundFocusConcept = false;
                     for(let uuid of context.conceptUUIDs) {
                         let concept = await VarvEngine.getConceptFromUUID(uuid);
-                        if (concept.name === self.options.focus) {
-                            foundFocusConcept = true;
+                        if(self.options.focus.exactConceptMatch) {
+                            if (concept.name === self.options.focus) {
+                                foundFocusConcept = true;
+                                break;
+                            }
+                        } else {
+                            if (concept.isA(self.options.focus)) {
+                                foundFocusConcept = true;
+                                break;
+                            }
                         }
                     }
 
@@ -504,7 +577,9 @@ class KeyTrigger extends Trigger {
                         }
                         return;
                     }
-                } else if(focusOptions.view != null) {
+                }
+
+                if(focusOptions.view != null) {
                     let foundView = context.targetElement.closest("[view='"+focusOptions.view+"']");
                     if(!foundView) {
                         if(DOMTriggers.DEBUG) {
@@ -512,9 +587,13 @@ class KeyTrigger extends Trigger {
                         }
                         return;
                     }
-                } else if(focusOptions.property != null) {
+                }
+
+                if(focusOptions.property != null) {
                     throw new Error("Unsupported focus on property for key trigger");
-                } else if(focusOptions.unknown != null) {
+                }
+
+                if(focusOptions.unknown != null) {
                     if(DOMTriggers.DEBUG) {
                         console.log("Focus unknown does not match!");
                     }
