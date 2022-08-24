@@ -109,7 +109,11 @@ class Trigger {
         return EventSystem.registerEventCallback(VarvEventPrefix+triggerName, async (evt)=>{
             let contexts = Action.clone(evt.detail);
 
-            await callback(contexts);
+            let callbackReturn = callback(contexts);
+
+            if(callbackReturn instanceof Promise) {
+                await callbackReturn;
+            }
         });
     }
 

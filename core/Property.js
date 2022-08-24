@@ -689,7 +689,15 @@ class Property {
 
         for(let getCallback of this.getCallbacks) {
             try {
-                let value = this.typeCast(await getCallback(uuid));
+                let value = null;
+
+                let callbackReturn = getCallback(uuid);
+
+                if(callbackReturn instanceof Promise) {
+                    value = this.typeCast(await callbackReturn);
+                } else {
+                    value = this.typeCast(callbackReturn);
+                }
 
                 PropertyCache.setCachedProperty(uuid+"."+this.name, value);
 

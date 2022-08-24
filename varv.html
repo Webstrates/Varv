@@ -1631,7 +1631,15 @@ class Property {
 
         for(let getCallback of this.getCallbacks) {
             try {
-                let value = this.typeCast(await getCallback(uuid));
+                let value = null;
+
+                let callbackReturn = getCallback(uuid);
+
+                if(callbackReturn instanceof Promise) {
+                    value = this.typeCast(await callbackReturn);
+                } else {
+                    value = this.typeCast(callbackReturn);
+                }
 
                 PropertyCache.setCachedProperty(uuid+"."+this.name, value);
 
@@ -2171,7 +2179,11 @@ class Trigger {
         return EventSystem.registerEventCallback(VarvEventPrefix+triggerName, async (evt)=>{
             let contexts = Action.clone(evt.detail);
 
-            await callback(contexts);
+            let callbackReturn = callback(contexts);
+
+            if(callbackReturn instanceof Promise) {
+                await callbackReturn;
+            }
         });
     }
 
