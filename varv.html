@@ -7360,7 +7360,17 @@ class NewAction extends Action {
 
             Action.setVariable(context, variableName, uuid);
 
-            if(options.select) {
+            let select = options.select;
+
+            if(options.forEach == false) {
+                if(!select) {
+                    console.warn("Uncompatible options for 'new' action - select: false and forEach: false. Bulk mode always selects the newly created instance")
+                }
+
+                select = true;
+            }
+
+            if(select) {
                 context.target = uuid;
             }
 
