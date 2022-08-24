@@ -820,7 +820,7 @@ class RemoveAction extends Action {
 
             for(let uuid of removeUuids) {
                 let concept = await VarvEngine.getConceptFromUUID(uuid);
-                concept.delete(uuid);
+                await concept.delete(uuid);
             }
 
             //Return null, to signal that this target/context is now invalid.
