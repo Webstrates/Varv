@@ -638,7 +638,8 @@ class VarvEngine {
                     return {
                         property: lookupProperty,
                         concept: lookupConcept,
-                        target: lookupTarget
+                        target: lookupTarget,
+                        type: "specificConcept"
                     }
                 } else {
                     throw new Error("Lookup property on ["+split.join(".")+"], property does not exist: "+propertyName);
@@ -671,7 +672,8 @@ class VarvEngine {
             return {
                 property: property,
                 concept: contextConcept,
-                target: contextTarget
+                target: contextTarget,
+                type: "contextConcept"
             }
         } catch(e) {
             //Ignore
@@ -691,7 +693,8 @@ class VarvEngine {
             return {
                 property: property,
                 concept: localConcept,
-                target: await VarvEngine.lookupTarget(localConcept)
+                target: await VarvEngine.lookupTarget(localConcept),
+                type: "localConcept"
             }
         } catch(e) {
             //Ignore
@@ -712,7 +715,8 @@ class VarvEngine {
                 return {
                     property: property,
                     concept: globalConcept,
-                    target: await VarvEngine.lookupTarget(globalConcept)
+                    target: await VarvEngine.lookupTarget(globalConcept),
+                    type: "globalConcept"
                 }
             } catch(e) {
                 //Ignore
