@@ -413,3 +413,249 @@ class EnumsAction extends Action {
 }
 Action.registerPrimitiveAction("enums", EnumsAction);
 window.EnumsAction = EnumsAction;
+
+/**
+ * An action 'getType' that sets a variable to the type of the looked up property/variable/target. If the lookup finds nothing, the variable is set to undefined.
+ *
+ * @memberOf PropertyActions
+ *
+ * @example
+ * {
+ *     "getType": {
+ *         "property": "myProperty",
+ *         "as": "myPropertyType"
+ *     }
+ * }
+ *
+ * @example
+ * {
+ *     "getType": {
+ *         "variable": "myVariableName",
+ *         "as": "myVariableType"
+ *     }
+ * }
+ *
+ * @example
+ * {
+ *     "getType": {
+ *         "target": "someConceptUUID",
+ *         "as": "myConceptType"
+ *     }
+ * }
+ *
+ * @example
+ * //Shorthand retrieves the type of myProperty and puts it in the variable 'getType'
+ * //Looks up in the following order:
+ * //ContextConcept, LocalConcept, GlobalConcept, Variable, UUID
+ * {
+ *     "getType": "somePropertyNameVariableNameOrConceptUUID"
+ * }
+ *
+ * @example
+ * //Shorthand that looks up the current target's concept type
+ * "getType"
+ */
+class GetTypeAction extends Action {
+    constructor(name, options, concept) {
+        if(typeof options === "string") {
+            options = {
+                runtimeLookup: options
+            }
+        }
+
+        if(typeof options === "object" && Object.keys(options).length === 0) {
+            options.target = "$target$";
+        }
+
+        super(name, options, concept);
+    }
+
+    async apply(contexts, actionArguments = {}) {
+        let self = this;
+        return this.forEachContext(contexts, actionArguments, async (context, options)=>{
+
+            if(options.runtimeLookup != null) {
+                //Figure out what we are dealing with
+                let found = false;
+
+                //Check for property on specificConcept, contextConcept, localConcept or globalConcept
+                let propertyLookupResult = await VarvEngine.lookupProperty(context.target, self.concept, options.runtimeLookup);
+                if(propertyLookupResult != null) {
+                    options.property = propertyLookupResult.property;
+
+                    found = true;
+                }
+
+                //Check for variable
+                if(!found) {
+                    //Not a property, try variable?
+                    try {
+                        Action.getVariable(context, options.runtimeLookup);
+
+                        options.variable = options.runtimeLookup;
+
+                        found = true;
+                    } catch(e) {
+                        //Do nothing
+                    }
+                }
+
+                //Check for concept type
+                if(!found) {
+                    let concept = await VarvEngine.getConceptFromUUID(options.runtimeLookup);
+
+                    if(concept != null) {
+                        options.target = concept;
+                        found = true;
+                    }
+                }
+
+                if(!found) {
+                    throw new Error("Unable to lookup ["+options.runtimeLookup+"] to anything meaningfull for action 'getType'");
+                }
+            }
+
+            if(options.property == null && options.variable == null && options.target == null) {
+                throw new Error("Missing option, either 'property', 'variable' or 'target' should be present on action 'getType'");
+            }
+
+            let result = undefined;
+
+            if(options.property != null) {
+                let foundProperty = null;
+
+                if(options.property instanceof Property) {
+                    foundProperty = options.property;
+                } else {
+                    let lookupResult = await VarvEngine.lookupProperty(context.target, self.concept, options.property);
+                    if(lookupResult != null) {
+                        foundProperty = lookupResult.property;
+                    }
+                }
+
+                if(foundProperty != null) {
+                    result = foundProperty.getType();
+
+                    if(result === "array") {
+                        result += ":"+foundProperty.getArrayType();
+                    }
+                }
+            }
+
+            if(options.variable != null) {
+                try {
+                    //Find type of variable?
+                    let value = Action.getVariable(context, options.variable);
+
+                    if (value != null) {
+                        if (Array.isArray(value)) {
+                            result = "array";
+                        } else if (typeof value === "number") {
+                            result = "number";
+                        } else if (typeof value === "boolean") {
+                            result = "boolean";
+                        } else if (typeof value === "string") {
+                            let concept = await VarvEngine.getConceptFromUUID(value);
+
+                            if (concept != null) {
+                                result = concept.name;
+                            } else {
+                                result = "string";
+                            }
+                        }
+                    } else {
+                        //Variable existed, but was null. Set type to "null" ?
+                        result = "null";
+                    }
+                } catch(e) {
+                    //Do nothing
+                }
+            }
+
+            if(options.target != null) {
+                //Find type of concept
+                let foundConcept = null;
+
+                if(options.target instanceof Concept) {
+                    foundConcept = options.target;
+                } else {
+                    foundConcept = await VarvEngine.getConceptFromUUID(options.target);
+                }
+
+                if(foundConcept != null) {
+                    result = foundConcept.name;
+                }
+            }
+
+            let variableName = Action.defaultVariableName(self);
+
+            if(options.as != null) {
+                variableName = options.as;
+            }
+
+            Action.setVariable(context, variableName, result);
+
+            return context;
+        });
+    }
+}
+Action.registerPrimitiveAction("getType", GetTypeAction);
+window.GetTypeAction = GetTypeAction;
+
+/**
+ * An action 'conceptTypes' that returns the currently defined concept types, optionally filtered for injected/joined concepts
+ * @memberOf PropertyActions
+ *
+ * @example
+ * //Retrieve all concept types into the variable "myConceptTypes"
+ * {"conceptTypes": {"as": "myConceptTypes"}}
+ *
+ * @example
+ * //Retrieve all concept types, that have "myConcept" and "myOtherConcept" injected/joined. Saved into the variable "conceptTypes"
+ * {"conceptTypes": {
+ *     "isType": ["myConcept", "myOtherConcept"]
+ * }}
+ */
+class ConceptTypesAction extends Action {
+    constructor(name, options, concept) {
+
+        super(name, options, concept);
+    }
+
+    async apply(contexts, actionArguments = {}) {
+        let self = this;
+
+        return this.forEachContext(contexts, actionArguments, async (context, options)=>{
+            let testTypes = options.isType;
+            if(testTypes == null) {
+                testTypes = [];
+            }
+            if(!Array.isArray(testTypes)) {
+                testTypes = [testTypes];
+            }
+
+            let result = VarvEngine.concepts.filter((concept)=>{
+                for(let testType of testTypes) {
+                    if(!concept.isA(testType)) {
+                        return false;
+                    }
+                }
+                return true;
+            }).map((concept)=>{
+                return concept.name;
+            });
+
+            let variableName = Action.defaultVariableName(self);
+
+            if(options.as != null) {
+                variableName = options.as;
+            }
+
+            Action.setVariable(context, variableName, result);
+
+            return context;
+        });
+    }
+}
+Action.registerPrimitiveAction("conceptTypes", ConceptTypesAction);
+window.ConceptTypesAction = ConceptTypesAction;
