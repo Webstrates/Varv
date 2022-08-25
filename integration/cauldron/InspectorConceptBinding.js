@@ -48,7 +48,7 @@ class InspectorConceptBinding {
                 let propertyEditors = new Cauldron.InspectorSegment("Properties", elements);
                 elements.push(propertyEditors);
                 for (const property of concept.properties.values()){
-                    if (datastore.isPropertyMapped(concept, property)){
+                    if (datastore.isPropertyMapped(concept, property) || property.isDerived()){
                         propertyEditors.push(new Cauldron.InspectorPropertyEditor(treeNode.context, property, treeNode.getTreeBrowser()));                
                     }
                 }
@@ -149,6 +149,10 @@ class InspectorPropertyEditor extends Cauldron.InspectorElement {
         this.conceptInstance = conceptInstance;
         this.property = property;
 
+        if(property.isDerived()) {
+            this.readOnly = true;
+        }
+
         if (property.type==="array"){
             this.editor = document.createElement("div");            
         } else if (property.type==="boolean"){
@@ -164,6 +168,10 @@ class InspectorPropertyEditor extends Cauldron.InspectorElement {
             this.editor.setAttribute("spellcheck", "false");
         }
         this.editor.classList.add("cauldron-inspector-element-editor");
+
+        if(this.readOnly) {
+            this.editor.setAttribute("disabled", true);
+        }
 
         this.label = document.createElement("span");
         this.label.classList.add("cauldron-inspector-element-label");
@@ -190,15 +198,17 @@ class InspectorPropertyEditor extends Cauldron.InspectorElement {
             this.autocompleteDiv.classList.add("hidden");
             this.editorContainer.appendChild(this.autocompleteDiv);
 
-            this.editor.addEventListener("focus", ()=>{
-                self.autoComplete(self.editor.value);
-            });
-            document.addEventListener("pointerdown", (evt)=>{
-                if(evt.target.closest(".cauldron-inspector-element-editor-container") !== self.editorContainer) {
-                    self.autocompleteDiv.innerHTML = "";
-                    self.autocompleteDiv.classList.add("hidden");
-                }
-            });
+            if(!this.readOnly) {
+                this.editor.addEventListener("focus", () => {
+                    self.autoComplete(self.editor.value);
+                });
+                document.addEventListener("pointerdown", (evt) => {
+                    if (evt.target.closest(".cauldron-inspector-element-editor-container") !== self.editorContainer) {
+                        self.autocompleteDiv.innerHTML = "";
+                        self.autocompleteDiv.classList.add("hidden");
+                    }
+                });
+            }
             
             // Add the click-to-locate feature
             if (property.type!=="array"){
@@ -289,7 +299,7 @@ class InspectorPropertyEditor extends Cauldron.InspectorElement {
         property.getValue(conceptInstance.uuid).then((value)=>{
             self.valueUpdaterCallback(self.conceptInstance.uuid, value);
         });
-        property.addSetCallback(this.valueUpdaterCallback);
+        property.addUpdatedCallback(this.valueUpdaterCallback);
     }
 
     updateLocator() {
@@ -366,7 +376,7 @@ class InspectorPropertyEditor extends Cauldron.InspectorElement {
 
     destroy() {
         super.destroy();
-        this.property.removeSetCallback(this.valueUpdaterCallback);
+        this.property.removeUpdatedCallback(this.valueUpdaterCallback);
     }
     
     focus(){

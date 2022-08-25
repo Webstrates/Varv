@@ -1151,6 +1151,8 @@ Action.registerPrimitiveAction("join", JoinAction);
 /**
  * An action 'slice' that slices a string or an array.
  *
+ * @memberOf ArrayActions
+ *
  * @example
  * //Slices mySliceableProperty starting from 0, ending with 10, saving the result in "myResultVariable"
  * {

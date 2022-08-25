@@ -542,7 +542,7 @@ class Property {
         let mark = VarvPerformance.start();
         let promises = [];
         for(let updateCallback of this.updatedCallbacks.slice()) {
-            let result = await updateCallback(uuid);
+            let result = await updateCallback(uuid, value);
 
             if(result instanceof Promise) {
                 promises.push(result);
