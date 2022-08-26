@@ -341,6 +341,8 @@ class VarvEngine {
     }
 
     static deregisterConceptFromUUID(uuid) {
+        this.conceptUUIDCache.delete(uuid);
+
         //Legacy register of all direct datastores
         for(let ds of Datastore.getAllDatastores()) {
             if(ds instanceof DirectDatastore) {

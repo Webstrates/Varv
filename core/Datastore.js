@@ -38,7 +38,7 @@ class Datastore {
         this.options = options;
         this.mappedConcepts = new Map();
     }
-    
+
     isConceptMapped(concept){
         return this.isConceptTypeMapped(concept.name);
     }
@@ -76,11 +76,11 @@ class Datastore {
     }
 
     createBackingStore(concept, property) {
-        throw new Error("createBackingStore, should always be overridden in Datastore subclass");
+        throw new Error("createBackingStore, should always be overridden in Datastore subclass - "+this.constructor.name);
     }
 
     removeBackingStore(concept, property) {
-        throw new Error("removeBackingStore, should always be overridden in Datastore subclass");
+        throw new Error("removeBackingStore, should always be overridden in Datastore subclass - "+this.constructor.name);
     }
 
     isShared() {
@@ -88,11 +88,11 @@ class Datastore {
     }
 
     async init() {
-        throw new Error("init, should always be overridden in Datastore subclass");
+        throw new Error("init, should always be overridden in Datastore subclass - "+this.constructor.name);
     }
 
     destroy() {
-        throw new Error("destroy, should always be overridden in Datastore subclass");
+        throw new Error("destroy, should always be overridden in Datastore subclass - "+this.constructor.name);
     }
 
     /**
@@ -105,7 +105,7 @@ class Datastore {
      * @returns {Promise<String[]>}
      */
     async lookupInstances(typeNames, query, context, limit = 0, localConcept = null) {
-        throw new Error("Implement [lookupInstances] me in sub datastores!");
+        throw new Error("Implement [lookupInstances] me in sub datastores! - "+this.constructor.name);
     }
 
     /**
@@ -116,7 +116,7 @@ class Datastore {
      * @returns {Promise<number>}
      */
     async countInstances(typeNames, query, context, localConcept) {
-        throw new Error("Implement [countInstances] me in sub datastores!");
+        throw new Error("Implement [countInstances] me in sub datastores! - "+this.constructor.name);
     }
 
     /**
@@ -127,7 +127,7 @@ class Datastore {
      * @returns {Promise<boolean>}
      */
     async existsInstance(typeNames, query, context, localConcept) {
-        throw new Error("Implement [existsInstance] me in sub datastores!");
+        throw new Error("Implement [existsInstance] me in sub datastores! - "+this.constructor.name);
     }
 
     /**
@@ -136,7 +136,7 @@ class Datastore {
      * @returns {Promise<Concept>}
      */
     async lookupConcept(uuid) {
-        throw new Error("Implement [lookupConcept] me in sub datastores!");
+        throw new Error("Implement [lookupConcept] me in sub datastores! - "+this.constructor.name);
     }
 
     static getDatastoreFromName(name) {
