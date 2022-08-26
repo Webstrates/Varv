@@ -6662,7 +6662,7 @@ class SliceAction extends Action {
                 const concept = lookup.concept;
                 const property = lookup.property;
                 const target = lookup.target;
-
+                
                 if(property.type !== "array") {
                     throw new Error("Property ["+options.property+"] of ["+concept.name+"] is not an array");
                 }
@@ -7367,7 +7367,11 @@ Action.registerPrimitiveAction("where", FilterAction);
 window.FilterAction = FilterAction;
 
 /**
- * An action "new" that creates a new concept, optionally setting properties on it as well
+ * An action "new" that creates a new concept, optionally setting properties on it as well.
+ * Runs in bulk mode unless 'forEach: true' is set. In bulk mode only 1 new concept is created, else 1 new would be created for every currently selected concept.
+ * 'select: false' is not supported in bulk mode ('forEach: false')
+ *
+ *
  * @memberOf ContextActions
  * @example
  * {
@@ -7378,6 +7382,15 @@ window.FilterAction = FilterAction;
  *              "mySecondProperty": false
  *              "myThirdProperty": "$myVariableName"
  *          }
+ *      }
+ * }
+ *
+ * @example
+ * //Run in non-bulk mode, creates 1 "myConcept" for each currently selected concept
+ * {
+ *      "new": {
+ *          "concept": "myConcept",
+ *          "forEach": true
  *      }
  * }
  *
@@ -7842,20 +7855,20 @@ window.ExistsAction = ExistsAction;
  * Always sorts "naturally", and only supports string, number and boolean types.
  * @memberOf ContextActions
  * @example
- * {"sort: {
+ * {"sort": {
  *     "property": "myProperty",
  *     "order": "asc"
  * }}
  *
  * @example
- * {"sort: {
+ * {"sort": {
  *     "variable": "myVariable",
  *     "order": "desc"
  * }}
  *
  * @example
  * //Shorthand sorts ascending on property
- * {"sort: "myProperty"}
+ * {"sort": "myProperty"}
  */
 class SortAction extends Action {
     constructor(name, options, concept) {
@@ -18707,7 +18720,7 @@ class GigaVarvDatastore extends Datastore {
                 // STUB: No cache
                 // TODO: Use a fixed-size in-memory concept cache since getting everything item-by-item is SUPER DUPER SLOW
                 // TODO: and we already get most of the relevant values in the update notifications anyways
-                if (uuid===null || uuid==="") throw new Error("Invalid UUID for Lucene getter", uuid);
+                if (uuid===null || uuid==="") throw new Error("Invalid UUID for Gigavarv getter", uuid);
 
                 let fullPropertyName = property.name;
                 switch (property.type){
@@ -18852,324 +18865,6 @@ class GigaVarvDatastore extends Datastore {
 GigaVarvDatastore.DEBUG = false;
 window.GigaVarvDatastore = GigaVarvDatastore;
 GigaVarvDatastore.storages = new Map();
-
-</script>
-
-            </div>            
-            <div class="package" id="varv-lucene">
-                <script id="descriptor-script" type="descriptor">
-{
-    "friendlyName": "Varv Lucene Data Store",
-    "description": "Searchable database datastore",
-    "dependencies": [
-        "#varv-giga"
-    ],
-    "assets": [],
-    "license": "MIT",
-    "version": "0.1",
-    "changelog": {}
-}
-
-</script>
-
-                <script id="LuceneDataStore-script" type="disabled">
-/**
- *  LuceneDataStore - stores properties in a Lucene database through websockets
- * 
- *  This code is licensed under the MIT License (MIT).
- *  
- *  Copyright 2020, 2021, 2022 Rolf Bagge, Janus B. Kristensen, CAVI,
- *  Center for Advanced Visualization and Interaction, Aarhus University
- *  
- *  Permission is hereby granted, free of charge, to any person obtaining a copy
- *  of this software and associated documentation files (the “Software”), to deal
- *  in the Software without restriction, including without limitation the rights 
- *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
- *  copies of the Software, and to permit persons to whom the Software is 
- *  furnished to do so, subject to the following conditions:
- *  
- *  The above copyright notice and this permission notice shall be included in 
- *  all copies or substantial portions of the Software.
- *  
- *  THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
- *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
- *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
- *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
- *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
- *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 
- *  THE SOFTWARE.
- *  
- */
-
-/**
- * A datastore that uses Lucene as backend
- *
- * <pre>
- * options:
- * serverURL - The url to the server
- * storageName - The name of the bucket to use on the server
- * </pre>
- *
- * @memberOf Datastores
- */
-class LuceneDataStore extends GigaVarvDatastore {
-    constructor(name, options = {}) {
-        super(name, options);
-    }
-   
-    async constructQuery(query, primaryResultConceptName, context, localConcept){
-        // Construct an optimized Lucene query based on the Varv query given
-        let topFilterClass = LuceneDataStore.getFilterClass(query);
-        if (!topFilterClass) throw new Error("LuceneDatastore: FIXME: Unsupported or missing query filter type in this datastore",topFilterName,query);
-        let topFilter = new topFilterClass(query);        
-        
-        try {
-            return await topFilter.getLuceneQuery(primaryResultConceptName, context, localConcept);
-        } catch (ex){
-            console.warn("Failed to prepare Lucene query statement string, abstract and Lucene query trees were:", query, topFilter);
-            throw ex;
-        }
-    }
-        
-    static getFilterClass(query){
-        let topFilterName = "Lucene"+(query.constructor.name);
-        let topFilterClass = LuceneFilter.registeredFilters[topFilterName];
-        if (typeof topFilterClass === "undefined"){            
-            return null;
-        }
-        return topFilterClass;
-    }
-    
-    async lookupConcept(uuid){
-        if (uuid===null || uuid==="") return null;
-        let type = await this.requestPropertyValue(uuid, LuceneDataStore.TYPE_PROPERTY);
-
-        if(type == null) {
-            throw new Error("Unable to find concept from uuid: "+uuid);
-        }
-
-        return VarvEngine.getConceptFromType(type);
-    }
-    
-    sendReferenceArrayUpdate(uuid, conceptType, propertyName, newValues){
-        throw new Error("FIXME: Reference arrays are not implemented for Lucene datastores yet ("+propertyName+" on "+conceptType+")");
-    }
-    sendStringArrayUpdate(uuid, conceptType, propertyName, newValues){
-        throw new Error("FIXME: String arrays are not implemented for Lucene datastores yet ("+propertyName+" on "+conceptType+")");
-    }
-    sendNumberArrayUpdate(uuid, conceptType, propertyName, newValues){
-        throw new Error("FIXME: Number arrays are not implemented for Lucene datastores yet ("+propertyName+" on "+conceptType+")");
-    }
-    sendBooleanArrayUpdate(uuid, conceptType, propertyName, newValues){
-        throw new Error("FIXME: Boolean arrays are not implemented for Lucene datastores yet ("+propertyName+" on "+conceptType+")");
-    }    
-}
-LuceneDataStore.DEBUG = true;
-LuceneDataStore.TYPE_PROPERTY = "__cType";
-window.LuceneDataStore = LuceneDataStore;
-LuceneDataStore.storages = new Map();
-
-// Register default dom datastore
-Datastore.registerDatastoreType("lucene", LuceneDataStore);
-
-</script>
-
-                <script id="LuceneFilter-script" type="disabled">
-window.LuceneFilter = {};
-LuceneFilter.registeredFilters = [];
-
-// AND
-class LuceneFilterAnd {
-    constructor(query){
-        let self = this;
-        self.filters = [];
-        
-        query.filters.forEach(filter =>{
-            let filterClass = LuceneDataStore.getFilterClass(filter);
-            if (!filterClass) throw new Error("LuceneFilter: Unsupported filter in AND list: " + filter.constructor.name);
-            self.filters.push(new filterClass(filter));
-        });        
-    }
-    
-    async getLuceneQuery(primaryResultConceptName, context, localConcept){
-        return "("+(await Promise.all(this.filters.map(async filter => await filter.getLuceneQuery(primaryResultConceptName, context, localConcept)))).join(") AND (")+")";
-    }
-}
-LuceneFilter.registeredFilters["LuceneFilterAnd"] = LuceneFilterAnd;
-
-
-// OR
-class LuceneFilterOr {
-    constructor(query){
-        let self = this;
-        self.filters = [];
-        
-        query.filters.forEach(filter =>{
-            let filterClass = LuceneDataStore.getFilterClass(filter);
-            if (!filterClass) throw new Error("LuceneFilter: Unsupported filter in OR list: "+ filter.constructor.name);
-            self.filters.push(new filterClass(filter));
-        });
-    }
-    
-    async getLuceneQuery(primaryResultConceptName, context, localConcept){
-        return "("+(await Promise.all(this.filters.map(async filter => await filter.getLuceneQuery(primaryResultConceptName, context, localConcept)))).join(") OR (")+")";
-    }
-}
-LuceneFilter.registeredFilters["LuceneFilterOr"] = LuceneFilterOr;
-
-// NOT
-class LuceneFilterNot {
-    constructor(query){
-        let self = this;
-
-        let filterClass = LuceneDataStore.getFilterClass(query.notFilter);
-        if (!filterClass) throw new Error("LuceneFilter: Unsupported filter in NOT:"+ query.notFilter.constructor.name);
-        self.filter = new filterClass(query.notFilter);
-    }
-    
-    async getLuceneQuery(primaryResultConceptName, context, localConcept){
-        return "NOT("+(await this.filter.getLuceneQuery(primaryResultConceptName, context, localConcept))+")";
-    }
-}
-LuceneFilter.registeredFilters["LuceneFilterNot"] = LuceneFilterNot;
-
-// Concept
-class LuceneFilterConcept {
-    constructor(query){        
-        let self = this;
-        self.query = query;
-    }
-    
-    getLuceneQuery(){
-        if (this.query.includeOthers){
-            let implementingConcepts = VarvEngine.getAllImplementingConcepts(this.query.conceptName);
-            if (implementingConcepts.length===0){
-                throw new Error("Cannot construct query with concept filtering on '"+this.query.conceptName+"' because the concept does not exist in any implementation");
-            }
-            let orList = implementingConcepts.map(concept=>concept.name).join(" ");
-            return LuceneDataStore.TYPE_PROPERTY + ":("+orList+")"; // TODO: escape + - && || ! ( ) { } [ ] ^ " ~ * ? : \
-        } else {
-            return LuceneDataStore.TYPE_PROPERTY + ":("+this.query.conceptName+")"; // TODO: escape + - && || ! ( ) { } [ ] ^ " ~ * ? : \
-        }
-    }
-}
-LuceneFilter.registeredFilters["LuceneFilterConcept"] = LuceneFilterConcept;
-
-// Property
-class LuceneFilterProperty {
-    constructor(query){        
-        let self = this;
-        self.query = query;
-    }
-    
-    async getLuceneQuery(primaryResultConceptName, context, localConcept){
-        let lookedUpProperty = await VarvEngine.lookupProperty(VarvEngine.getConceptFromType(primaryResultConceptName), localConcept, this.query.property);
-        if (!lookedUpProperty){
-            throw new Error("FIXME: Precondition failed. No unresolved references to properties should exist at this point EXCEPT those referring to the target type to be filtered (the primary type)", this.query.property);
-        }
-
-        let lookup = await this.query.prepare(lookedUpProperty);
-        let lucenePropertyName = lookup.property.name;
-        switch (lookup.property.type){
-            case "string":
-                lucenePropertyName+=".sv";
-                break;
-            case "number":
-                lucenePropertyName+=".nv";
-                break;                
-            case "boolean":
-                lucenePropertyName+=".bv";
-                break;   
-            default:
-                if (lookup.property.isConceptType()){
-                    lucenePropertyName+=".rv";
-                    break;                            
-                }
-                throw new Error("LuceneDatastore: unsupported data type" + lookup.property.type);
-        }            
-        
-        // TODO: Escape query value
-        
-        switch (this.query.op){
-            case FilterOps.greaterThan:
-                return lucenePropertyName + ":{"+this.query.value+" TO *]";
-            case FilterOps.lessThan:
-                return lucenePropertyName + ":[* TO "+this.query.value+"}";
-            case FilterOps.greaterOrEquals:
-                return lucenePropertyName + ":["+this.query.value+" TO *]";
-            case FilterOps.lessOrEquals:
-                return lucenePropertyName + ":[* TO "+this.query.value+"]";
-            case FilterOps.startsWith:
-                return lucenePropertyName + "__exact:"+this.query.value.replace(" ", "\\ ");
-            case FilterOps.endsWith:
-                return lucenePropertyName + "__exact:*"+this.query.value.replace(" ", "\\ ");
-            case FilterOps.includes:
-                if (this.query.value.includes(" ")){
-                    return lucenePropertyName + "__exact:*"+this.query.value.replace(" ", "\\ ")+"*";
-                } else {
-                    return lucenePropertyName + ":*"+this.query.value+"*";
-                }
-            case FilterOps.equals:
-                return lucenePropertyName + "__exact:"+this.query.value.replace(" ", "\\ "); 
-            case FilterOps.unequals:
-                return lucenePropertyName + "__exact:-"+this.query.value.replace(" ", "\\ "); 
-            case FilterOps.matches:
-            case FilterOps.includesAny:
-            case FilterOps.includesAll:
-            default:
-                throw new Error("FIXME: Unsupported filter op",this.query.op);
-        }
-    }
-}
-LuceneFilter.registeredFilters["LuceneFilterProperty"] = LuceneFilterProperty;
-
-
-// Variable
-class LuceneFilterVariable {
-    constructor(query){        
-        let self = this;
-        self.query = query;
-    }
-    
-    getLuceneQuery(primaryResultConceptName, context, localConcept){
-        // TODO: This is either always true or always false - the variable cannot change
-        let isTrue = this.query.filter(context, localConcept);
-        throw new Error("FIXME: LuceneFilterVariable expression "+this.query.variable+" "+this.query.op+" "+this.query.value+" is always "+isTrue+" at this point, but the query mapper does not have anything to map that to yet");
-    }
-}
-LuceneFilter.registeredFilters["LuceneFilterVariable"] = LuceneFilterVariable;
-
-// Variable
-class LuceneFilterValue {
-    constructor(query){        
-        let self = this;
-        self.query = query;
-    }
-    
-    getLuceneQuery(primaryResultConceptName, context, localConcept){
-        // TODO: This is either always true or always false - the variable cannot change
-        let isTrue = this.query.filter(context, localConcept);
-        throw new Error("FIXME: LuceneFilterValue expression "+this.query.value+" "+this.query.op+" "+context+" is always "+isTrue+" at this point, but the query mapper does not prune the query tree for static nodes yet");
-    }
-}
-LuceneFilter.registeredFilters["LuceneFilterValue"] = LuceneFilterValue;
-
-// Calc
-class LuceneFilterCalc {
-    constructor(query){        
-        let self = this;
-        self.query = query;
-    }
-    
-    getLuceneQuery(primaryResultConceptName, context, localConcept){
-        // TODO: This is either always true or always false - the calculation cannot change if all inputs are resolved
-        // STUB: Only handles static calculations
-        
-        let isTrue = this.query.filter(context, localConcept);
-        throw new Error("FIXME: LuceneFilterCalc expression "+this.query.calculation+" "+this.query.valueFilter.op+" "+this.query.valueFilter.value+" is always "+isTrue+" at this point, but the query mapper does not prune the query tree for static nodes yet");
-    }
-}
-LuceneFilter.registeredFilters["LuceneFilterCalc"] = LuceneFilterCalc;
 
 </script>
 

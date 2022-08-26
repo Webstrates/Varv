@@ -331,7 +331,7 @@ class GigaVarvDatastore extends Datastore {
                 // STUB: No cache
                 // TODO: Use a fixed-size in-memory concept cache since getting everything item-by-item is SUPER DUPER SLOW
                 // TODO: and we already get most of the relevant values in the update notifications anyways
-                if (uuid===null || uuid==="") throw new Error("Invalid UUID for Lucene getter", uuid);
+                if (uuid===null || uuid==="") throw new Error("Invalid UUID for Gigavarv getter", uuid);
 
                 let fullPropertyName = property.name;
                 switch (property.type){

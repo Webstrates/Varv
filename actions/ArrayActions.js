@@ -1228,7 +1228,7 @@ class SliceAction extends Action {
                 const concept = lookup.concept;
                 const property = lookup.property;
                 const target = lookup.target;
-
+                
                 if(property.type !== "array") {
                     throw new Error("Property ["+options.property+"] of ["+concept.name+"] is not an array");
                 }

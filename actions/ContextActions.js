@@ -655,7 +655,11 @@ Action.registerPrimitiveAction("where", FilterAction);
 window.FilterAction = FilterAction;
 
 /**
- * An action "new" that creates a new concept, optionally setting properties on it as well
+ * An action "new" that creates a new concept, optionally setting properties on it as well.
+ * Runs in bulk mode unless 'forEach: true' is set. In bulk mode only 1 new concept is created, else 1 new would be created for every currently selected concept.
+ * 'select: false' is not supported in bulk mode ('forEach: false')
+ *
+ *
  * @memberOf ContextActions
  * @example
  * {
@@ -666,6 +670,15 @@ window.FilterAction = FilterAction;
  *              "mySecondProperty": false
  *              "myThirdProperty": "$myVariableName"
  *          }
+ *      }
+ * }
+ *
+ * @example
+ * //Run in non-bulk mode, creates 1 "myConcept" for each currently selected concept
+ * {
+ *      "new": {
+ *          "concept": "myConcept",
+ *          "forEach": true
  *      }
  * }
  *
@@ -1130,20 +1143,20 @@ window.ExistsAction = ExistsAction;
  * Always sorts "naturally", and only supports string, number and boolean types.
  * @memberOf ContextActions
  * @example
- * {"sort: {
+ * {"sort": {
  *     "property": "myProperty",
  *     "order": "asc"
  * }}
  *
  * @example
- * {"sort: {
+ * {"sort": {
  *     "variable": "myVariable",
  *     "order": "desc"
  * }}
  *
  * @example
  * //Shorthand sorts ascending on property
- * {"sort: "myProperty"}
+ * {"sort": "myProperty"}
  */
 class SortAction extends Action {
     constructor(name, options, concept) {
