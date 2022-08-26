@@ -1258,6 +1258,8 @@ class CloneAction extends Action {
     }
 
     async apply(contexts, actionArguments) {
+        const self = this;
+
         return this.forEachContext(contexts, actionArguments, async (context, options)=>{
             let cloneUUIDs = options.of;
 
@@ -1298,3 +1300,58 @@ class CloneAction extends Action {
 }
 Action.registerPrimitiveAction("clone", CloneAction);
 window.CloneAction = CloneAction;
+
+/**
+ * An action 'setType' that can change the type of a concept instance, highly experimental
+ *
+ * @memberOf ContextActions
+ *
+ * @example
+ * //Changes the type of all currently selected concept instances to "myNewConcept"
+ * {
+ *     "setType": {"concept": "myNewConcept"}
+ * }
+ *
+ * @example
+ * //Shorthand
+ * {"setType": "myNewConcept"}
+ */
+class SetTypeAction extends Action {
+    constructor(name, options, concept) {
+        if(typeof options === "string") {
+            options = {
+                concept: options
+            }
+        }
+
+        super(name, options, concept);
+    }
+
+    async apply(contexts, actionArguments) {
+        const self = this;
+
+        return this.forEachContext(contexts, actionArguments, async (context, options) => {
+            if(options.concept == null) {
+                throw new Error("Missing concept in action 'setType'");
+            }
+
+            let targetConcept = VarvEngine.getConceptFromType(options.concept);
+
+            if(targetConcept == null) {
+                throw new Error("Unknown concept \""+options.concept+"\" in action 'setType'");
+            }
+
+            if(context.target != null) {
+                let concept = await VarvEngine.getConceptFromUUID(context.target);
+
+                if(concept != null) {
+                    await VarvEngine.switchConceptType(context.target, targetConcept, concept);
+                }
+            } else {
+                throw new Error("Missing context.target in action 'setType'");
+            }
+        });
+    }
+}
+Action.registerPrimitiveAction("setType", SetTypeAction);
+window.SetTypeAction = SetTypeAction;

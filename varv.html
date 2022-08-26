@@ -4306,6 +4306,52 @@ class VarvEngine {
         });
     }
 
+    static async switchConceptType(uuid, newConcept, oldConcept) {
+        console.groupCollapsed("%c EXPERIMENTAL: Switching "+uuid+" from "+oldConcept.name+" to "+newConcept.name, "background: red; color: yellow");
+
+        //Find and save all properties of the concept
+        let oldProperties = {};
+
+        for(let property of oldConcept.properties) {
+            property = property[1];
+            oldProperties[property.name] = {
+                "type": property.type,
+                "value": await property.getValue(uuid)
+            }
+
+            property.purgeCache(uuid);
+        }
+
+        console.log("Old properties:", oldProperties);
+
+        //Dissapear the instance
+        await oldConcept.disappeared(uuid);
+
+        console.log("Creating instance as new concept!");
+        VarvEngine.registerConceptFromUUID(uuid, newConcept);
+
+        //Appear new instance
+        await newConcept.appeared(uuid);
+
+        //Set all properties that match
+        for(let property of newConcept.properties) {
+            property = property[1];
+
+            if(oldProperties[property.name] != null) {
+                let oldProperty = oldProperties[property.name];
+                console.log("Matching property name:", oldProperty);
+                try {
+                    await property.setValue(uuid, oldProperty.value);
+                } catch(e) {
+                    console.warn("Unable to set property on new concept type:", e);
+                }
+            }
+        }
+
+        console.groupEnd();
+    }
+
+
     static getConceptFromType(type) {
         return VarvEngine.conceptTypeMap.get(type);
     }
@@ -7924,6 +7970,8 @@ class CloneAction extends Action {
     }
 
     async apply(contexts, actionArguments) {
+        const self = this;
+
         return this.forEachContext(contexts, actionArguments, async (context, options)=>{
             let cloneUUIDs = options.of;
 
@@ -7964,6 +8012,61 @@ class CloneAction extends Action {
 }
 Action.registerPrimitiveAction("clone", CloneAction);
 window.CloneAction = CloneAction;
+
+/**
+ * An action 'setType' that can change the type of a concept instance, highly experimental
+ *
+ * @memberOf ContextActions
+ *
+ * @example
+ * //Changes the type of all currently selected concept instances to "myNewConcept"
+ * {
+ *     "setType": {"concept": "myNewConcept"}
+ * }
+ *
+ * @example
+ * //Shorthand
+ * {"setType": "myNewConcept"}
+ */
+class SetTypeAction extends Action {
+    constructor(name, options, concept) {
+        if(typeof options === "string") {
+            options = {
+                concept: options
+            }
+        }
+
+        super(name, options, concept);
+    }
+
+    async apply(contexts, actionArguments) {
+        const self = this;
+
+        return this.forEachContext(contexts, actionArguments, async (context, options) => {
+            if(options.concept == null) {
+                throw new Error("Missing concept in action 'setType'");
+            }
+
+            let targetConcept = VarvEngine.getConceptFromType(options.concept);
+
+            if(targetConcept == null) {
+                throw new Error("Unknown concept \""+options.concept+"\" in action 'setType'");
+            }
+
+            if(context.target != null) {
+                let concept = await VarvEngine.getConceptFromUUID(context.target);
+
+                if(concept != null) {
+                    await VarvEngine.switchConceptType(context.target, targetConcept, concept);
+                }
+            } else {
+                throw new Error("Missing context.target in action 'setType'");
+            }
+        });
+    }
+}
+Action.registerPrimitiveAction("setType", SetTypeAction);
+window.SetTypeAction = SetTypeAction;
 
 </script>
 

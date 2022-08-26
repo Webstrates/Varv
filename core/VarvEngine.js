@@ -64,6 +64,52 @@ class VarvEngine {
         });
     }
 
+    static async switchConceptType(uuid, newConcept, oldConcept) {
+        console.groupCollapsed("%c EXPERIMENTAL: Switching "+uuid+" from "+oldConcept.name+" to "+newConcept.name, "background: red; color: yellow");
+
+        //Find and save all properties of the concept
+        let oldProperties = {};
+
+        for(let property of oldConcept.properties) {
+            property = property[1];
+            oldProperties[property.name] = {
+                "type": property.type,
+                "value": await property.getValue(uuid)
+            }
+
+            property.purgeCache(uuid);
+        }
+
+        console.log("Old properties:", oldProperties);
+
+        //Dissapear the instance
+        await oldConcept.disappeared(uuid);
+
+        console.log("Creating instance as new concept!");
+        VarvEngine.registerConceptFromUUID(uuid, newConcept);
+
+        //Appear new instance
+        await newConcept.appeared(uuid);
+
+        //Set all properties that match
+        for(let property of newConcept.properties) {
+            property = property[1];
+
+            if(oldProperties[property.name] != null) {
+                let oldProperty = oldProperties[property.name];
+                console.log("Matching property name:", oldProperty);
+                try {
+                    await property.setValue(uuid, oldProperty.value);
+                } catch(e) {
+                    console.warn("Unable to set property on new concept type:", e);
+                }
+            }
+        }
+
+        console.groupEnd();
+    }
+
+
     static getConceptFromType(type) {
         return VarvEngine.conceptTypeMap.get(type);
     }
