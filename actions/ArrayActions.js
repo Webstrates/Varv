@@ -1223,7 +1223,7 @@ class SliceAction extends Action {
                 theThingToSlice = Action.getVariable(context, options.of.variable);
             } else if(options.of.property != null) {
                 //Handle property
-                let lookup = VarvEngine.lookupProperty(context.target, self.concept, options.of.property);
+                let lookup = await VarvEngine.lookupProperty(context.target, self.concept, options.of.property);
 
                 const concept = lookup.concept;
                 const property = lookup.property;
@@ -1233,7 +1233,7 @@ class SliceAction extends Action {
                     throw new Error("Property ["+options.property+"] of ["+concept.name+"] is not an array");
                 }
 
-                theThingToSlice = property.getValue(target);
+                theThingToSlice = await property.getValue(target);
             } else {
                 throw new Error("'slice' requires option 'of.variable' or 'of.property' to be present:"+JSON.stringify(options));
             }
