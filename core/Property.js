@@ -656,6 +656,10 @@ class Property {
         return result;
     }
 
+    purgeCache(uuid) {
+        PropertyCache.removeCachedProperty(uuid+"."+this.name);
+    }
+
     async getValue(uuid, forceDerivedReload) {
         let mark = VarvPerformance.start();
 

@@ -17,6 +17,13 @@ class PropertyCache {
         }
     }
 
+    static removeCachedProperty(lookupKey) {
+        if(PropertyCache.DEBUG) {
+            console.log("PropertyCache deleting: ", lookupKey);
+        }
+        PropertyCache.cacheMap.delete(lookupKey);
+    }
+
     static setCachedProperty(lookupKey, value) {
         if(PropertyCache.DEBUG) {
             console.log("PropertyCache setting: ", lookupKey, value);
