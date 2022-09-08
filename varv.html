@@ -1615,7 +1615,7 @@ class Property {
             const derivedValue = await this.deriveValue(uuid);
             this.derivedOldValues.set(uuid, derivedValue);
             if(typeof derivedOldValue !== "undefined" && !this.isSame(derivedValue, derivedOldValue)) {
-                await this.updated(uuid, derivedValue, true);
+                await this.updated(uuid, derivedValue, false);
             }
 
             VarvPerformance.stop("Property.getValue.derived", mark);
