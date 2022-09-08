@@ -1246,10 +1246,18 @@ window.SortAction = SortAction;
  * {
  *     "clone"
  * }
- * 
- *  * @example
+ *
+ * @example
+ * // Clone the concepts referenced in $myUuidArray
+ * {"clone": {
+ *  "of": "$myUuidArray"
+ * }}
+ *
+ * @example
+ * //Do a deep clone of current context target, setting the variable "myVariable" to the result, not selecting the new clone
  * {"clone: {
  *     "deep": true,
+ *     "select": false,
  *     "as": "myVariable"
  * }}
  * 
@@ -1267,7 +1275,12 @@ class CloneAction extends Action {
                 of: options
             }
         }
-        super(name, options, concept);
+        const defaultOptions = {
+            select: true,
+            deep: false
+        };
+
+        super(name, Object.assign({}, defaultOptions, options), concept);
     }
 
     async apply(contexts, actionArguments) {
@@ -1289,11 +1302,6 @@ class CloneAction extends Action {
                 cloneUUIDs = [cloneUUIDs];
             }
 
-            // Handle "as" before creating result contexts as it needs to be on all of them.
-            if(options.as != null) {
-                Action.setVariable(context, options.as, newUUIDs);
-            }
-
             let resultingContexts = [];
 
             let newUUIDs = [];
@@ -1301,13 +1309,40 @@ class CloneAction extends Action {
                 let concept = await VarvEngine.getConceptFromUUID(uuid);
                 let clone = await concept.clone(uuid, options.deep);
                 newUUIDs.push(clone);
-
-                let resultContext = Action.cloneContext(context);
-                resultContext.target = clone;
-                resultingContexts.push(resultContext);
             }
 
-            return resultingContexts;
+            // Handle "as" before creating result contexts as it needs to be on all of them.
+            let variableName = Action.defaultVariableName(self);
+
+            if (options.as != null) {
+                variableName = options.as;
+            }
+
+            if(options.select) {
+                //Select the new clones
+                for(let uuid of newUUIDs) {
+                    let resultContext = Action.cloneContext(context);
+                    resultContext.target = uuid;
+
+                    let variableValue = newUUIDs;
+                    if(newUUIDs.length === 1) {
+                        variableValue = uuid;
+                    }
+
+                    Action.setVariable(resultContext, variableName, variableValue);
+                    resultingContexts.push(resultContext);
+                }
+
+                return resultingContexts;
+            } else {
+                //Keep our old context selected
+                if(newUUIDs.length === 1) {
+                    newUUIDs = newUUIDs[0];
+                }
+
+                Action.setVariable(context, variableName, newUUIDs);
+                return context;
+            }
         });
     }
 }

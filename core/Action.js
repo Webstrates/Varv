@@ -521,8 +521,8 @@ class Action {
 
     /**
      * Clones the given context. (Any non JSON serializable values in the context, will be lost)
-     * @param {object} context
-     * @returns {object} - The cloned context
+     * @param {VarvContext} context
+     * @returns {VarvContext} - The cloned context
      */
     static cloneContext(context) {
         let mark = VarvPerformance.start();
