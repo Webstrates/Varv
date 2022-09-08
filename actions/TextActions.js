@@ -264,11 +264,12 @@ window.ConcatAction = ConcatAction;
  * An action 'split' that splits a String into an array, based on the given delimiter. Default delimiter is ","
  * @memberOf TextActions
  * @example
- * //Split the string in "myStringProperty" at the delimiter ";" and save the result in the variable "myArrayVariable"
+ * //Split the string in "myStringProperty" at the delimiter ";" and save the result in the variable "myArrayVariable", keeping any empty values. ex. "test;;test2" would not return the empty between ;;
  * {
  *     "split": {
  *         "property": "myStringProperty",
  *         "delimiter": ";",
+ *         "removeEmptyValues": false,
  *         "as": "myArrayVariable"
  *     }
  * }
@@ -310,7 +311,8 @@ class TextSplitAction extends Action {
         }
 
         const defaultOptions = {
-            delimiter: ","
+            delimiter: ",",
+            removeEmptyValues: true
         }
 
         super(name, Object.assign({}, defaultOptions, options), concept);
@@ -349,6 +351,12 @@ class TextSplitAction extends Action {
                 }
 
                 result = value.split(options.delimiter);
+            }
+
+            if(options.removeEmptyValues) {
+                result = result.filter((v)=>{
+                    return v.trim().length > 0;
+                });
             }
 
             if(result != null) {
