@@ -47,9 +47,9 @@ class DebugConceptAction extends Action {
 
     async apply(contexts, actionArguments) {
         return this.forEachContext(contexts, actionArguments, async (context, options)=>{
-            console.groupCollapsed("ConceptDebug:", context.target);
-
             let concept = await VarvEngine.getConceptFromUUID(context.target);
+
+            console.groupCollapsed("ConceptDebug:", concept.name, context.target);
 
             for(let key of concept.properties.keys()) {
                 let property = concept.properties.get(key);

@@ -1398,6 +1398,8 @@ class SetTypeAction extends Action {
             } else {
                 throw new Error("Missing context.target in action 'setType'");
             }
+
+            return context;
         });
     }
 }

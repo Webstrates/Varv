@@ -1194,6 +1194,11 @@ class Property {
     }
 
     holdsConceptOfType(concept) {
+        //If not a concept property or array, just skip.
+        if(!this.isConceptType() && !this.isConceptArrayType()) {
+            return false;
+        }
+
         let types = [concept.name];
         concept.otherConcepts.forEach((otherConcept)=>{
             types.push(otherConcept);
@@ -4344,6 +4349,19 @@ class VarvEngine {
                     await property.setValue(uuid, oldProperty.value);
                 } catch(e) {
                     console.warn("Unable to set property on new concept type:", e);
+                }
+            }
+        }
+
+        console.log("Cleaning references:");
+
+        //Clean all references that no longer match
+        for(let concept of VarvEngine.concepts) {
+            for(let [key, property] of concept.properties) {
+                //If property could hold old concept type, but not new, remove if our reference exists
+                if(property.holdsConceptOfType(oldConcept) && !property.holdsConceptOfType(newConcept)) {
+                    console.log("Found property that can no longer hold our reference:", property.name);
+                    await property.removeAllReferences(concept.name, uuid);
                 }
             }
         }
@@ -8110,6 +8128,8 @@ class SetTypeAction extends Action {
             } else {
                 throw new Error("Missing context.target in action 'setType'");
             }
+
+            return context;
         });
     }
 }
@@ -10054,9 +10074,9 @@ class DebugConceptAction extends Action {
 
     async apply(contexts, actionArguments) {
         return this.forEachContext(contexts, actionArguments, async (context, options)=>{
-            console.groupCollapsed("ConceptDebug:", context.target);
-
             let concept = await VarvEngine.getConceptFromUUID(context.target);
+
+            console.groupCollapsed("ConceptDebug:", concept.name, context.target);
 
             for(let key of concept.properties.keys()) {
                 let property = concept.properties.get(key);

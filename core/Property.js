@@ -252,6 +252,11 @@ class Property {
     }
 
     holdsConceptOfType(concept) {
+        //If not a concept property or array, just skip.
+        if(!this.isConceptType() && !this.isConceptArrayType()) {
+            return false;
+        }
+
         let types = [concept.name];
         concept.otherConcepts.forEach((otherConcept)=>{
             types.push(otherConcept);

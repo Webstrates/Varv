@@ -106,6 +106,19 @@ class VarvEngine {
             }
         }
 
+        console.log("Cleaning references:");
+
+        //Clean all references that no longer match
+        for(let concept of VarvEngine.concepts) {
+            for(let [key, property] of concept.properties) {
+                //If property could hold old concept type, but not new, remove if our reference exists
+                if(property.holdsConceptOfType(oldConcept) && !property.holdsConceptOfType(newConcept)) {
+                    console.log("Found property that can no longer hold our reference:", property.name);
+                    await property.removeAllReferences(concept.name, uuid);
+                }
+            }
+        }
+
         console.groupEnd();
     }
 
