@@ -4879,11 +4879,19 @@ class VarvEngine {
     }
 
     /**
+     * The object returned from lookupProperty
+     * @typedef {object} lookupPropertyObject
+     * @property {Concept} concept The concept the property was found on
+     * @property {Property} property The property itself
+     * @property {string} target The target to look up the property on
+     */
+
+    /**
      *
      * @param {string|Concept} contextTarget
      * @param {Concept} localConcept
      * @param {string} propertyName
-     * @returns {null|object}
+     * @returns {null|lookupPropertyObject}
      */
     static async lookupProperty(contextTarget, localConcept, propertyName) {
         const DEBUG_LOOKUP_PROPERTY = false;
@@ -6691,7 +6699,7 @@ class SliceAction extends Action {
             }
 
             if(theThingToSlice == null) {
-                throw new Error("'slice' the choosen array was null: "+JSON.stringify(options));
+                throw new Error("'slice' the chosen array was null: "+JSON.stringify(options));
             }
 
             if(theThingToSlice.slice == null) {
@@ -6724,6 +6732,127 @@ class SliceAction extends Action {
 }
 window.SliceAction = SliceAction;
 Action.registerPrimitiveAction("slice", SliceAction);
+
+/**
+ * An action 'index' that finds the index of a given item in an array
+ *
+ * @example
+ * //Lookup the item "myLookupItem" inside the array property "myArrayProperty", and save the resulting index in the variable "myResultVariableName"
+ * {"index": {
+ *     "of": {
+ *         "property": "myArrayProperty"
+ *     },
+ *     "item": "myLookupItem",
+ *     "as": "myResultVariableName"
+ * }}
+ *
+ * @example
+ * //Shorthand, lookup the "myLookupItem" inside the property array "myArrayProperty", and saves the index in the variable "index"
+ * {"index": {"myArrayProperty": "myLookupItem"}}
+ */
+class IndexAction extends Action {
+    constructor(name, options, concept) {
+        //Handle {"index": {"$myVariable": "myItem"}} shorthand
+        //Handle {"index": {"myProperty": "myItem"}} shorthand
+
+        if(Object.keys(options).length === 1) {
+            let key = Object.keys(options)[0];
+            let value = options[key];
+
+            if(key.startsWith("$")) {
+                options = {
+                    "of": {
+                        "variable": key.substring(1)
+                    },
+                    "item": value
+                }
+            } else {
+                options = {
+                    "of": {
+                        "property": key
+                    },
+                    "item": value
+                }
+            }
+        }
+
+        if(options.property != null) {
+            options.of = {
+                property: options.property
+            }
+
+            delete options.property;
+        }
+
+        if(options.variable != null) {
+            options.of = {
+                variable: options.variable
+            }
+
+            delete options.variable;
+        }
+
+        super(name, options, concept);
+    }
+
+    async apply(contexts, actionArguments = {}) {
+        const self = this;
+        return this.forEachContext(contexts, actionArguments, async (context, options) => {
+
+            let theArray = null;
+
+            if(options.of == null) {
+                throw new Error("'index' requires option 'of' to be present:"+JSON.stringify(options));
+            }
+
+            if(options.item == null) {
+
+            }
+
+            if(options.of.variable != null) {
+                //Handle variable
+                theArray = Action.getVariable(context, options.of.variable);
+            } else if(options.of.property != null) {
+                //Handle property
+                let lookup = await VarvEngine.lookupProperty(context.target, self.concept, options.of.property);
+
+                const concept = lookup.concept;
+                const property = lookup.property;
+                const target = lookup.target;
+
+                if(property.type !== "array") {
+                    throw new Error("Property ["+options.property+"] of ["+concept.name+"] is not an array");
+                }
+
+                theArray = await property.getValue(target);
+            } else {
+                throw new Error("'index' requires option 'of.variable' or 'of.property' to be present:"+JSON.stringify(options));
+            }
+
+            if(theArray == null) {
+                throw new Error("'index' the chosen array was null: "+JSON.stringify(options));
+            }
+
+            if(theArray.indexOf == null) {
+                throw new Error("'index' unable to find index on type: "+(typeof theArray));
+            }
+
+            let index = theArray.indexOf(options.item);
+
+            let variableName = Action.defaultVariableName(self);
+
+            if(options.as != null) {
+                variableName = options.as;
+            }
+
+            Action.setVariable(context, variableName, index);
+
+            return context;
+        });
+    }
+}
+Action.registerPrimitiveAction("index", IndexAction);
+window.IndexAction = IndexAction;
 
 </script>
 

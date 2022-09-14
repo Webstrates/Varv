@@ -632,11 +632,19 @@ class VarvEngine {
     }
 
     /**
+     * The object returned from lookupProperty
+     * @typedef {object} lookupPropertyObject
+     * @property {Concept} concept The concept the property was found on
+     * @property {Property} property The property itself
+     * @property {string} target The target to look up the property on
+     */
+
+    /**
      *
      * @param {string|Concept} contextTarget
      * @param {Concept} localConcept
      * @param {string} propertyName
-     * @returns {null|object}
+     * @returns {null|lookupPropertyObject}
      */
     static async lookupProperty(contextTarget, localConcept, propertyName) {
         const DEBUG_LOOKUP_PROPERTY = false;
