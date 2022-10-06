@@ -18363,7 +18363,7 @@ class Inspector {
                             icon: IconRegistry.createIcon("mdc:gps_fixed"),
                             onAction: (menuItem) => {
                                 for (let browser of treeBrowsers){
-                                    let treeNodes = browser.findTreeNode(uuid);
+                                    let treeNodes = browser.findTreeNode(conceptBinding.uuid);
                                     if(treeNodes.length > 0) {
                                         let treeNode = treeNodes[0];
                                         treeNode.reveal();
