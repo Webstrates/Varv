@@ -717,30 +717,34 @@ class Property {
                 //console.warn("Something went wrong (Using Default):", e);
 
                 // Return default value
-                if(this.options.default != null) {
-                    return this.options.default;
-                }
-
-                switch(this.type) {
-                    case "string":
-                        return "";
-                    case "number":
-                        return 0;
-                    case "boolean":
-                        return false;
-                    case "array":
-                        return [];
-                    default:
-                        if(VarvEngine.getConceptFromType(this.type) != null) {
-                            return null;
-                        }
-
-                        console.warn("Unknown type for default value:", this.type);
-                }
+                return this.getDefaultValue();
             }
         }
 
         throw new Error("Unable to get value for property ["+this.name+"] on ["+uuid+"]");
+    }
+
+    getDefaultValue() {
+        if(this.options.default != null) {
+            return this.options.default;
+        }
+
+        switch(this.type) {
+            case "string":
+                return "";
+            case "number":
+                return 0;
+            case "boolean":
+                return false;
+            case "array":
+                return [];
+            default:
+                if(VarvEngine.getConceptFromType(this.type) != null) {
+                    return null;
+                }
+
+                console.warn("Unknown type for default value:", this.type);
+        }
     }
 
     async stateChanged(uuid, value) {

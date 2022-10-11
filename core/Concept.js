@@ -247,7 +247,13 @@ class Concept {
             for (let key of Object.keys(properties)) {
                 let value = properties[key];
 
-                await this.setPropertyValue(wantedUUID, key, value, true);
+                await this.setPropertyValue(wantedUUID, key, value, false);
+            }
+        } else {
+            //Now trigger stateChanged for all properties
+            for(let [key, prop] of this.properties) {
+                let value = prop.getDefaultValue();
+                await prop.stateChanged(wantedUUID, value);
             }
         }
 
