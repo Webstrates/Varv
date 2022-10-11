@@ -12468,10 +12468,22 @@ class KeyTrigger extends Trigger {
                 console.log("Key trigger:", context, self.options);
             }
 
+            if(self.options.key != null && self.options.code != null) {
+                throw new Error("'key' trigger can only have one of \"key\" or \"code\" option, not both");
+            }
+
             if(self.options.key != null && self.options.key.toLowerCase() !== context.variables.key.toLowerCase()) {
                 //Key does not match
                 if(DOMTriggers.DEBUG) {
                     console.log("key does not match!");
+                }
+                return;
+            }
+
+            if(self.options.code != null && self.options.code !== context.variables.code) {
+                //Code does not match
+                if(DOMTriggers.DEBUG) {
+                    console.log("code does not match!");
                 }
                 return;
             }
@@ -12685,6 +12697,7 @@ class DOMTriggers {
 
             let context = {
                 variables: {
+                    code: keyEvent.code,
                     key: keyEvent.key,
                     shift: shift,
                     ctrl: ctrl,
