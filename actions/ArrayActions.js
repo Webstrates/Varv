@@ -450,6 +450,8 @@ class InsertAction extends Action {
             }
 
             let array = null;
+            let arrayPropertyTarget = null;
+            let arrayProperty = null;
 
             if(options.to.property != null) {
                 // Append to property array
@@ -467,6 +469,9 @@ class InsertAction extends Action {
                 if (property.type !== "array") {
                     throw new Error("Unable to " + (this.prepend ? "prepend" : "append") + " to non array type property [" + property.name + "] on [" + concept.name + "]");
                 }
+
+                arrayPropertyTarget = target;
+                arrayProperty = property;
 
                 array = await property.getValue(target);
             } else if(options.to.variable != null) {
@@ -494,6 +499,11 @@ class InsertAction extends Action {
             items.reverse().forEach((item)=>{
                 array.splice(options.index, 0, item);
             });
+
+            if(arrayProperty != null) {
+                //If property, remember to set it
+                await arrayProperty.setValue(arrayPropertyTarget, array);
+            }
 
             return context;
         });

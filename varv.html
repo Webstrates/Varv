@@ -5920,6 +5920,8 @@ class InsertAction extends Action {
             }
 
             let array = null;
+            let arrayPropertyTarget = null;
+            let arrayProperty = null;
 
             if(options.to.property != null) {
                 // Append to property array
@@ -5937,6 +5939,9 @@ class InsertAction extends Action {
                 if (property.type !== "array") {
                     throw new Error("Unable to " + (this.prepend ? "prepend" : "append") + " to non array type property [" + property.name + "] on [" + concept.name + "]");
                 }
+
+                arrayPropertyTarget = target;
+                arrayProperty = property;
 
                 array = await property.getValue(target);
             } else if(options.to.variable != null) {
@@ -5964,6 +5969,11 @@ class InsertAction extends Action {
             items.reverse().forEach((item)=>{
                 array.splice(options.index, 0, item);
             });
+
+            if(arrayProperty != null) {
+                //If property, remember to set it
+                await arrayProperty.setValue(arrayPropertyTarget, array);
+            }
 
             return context;
         });
@@ -8045,29 +8055,24 @@ class SortAction extends Action {
     async apply(contexts, actionArguments) {
         const self = this;
 
-        const sortedContexts = await Promise.all(contexts.map(async (context)=> {
-            return {
-                c: context,
-                t: await VarvEngine.getConceptFromUUID(context.target)
-            };
-        }));
-
         let optionsWithArguments = await Action.lookupArguments(this.options, actionArguments);
 
         if(optionsWithArguments.property == null && optionsWithArguments.variable == null) {
             throw new Error("Missing option property or variable on sort action");
         }
 
-        sortedContexts.sort(async (c1, c2)=>{
-            let s1 = null;
-            let s2 = null;
+        const sortedContexts = await Promise.all(contexts.map(async (context)=> {
+            let obj = {
+                c: context,
+                t: await VarvEngine.getConceptFromUUID(context.target),
+            };
 
             if(optionsWithArguments.property) {
                 //We have an invariant that says that all selected concepts are of same type
                 console.warn("TODO: Implement some fix for polymorphism enabled sort");
-                const concept = c1.t;
+                const concept = obj.t;
                 if(concept == null) {
-                    throw new Error("Unable to find concept for uuid ["+c1.c.target+"]");
+                    throw new Error("Unable to find concept for uuid ["+obj.c.target+"]");
                 }
 
                 const property = concept.getProperty(optionsWithArguments.property);
@@ -8075,13 +8080,20 @@ class SortAction extends Action {
                     throw new Error("Unable to find property ["+optionsWithArguments.property+"] on ["+concept.name+"]");
                 }
 
-                s1 = property.getValue(c1.c.target);
-                s2 = property.getValue(c2.c.target);
+                let value = await property.getValue(obj.c.target);
+                obj.v = value;
             } else {
                 //Variable
-                s1 = Action.getVariable(c1.c, optionsWithArguments.variable);
-                s2 = Action.getVariable(c2.c, optionsWithArguments.variable);
+                let value = Action.getVariable(obj.c, optionsWithArguments.variable);
+                obj.v = value;
             }
+
+            return obj;
+        }));
+
+        sortedContexts.sort((c1, c2)=>{
+            let s1 = c1.v;
+            let s2 = c2.v;
 
             if(typeof s1 !== typeof s2) {
                 throw new Error("Unable to sort when not the same type: ("+s1+") - ("+s2+")");
