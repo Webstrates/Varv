@@ -7765,7 +7765,7 @@ class EvalAction extends Action {
         const self = this;
         return this.forEachContext(contexts, actionArguments, async (context, options)=>{
 
-            let filter = FilterAction.constructFilter(this.options);
+            let filter = FilterAction.constructFilter(options);
 
             let shouldFilter = await filter.filter(context);
 
