@@ -258,6 +258,20 @@ class Action {
         return common;
     }
 
+    static getCommonTarget(contexts) {
+        let commonTarget = -1;
+        contexts.forEach((context)=>{
+            if(commonTarget === -1) {
+                commonTarget = context.target;
+            } else {
+                if(commonTarget !== context.target) {
+                    commonTarget = null;
+                }
+            }
+        });
+        return commonTarget;
+    }
+
     /**
      * Looks up any options that are set to an argument replacement value "@myArgumentName" and replaces it with that arguments value
      * @param {object} options - The options to do the replacement on

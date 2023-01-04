@@ -85,10 +85,15 @@ class RunAction extends Action {
             contextConcept = await VarvEngine.getConceptFromUUID(contexts[0].target);
         }
 
-        let action = VarvEngine.lookupAction(optionsWithArguments.action, [contextConcept, self.concept]);
+        let commonVariables = Action.getCommonVariables(contexts);
+        let commonTarget = Action.getCommonTarget(contexts);
+
+        let optionsWithVariablesAndArguments = await Action.lookupVariables(optionsWithArguments, {target: commonTarget, variables: commonVariables});
+
+        let action = VarvEngine.lookupAction(optionsWithVariablesAndArguments.action, [contextConcept, self.concept]);
 
         if(action == null) {
-            throw new Error("Unable to find action ["+optionsWithArguments.action+"]");
+            throw new Error("Unable to find action ["+optionsWithVariablesAndArguments.action+"]");
         }
 
         let clonedContexts = contexts.map((context)=> {
@@ -101,7 +106,7 @@ class RunAction extends Action {
         try {
             await ActionTrigger.before(action, clonedContexts);
             let mark = VarvPerformance.start();
-            let runContextsResult = await action.apply(clonedContexts, optionsWithArguments.lookupActionArguments);
+            let runContextsResult = await action.apply(clonedContexts, optionsWithVariablesAndArguments.lookupActionArguments);
             if(action.isPrimitive) {
                 VarvPerformance.stop("PrimitiveAction-"+action.name, mark);
             } else {
