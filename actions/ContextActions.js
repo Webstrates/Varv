@@ -280,7 +280,10 @@ class SelectAction extends Action {
 
             let result = conceptUUIDs.map((uuid)=>{
                 // Turn into context
-                return Object.assign({}, context, {target: uuid});
+                let newContext = Object.assign({}, context, {target: uuid});
+                //Make sure the target variable from commonVariables, does not bleed out, since we just set a correct target.
+                delete newContext.variables["target"];
+                return newContext;
             });
 
             if(options.as) {

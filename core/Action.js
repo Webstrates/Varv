@@ -169,6 +169,11 @@ class Action {
             return context.target;
         }
 
+        if(name === "lastTarget" && context.lastTarget != null) {
+            //If context.lastTarget exists use that
+            return context.lastTarget;
+        }
+
         if(context.variables == null) {
             context.variables = {}
         }
