@@ -147,15 +147,15 @@ class Property {
                 try {
                     this.derived.properties.forEach((propertyName) => {
                         VarvEngine.lookupProperty(null, concept, propertyName).then((lookupResult) => {
+                            console.log("LookupResult:", lookupResult, propertyName);
                             if(lookupResult.property != null) {
-                                lookupResult.property.addUpdatedCallback(resetFunction);
+                                if(lookupResult.concept.name === concept.name) {
+                                    lookupResult.property.addUpdatedCallback(updateFunction);
+                                } else {
+                                    lookupResult.property.addUpdatedCallback(resetFunction);
+                                }
                             }
                         });
-
-                        let property = concept.getProperty(propertyName);
-                        if(property != null) {
-                            property.addUpdatedCallback(updateFunction);
-                        }
                     });
                 } catch(e) {
                     console.warn(e);
