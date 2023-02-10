@@ -716,12 +716,11 @@ class Property {
             } catch(e) {
                 //console.warn("Something went wrong (Using Default):", e);
 
-                // Return default value
-                return this.getDefaultValue();
+                // Return default value, if no callback returns a value
             }
         }
 
-        throw new Error("Unable to get value for property ["+this.name+"] on ["+uuid+"]");
+        return this.getDefaultValue();
     }
 
     getDefaultValue() {
