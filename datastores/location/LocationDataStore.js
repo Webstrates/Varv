@@ -159,7 +159,7 @@ class LocationDataStore extends DirectDatastore {
 
             // On-load set the URL parameters too
             for (let [name,value] of new URLSearchParams(window.location.search).entries()){
-                for (let [conceptName, properties] of this.mappedConcepts.entries()){
+                for (let [conceptName, properties] of self.mappedConcepts.entries()){
                     if (properties.has(name)){
                         let concept = VarvEngine.getConceptFromType(conceptName);
                         let property = concept.getProperty(name);                
