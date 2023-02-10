@@ -98,17 +98,17 @@ class LocationDataStore extends DirectDatastore {
         };
         let getter = (uuid) => {
             let mark = VarvPerformance.start();
-            let result = "";            
             if (property.name==="locationHash"){
-                result = decodeURIComponent(location.hash.substring(1));
+                let result = decodeURIComponent(location.hash.substring(1));
+                if (result === "") throw new Exception("Cannot get empty locationHash");
+                VarvPerformance.stop("LocationDataStore.getter.hash", mark);
+                return result;
             } else {
                 let urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.has(property.name)){
-                    return urlParams.get(property.name);
-                }
+                if (!urlParams.has(property.name)) throw new Exception("Cannot get property not present in URL");                
+                VarvPerformance.stop("LocationDataStore.getter.argument", mark);
+                return urlParams.get(property.name);
             }
-            VarvPerformance.stop("LocationDataStore.getter", mark);
-            return result;
         };
         property.addSetCallback(setter);
         property.addGetCallback(getter);
