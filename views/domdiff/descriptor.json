@@ -1,0 +1,11 @@
+{
+    "friendlyName": "Varv DOMDiff View",
+    "description": "Allow data to be visualized as a high-performance browser-based UI based on DOM-diffing",
+    "dependencies": [
+        "#varv-engine"
+    ],
+    "assets": [],
+    "license": "MIT",
+    "version": "0.1",
+    "changelog": {}
+}
