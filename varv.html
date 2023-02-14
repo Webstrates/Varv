@@ -14350,7 +14350,634 @@ varv-view {
   display: none; }
 </style>
                 
-            </div>             
+            </div>    
+            <div class="package" id="varv-domdiff-view">
+                <script id="descriptor-script" type="descriptor">
+{
+    "friendlyName": "Varv DOMDiff View",
+    "description": "Allow data to be visualized as a high-performance browser-based UI based on DOM-diffing",
+    "dependencies": [
+        "#varv-engine"
+    ],
+    "assets": [],
+    "license": "MIT",
+    "version": "0.1",
+    "changelog": {}
+}
+
+</script>
+
+                <script id="UpdatingEvalutation-script" type="disabled">
+class UpdatingEvaluation {
+    constructor(originalText, scope, onChangeCallback){
+        this.originalText = originalText;
+        this.bindings = new Map();
+        this.tokens = originalText.match(/{(.+?)}/g);
+        if (!this.tokens) this.tokens = [];
+        this.onChangeCallback = onChangeCallback;
+        this.updateCallbacks = [];
+        this.destroyed = false;
+        
+        let self = this;
+        
+        // Prepare it once manually
+        for(let token of this.tokens) {
+            token = token.trim();
+            let lookupQuery = token.substring(1, token.length - 1);
+
+            let binding = null;
+            let propertyName;
+            if (lookupQuery.includes("?")){
+                let regexp = /^(?<condition>.+?)\?(?<quote1>["']?)(?<true>.+?)\k<quote1>(?::(?<quote2>["']?)(?<false>.*)\k<quote2>)?$/gm;
+
+                let match = regexp.exec(lookupQuery);
+
+                propertyName = match.groups.condition;
+
+                let negated = false;
+
+                if(propertyName.startsWith("!")) {
+                    negated = true;
+                    propertyName = propertyName.substring(1);
+                }
+
+                // Fancy { x ? y : < } query
+                binding = DOMView.getBindingFromScope(propertyName, scope);
+                this.bindings.set(lookupQuery, async ()=>{
+                    if (binding===undefined) return undefined;
+
+                    let value = await binding.getValueFor(propertyName);
+
+                    let trueValue = match.groups.true;
+                    let falseValue = typeof match.groups.false === "undefined"?"":match.groups.false;
+
+                    if(negated) {
+                        let tmp = trueValue;
+                        trueValue = falseValue;
+                        falseValue = tmp;
+                    }
+
+                    return value?trueValue:falseValue;
+                });
+            } else {
+                // Normal {} query, the entire thing is the name
+                propertyName = lookupQuery;
+                binding = DOMView.getBindingFromScope(propertyName, scope);
+                this.bindings.set(lookupQuery, async ()=>{
+                    if (binding===undefined) return undefined;
+                    return binding.getValueFor(propertyName);
+                });
+            }
+            if (binding && binding.concept){
+                let property = binding.concept.getProperty(propertyName);
+
+                let callback = async function updateUpdatingStringEvaluation(uuid){
+                    //Only update this stringEvaluation if the changed property was on the watched concept instance
+                    if(uuid === binding.uuid) {
+                        await self.update();
+                    }
+                };
+                property.addUpdatedCallback(callback);
+                this.updateCallbacks.push({property: property, callback: callback});
+            }
+        }
+        this.update();
+            
+    }
+    
+    async update(){
+        let mark = VarvPerformance.start();
+
+        try {
+            let text = this.originalText;
+            for(let token of this.tokens) {
+                token = token.trim();
+                let lookupQuery = token.substring(1, token.length - 1);
+
+                let value = await this.bindings.get(lookupQuery)();
+
+                if (value !== undefined){
+                    text = text.replace(token, value); // STUB: This can fail if the first token is replaced with something that looks like the second token
+                }
+            }
+
+            await this.onChangeCallback(text);
+        } catch (ex){
+            console.error(ex);
+        }
+
+        VarvPerformance.stop("UpdatingStringEvaluation.update", mark);
+    }
+
+    destroy(){
+        if (this.destroyed) {
+            if (DOMView.DEBUG){
+                console.warn("FIXME: Harmless double desctruction, ignoring - but try not to destroy me this much");
+            }
+            return;
+        }
+        for (let entry of this.updateCallbacks){
+            entry.property.removeUpdatedCallback(entry.callback);
+        }
+        this.destroyed = true;
+    }
+}
+window.UpdatingEvaluation = UpdatingEvaluation;
+
+</script>
+
+                <script id="ParseNode-script" type="disabled">
+class ParseNode {
+    constructor(templateElement){
+        this.children = [];
+        this.cleanupCallbacks = [];
+        this.templateElement = templateElement;
+        
+        // TODO: Hooks for template element changes
+        // TODO: Hooks for template changes?
+    }
+    
+    parseChildNode(parseOptions={}){
+        switch (this.templateElement.nodeType){
+            // Nodes that cannot have attributes are treated directly
+            case Node.COMMENT_NODE:
+                // Drop all comments to minify view as much as possible - we cannot update them properly anyways
+                return null;
+            case Node.TEXT_NODE:
+                return new TextParseNode(this.templateElement);
+                
+            // Nodes that may have attributes are handled below 
+            case Node.ELEMENT_NODE:
+                break;
+                
+            // Unknown nodes are copied verbatim
+            default:
+                return new YotaParseNode(this.templateElement);
+        }
+        
+        // Handle filtering/duplication attributes before anything else (may need duplication)
+        if (!parseOptions.skipFiltering){
+            const atts = this.templateElement.attributes;
+            if (atts && (atts["concept"] || atts["property"] || atts["if"])){
+                // These are not valid on varv-template element
+                if (this.templateElement.tagName==="VARV-TEMPLATE") {
+                    console.log("concept, property or if used on varv-template element itself is invalid");
+                }
+                return new FilteringParseNode(this.templateElement);
+            }
+        }
+        
+        // Handle HTML elements
+        switch (templateElement.tagName){
+            case "VARV-TEMPLATE":
+                // Not used in output
+                return null;
+            case "TEMPLATE-REF":
+                return new TemplateRefParseNode(this.templateElement);
+            default:
+                return new ElementParseNode(this.templateElement);
+        }
+    }   
+    
+    
+    async instantiateChildren(targetDocument, scope){
+        let promises = [];
+        for (let child of this.children){
+            promises.push(child.instantiate(targetDocument, scope));
+        }        
+        await Promises.all(promises);        
+    }
+    async uninstantiateChildren(){
+        let promises = [];
+        for (let child of this.children){
+            promises.push(child.uninstantiate());
+        }        
+        await Promises.all(promises);        
+    }    
+    
+}
+
+window.ParseNode = ParseNode;
+
+</script>
+
+                <script id="YotaParseNode-script" type="disabled">
+class YotaParseNode extends ParseNode {        
+    instantiate(targetDocument, scope){
+        let instance = structuredClone(this);
+        instance.view = targetDocument.importNode(this.templateElement,false);
+        
+        return instance;
+    }
+    
+    uninstantiate(){
+        this.view.remove();
+    }
+};
+
+window.YotaParseNode = YotaParseNode;
+
+</script>
+
+                <script id="TextParseNode-script" type="disabled">
+class TextParseNode extends ParseNode {        
+    instantiate(targetDocument, scope){        
+        let instance = structuredClone(this);
+        
+        instance.view = targetDocument.createTextNode();
+        instance.updatingEvaluation = new UpdatingEvaluation(instance.text, scope, function textNodeUpdated(text){                        
+            instance.view.nodeValue = text;
+        });
+        
+        return instance;
+    }
+    
+    uninstantiate(){
+        this.updatingEvaluation.destroy();
+        this.view.remove();
+    }
+};
+
+window.TextParseNode = TextParseNode;
+
+</script>
+
+                <script id="TemplateRefParseNode-script" type="disabled">
+/* 
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Other/javascript.js to edit this template
+ */
+
+
+
+</script>
+
+                <script id="FilteringParseNode-script" type="disabled">
+/* 
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/ClientSide/javascript.js to edit this template
+ */
+
+
+
+</script>
+
+                <script id="ElementParseNode-script" type="disabled">
+class ElementParseNode extends ParseNode {        
+    constructor(templateElement){
+        super(templateElement); 
+        
+        // Parse the children
+        for (let childNode of templateElement.childNodes){
+            this.children.push(this.parseChildNode(childNode));
+        }
+    }
+    
+    async instantiate(targetDocument, scope){
+        // Create the element itself
+        let instance = structuredClone(this);
+        instance.view = targetDocument.createElement(this.templateElement.tagName);
+        instance.view.scope = scope;
+        instance.view.templateElement = this.templateElement;
+        instance.view.parseNode = this;
+        
+        // Evaluate all attributes
+        instance.updatingEvaluations = [];
+        for(let attr of Array.from(this.templateElement.attributes)) {
+            // Filtering attributes are ignored
+            if (attr.name==="concept" || attr.name==="property" || attr.name==="if") continue;
+            
+            // The rest are evaluated
+            instance.updatingEvaluations.push(new UpdatingEvaluation(attr.value, scope, function attributeNodeUpdated(value){
+                let shouldUpdateAttribute = true;
+
+                // Check for special attributes
+                if (attr.name==="value"){
+                    if (instance.view.tagName==="INPUT" || instance.view.tagName==="TEXTAREA"){
+                        shouldUpdateAttribute = false;
+                        if (instance.view.type==="checkbox"){
+                            instance.view.checked = value==="true" || value===true;
+                        } else {
+                            instance.view.value = value;
+                        }                                    
+                    } else if (instance.view.tagName==="SELECT"){
+                        // STUB: wait for the rest of the tree to render so that our OPTIONS nodes are ready
+                        shouldUpdateAttribute = false;
+                        instance.view.value = value;
+                    } else if (instance.view.tagName==="DIV"){
+                        shouldUpdateAttribute = false;
+                        if (!instance.view.blockReadbacks){
+                            instance.view.innerHTML = value;
+                        }
+                    }
+                } else if(attr.name === "disabled" && value === "false") {
+                    // Don't move disabled=false over
+                    shouldUpdateAttribute = false;
+                    instance.view.removeAttribute(attr.name);
+                }
+                if (shouldUpdateAttribute){
+                    instance.view.setAttribute(attr.name, value);                            
+                }
+            }));
+        }        
+        
+        await instance.instantiateChildren(targetDocument, scope);
+        
+        return instance;
+    }
+    
+    async uninstantiate(){
+        await uninstantiateChildren();
+        for (let updatingEvalutation of this.updatingEvaluations){
+            updatingEvalutation.destroy();
+        }
+    }
+}
+
+window.ElementParseNode = ElementParseNode;
+
+</script>
+
+                <script id="RootParseNode-script" type="disabled">
+class RootParseNode extends ElementParseNode {           
+    async instantiate(){        
+        // Find the target document
+        let targetFrameSpec = this.templateElement.getAttribute("target-iframe");
+        let targetDocument;
+        if (targetFrameSpec){
+            let frame = document.querySelector(targetFrameSpec);
+            if (!frame) throw new Error("DOMDiffView: dom-view-template with target-iframe that does not exist in document failed to render", targetFrameSpec, templateElement);
+            targetDocument = frame.contentDocument;
+        } else {                        
+            targetDocument = document;
+        }       
+        
+        let scope = [];
+        
+        return this.instantiate(targetDocument, scope);
+    }
+};
+
+window.RootParseNode = RootParseNode;
+
+</script>
+
+                <script id="ValueBinding-script" type="disabled">
+class ValueBinding {
+    constructor(bindings) {
+        this.bindings = bindings;
+    }
+
+    hasBindingFor(name) {
+        return this.bindings.hasOwnProperty(name);
+    }
+
+    async getValueFor(name) {
+        return this.bindings[name];
+    }
+}
+
+window.ValueBinding = ValueBinding;
+
+</script>
+
+                <script id="PropertyBinding-script" type="disabled">
+class PropertyBinding {
+    constructor(property, uuid) {
+        this.uuid = uuid;
+        this.property = property;
+    }
+    
+    hasBindingFor(name){
+        // We don't supply this ourselves
+        return false;
+    }
+}
+
+window.PropertyBinding = PropertyBinding;
+
+</script>
+
+                <script id="ConceptInstanceBinding-script" type="disabled">
+class ConceptInstanceBinding {
+    constructor(concept, uuid) {
+        if (!uuid) throw new Error("Invalid reference to concept instance with a null or undefined uuid '"+uuid+"' and concept '"+concept+"'");
+        if (!concept) throw new Error("Invalid reference to unknown concept with uuid '"+uuid+"', concept is "+concept);
+        this.concept = concept;
+        this.uuid = uuid;
+    }
+
+    hasBindingFor(name) {
+        let lookupName = name;
+        if(lookupName.startsWith(this.concept.name+".")) {
+            lookupName = lookupName.substring(this.concept.name.length+1);
+        }
+        
+        try {
+            this.concept.getProperty(lookupName);
+            return true;
+        } catch (ex) {
+            // Ignored
+        }
+        
+        return false;
+    }
+
+    async getValueFor(name) {
+        let lookupName = name;
+        if(lookupName.startsWith(this.concept.name+".")) {
+            lookupName = lookupName.substring(this.concept.name.length+1);
+        }
+        
+        let property = null;
+        
+        try {
+            property = this.concept.getProperty(lookupName);
+        } catch(e) {
+            //Ignore
+        }
+
+        if(property === null) {
+            return undefined;
+        }
+
+        let value = await property.getValue(this.uuid);
+        if (property.isConceptType()) {
+            if (!value) return undefined; // No uuid set
+            return await ConceptInstanceBinding.create(VarvEngine.getConceptFromUUID(value), value);
+        } else if (property.isConceptArrayType()) {
+            let conceptArray = [];
+            for(let entry of value) {
+                conceptArray.push(await ConceptInstanceBinding.create(VarvEngine.getConceptFromUUID(entry), entry));
+            }
+            return conceptArray;
+        } else {
+            return value;
+        }
+    }
+    
+    async setValueFor(name, value){
+        const property = this.concept.getProperty(name);
+        await property.setValue(this.uuid, property.typeCast(value));
+    }
+
+    static async create(concept, uuid) {
+        if(typeof concept === "string") {
+            concept = VarvEngine.getConceptFromType(concept);
+        }
+
+        return new ConceptInstanceBinding(concept, uuid)
+    }
+}
+
+window.ConceptInstanceBinding = ConceptInstanceBinding;
+
+</script>
+
+                <script id="DOMView-script" type="disabled">
+class DOMView {
+    render(){
+        
+    }
+    
+    
+    /**
+     * ???
+     * @param {type} viewName
+     * @returns {unresolved}
+     */
+    getViewElements(viewName){
+        return null; // STUB: what is this used for?
+    }    
+    
+    /**
+     * Gets the most specific binding with a value for a name in the scope
+     * @param {type} bindingName
+     * @param {type} scope
+     * @returns {undefined|DOMView.getBindingFromScope.scope}
+     */
+    static getBindingFromScope(bindingName, scope){
+        for (let i = scope.length - 1; i >= 0; i--) {
+            if (scope[i].hasBindingFor(bindingName)) {
+                return scope[i];
+            }
+        }
+        return undefined;
+    }
+
+    /**
+     * Convenience method that evaluates a value in scope
+     * @param {type} bindingName
+     * @param {type} scope
+     * @returns {undefined}
+     */
+    async evaluateValueInScope(bindingName, scope) {
+        let binding = DOMView.getBindingFromScope(bindingName, scope);
+        if (binding===undefined) return undefined;
+        
+        return await binding.getValueFor(bindingName);
+    }    
+    
+    /**
+     * Gets an ordered list of concepts instances involved in rendering this view element
+     * @param {HTMLElement} viewElement
+     * @returns {string[]}
+     */
+    getConceptPath(viewElement){        
+        let element = viewElement;
+        while (element != null && !element.scope){
+            element = element.parentElement;
+            if (element==null){
+                // No concepts in this tree path at all                
+                return [];
+            }
+        }
+
+        let result = [];
+        if(element != null && element.scope != null) {
+            for (let binding of element.scope) {
+                if (binding instanceof ConceptInstanceBinding) {
+                    result.push(binding);
+                }
+            }
+        }
+        return result;
+    }
+    
+    /**
+     * Gets an ordered list of template elements involved in rendering this view element
+     * @param {HTMLElement} viewElement
+     * @returns {string[]}
+     */     
+    getTemplatePath(viewElement){
+        let result = [];
+        let element = viewElement;
+        while (element != null){
+            if (element.templateElement){
+                result.push(element.templateElement);
+            }
+            element = element.parentElement;
+        }
+        
+        return result.reverse();
+    }
+    
+    /**
+     * Gets an ordered list of properties involved in rendering this view element
+     * @param {HTMLElement} viewElement
+     * @returns {string[]}
+     */    
+    getPropertyPath(viewElement){
+        let element = viewElement;
+        while (element != null && !element.scope){
+            element = element.parentElement;
+            if (element==null){
+                // No concepts in this tree path at all                
+                return [];
+            }
+        }
+
+        let result = [];
+        if(element != null && element.scope != null) {
+            for (let binding of element.scope) {
+                if (binding instanceof PropertyBinding) {
+                    result.push({uuid: binding.uuid, property: binding.property});
+                }
+            }
+        }
+        return result;        
+    }    
+}
+
+DOMView.DEBUG = true;
+DOMView.singleton = new DOMView();
+window.DOMView = DOMView;
+
+</script>
+
+                <style id="domview-style">
+dom-view-template {
+  display: none; }
+
+varv-view {
+  display: contents; }
+  varv-view varv-failure:before {
+    content: "?";
+    width: 1em;
+    height: 1em;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: red;
+    cursor: pointer; }
+  varv-view [varv-domview-highlight] {
+    filter: invert(15%) drop-shadow(0 0 0.25em #6496ff); }
+
+.hide-varv-errors varv-failure {
+  display: none; }
+</style>
+                
+            </div>               
             <div class="package" id="varv-memory">
                 <script id="descriptor-script" type="descriptor">
 {
@@ -19636,7 +20263,7 @@ SQLFilter.registeredFilters["SQLFilterCalc"] = SQLFilterCalc;
     "friendlyName": "Varv URL Data Store",
     "description": "Access properties of the URL as concept data",
     "dependencies": [
-        "#varv"
+        "#varv-engine"
     ],
     "assets": [],
     "license": "MIT",
