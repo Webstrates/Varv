@@ -62,6 +62,8 @@ class Filter {
     static filterValue(value, compareValue, op, assert = false) {
         let pass = false;
 
+        let markStart = VarvPerformance.start();
+
         if(value == null) {
             switch(op) {
                 case FilterOps.equals: {
@@ -152,6 +154,7 @@ class Filter {
                 }
 
                 default:
+                    VarvPerformance.stop("Filter.filterValue.Error", markStart);
                     throw new Error("Unknown op: " + op);
             }
         }
@@ -163,6 +166,8 @@ class Filter {
                 console.assert(pass, "Value: ",value," should be ",op.toString(),compareValue);
             }
         }
+
+        VarvPerformance.stop("Filter.filterValue", markStart);
 
         return pass;
     }
@@ -248,6 +253,8 @@ class FilterProperty extends Filter {
     }
 
     async filter(context, localConcept, assert) {
+        let markStart = VarvPerformance.start();
+
         let lookup = await this.prepare(await VarvEngine.lookupProperty(context.target, localConcept, this.property));
         let value = await lookup.property.getValue(lookup.target);
         let typeCastedValue = this.value;
@@ -258,7 +265,11 @@ class FilterProperty extends Filter {
             //Ignore
         }
 
-        return Filter.filterValue(value, typeCastedValue, this.op, assert);
+        let result = Filter.filterValue(value, typeCastedValue, this.op, assert);
+
+        VarvPerformance.stop("FilterProperty.filter", markStart);
+
+        return result;
     }
 }
 window.FilterProperty = FilterProperty;
@@ -323,6 +334,8 @@ class FilterVariable extends Filter {
     }
 
     async filter(context, localConcept, assert) {
+        let markStart = VarvPerformance.start();
+
         let variableValue = Action.getVariable(context, this.variable);
 
         let type = typeof variableValue;
@@ -332,10 +345,15 @@ class FilterVariable extends Filter {
         }
 
         if(!this.allowedTypes().includes(type)) {
+            VarvPerformance.stop("FilterVariable.filter.Error", markStart);
             throw new Error("Op ["+this.op+"] does not work on variable with value type ["+type+"] from variable ["+this.variable+"]");
         }
 
-        return Filter.filterValue(variableValue, this.value, this.op, assert);
+        let result = Filter.filterValue(variableValue, this.value, this.op, assert);
+
+        VarvPerformance.stop("FilterVariable.filter", markStart);
+
+        return result;
     }
 }
 window.FilterVariable = FilterVariable;
@@ -398,6 +416,8 @@ class FilterValue extends Filter {
     }
 
     async filter(value, localConcept, assert) {
+        let markStart = VarvPerformance.start();
+
         let type = typeof value;
 
         if(Array.isArray(value)) {
@@ -405,10 +425,15 @@ class FilterValue extends Filter {
         }
 
         if(!this.allowedTypes().includes(type)) {
+            VarvPerformance.stop("FilterValue.filter.Error", markStart);
             throw new Error("This operator ["+this.op+"] does not allow value type ["+type+"]");
         }
 
-        return Filter.filterValue(value, this.value, this.op, assert);
+        let result = Filter.filterValue(value, this.value, this.op, assert);
+
+        VarvPerformance.stop("FilterValue.filter", markStart);
+
+        return result;
     }
 }
 window.FilterValue = FilterValue;
@@ -422,6 +447,8 @@ class FilterConcept extends Filter {
     }
 
     async filter(context, localConcept, assert) {
+        let markStart = VarvPerformance.start();
+
         let concept = await VarvEngine.getConceptFromUUID(context.target);
 
         if(concept == null) {
@@ -447,6 +474,8 @@ class FilterConcept extends Filter {
             }
         }
 
+        VarvPerformance.stop("FilterConcept.filter", markStart);
+
         return pass;
     }
 }
@@ -460,11 +489,15 @@ class FilterOr extends Filter {
     }
 
     async filter(context, localConcept, assert) {
+        let markStart = VarvPerformance.start();
+
         let pass = false;
 
         for(let filter of this.filters) {
             pass = pass || await filter.filter(context, localConcept, assert);
         }
+
+        VarvPerformance.stop("FilterOr.filter", markStart);
 
         return pass;
     }
@@ -479,11 +512,15 @@ class FilterAnd extends Filter {
     }
 
     async filter(context, localConcept, assert) {
+        let markStart = VarvPerformance.start();
+
         let pass = true;
 
         for(let filter of this.filters) {
             pass = pass && await filter.filter(context, localConcept, assert);
         }
+
+        VarvPerformance.stop("FilterAnd.filter", markStart);
 
         return pass;
     }
@@ -499,11 +536,15 @@ class FilterNot extends Filter {
 
     async filter(context, localConcept, assert) {
 
+        let markStart = VarvPerformance.start();
+
         if(assert === true) {
             assert = 1;
         }
 
         let pass = ! (await this.notFilter.filter(context, localConcept, assert?(assert+1):false));
+
+        VarvPerformance.stop("FilterNot.filter", markStart);
 
         return pass;
     }
@@ -519,9 +560,13 @@ class FilterCalc extends Filter {
     }
 
     async filter(context, localConcept, assert) {
+        let markStart = VarvPerformance.start();
+
         let result = math.evaluate(this.calculation);
 
         let pass = await this.valueFilter.filter(result, localConcept, assert);
+
+        VarvPerformance.stop("FilterCalc.filter", markStart);
 
         return pass;
     }

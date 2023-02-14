@@ -143,8 +143,12 @@ class Concept {
     }
 
     getProperty(name) {
+        let markStart = VarvPerformance.start();
+
+        let property = null;
+
         if(name === "uuid") {
-            return {
+            property = {
                 name: "uuid",
                 type: "string",
                 isConceptType: ()=>{return false},
@@ -152,13 +156,15 @@ class Concept {
                     return uuid;
                 }
             };
+        } else {
+            property = this.properties.get(name);
         }
 
-        const property = this.properties.get(name);
-
         if(property != null) {
+            VarvPerformance.stop("Concept.getProperty", markStart);
             return property;
         } else {
+            VarvPerformance.stop("Concept.getProperty.error", markStart);
             throw new Error("No property ["+name+"] on ["+this.name+"]");
         }
     }

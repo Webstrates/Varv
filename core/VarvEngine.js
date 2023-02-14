@@ -59,6 +59,8 @@ class VarvEngine {
 
                 resolve(result);
             } catch(e) {
+                VarvPerformance.stop("VarvEngine.getConceptFromUUID.nonCached.error", mark);
+
                 resolve(null);
             }
         });
@@ -680,7 +682,7 @@ class VarvEngine {
             let lookupConcept = VarvEngine.getConceptFromType(conceptName);
 
             if(conceptName === "lastTarget") {
-                console.warn("Should never see this?????");
+                console.warn("Should never see this (conceptName === 'lastTarget') ?????");
             }
 
             if(lookupConcept != null) {
@@ -702,7 +704,7 @@ class VarvEngine {
                         console.groupEnd();
                     }
 
-                    VarvPerformance.stop("VarvEngine.lookupProperty", mark);
+                    VarvPerformance.stop("VarvEngine.lookupProperty.concept.property", mark);
 
                     return {
                         property: lookupProperty,
@@ -736,7 +738,7 @@ class VarvEngine {
                 console.groupEnd();
             }
 
-            VarvPerformance.stop("VarvEngine.lookupProperty", mark);
+            VarvPerformance.stop("VarvEngine.lookupProperty.contextConcept", mark);
 
             return {
                 property: property,
@@ -757,7 +759,7 @@ class VarvEngine {
                 console.groupEnd();
             }
 
-            VarvPerformance.stop("VarvEngine.lookupProperty", mark);
+            VarvPerformance.stop("VarvEngine.lookupProperty.localConcept", mark);
 
             return {
                 property: property,
@@ -779,7 +781,7 @@ class VarvEngine {
                     console.groupEnd();
                 }
 
-                VarvPerformance.stop("VarvEngine.lookupProperty", mark);
+                VarvPerformance.stop("VarvEngine.lookupProperty.globalConcept", mark);
 
                 return {
                     property: property,
@@ -792,7 +794,7 @@ class VarvEngine {
             }
         }
 
-        VarvPerformance.stop("VarvEngine.lookupProperty", mark);
+        VarvPerformance.stop("VarvEngine.lookupProperty.notFound", mark);
 
         if(VarvEngine.DEBUG || DEBUG_LOOKUP_PROPERTY) {
             console.log("Not found...");
