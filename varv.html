@@ -14486,6 +14486,35 @@ window.UpdatingEvaluation = UpdatingEvaluation;
 
 </script>
 
+                <script id="ViewParticle-script" type="disabled">
+class ViewParticle {
+    constructor(parseNode, scope){
+        this.view = [];
+        this.cleanup = [];
+    }
+    
+    push(element){
+        this.view.push(element);
+    }
+    
+    addCleanup(callback){
+        this.cleanup.push(callback);
+    }
+    
+    destroy(){
+        this.cleanup.forEach((callback)=>{
+            callback(); 
+        });
+        this.view.forEach((element)=>{
+            element.remove();
+        });
+    }
+}
+
+window.ViewParticle = ViewParticle;
+
+</script>
+
                 <script id="ParseNode-script" type="disabled">
 class ParseNode {
     constructor(templateElement){
@@ -14493,18 +14522,19 @@ class ParseNode {
         this.cleanupCallbacks = [];
         this.templateElement = templateElement;
         
+        console.log("adding ", templateElement);
         // TODO: Hooks for template element changes
         // TODO: Hooks for template changes?
     }
     
-    parseChildNode(parseOptions={}){
-        switch (this.templateElement.nodeType){
+    parseTemplateNode(elementNode, parseOptions={}){
+        switch (elementNode.nodeType){
             // Nodes that cannot have attributes are treated directly
             case Node.COMMENT_NODE:
                 // Drop all comments to minify view as much as possible - we cannot update them properly anyways
                 return null;
             case Node.TEXT_NODE:
-                return new TextParseNode(this.templateElement);
+                return new TextParseNode(elementNode);
                 
             // Nodes that may have attributes are handled below 
             case Node.ELEMENT_NODE:
@@ -14512,49 +14542,32 @@ class ParseNode {
                 
             // Unknown nodes are copied verbatim
             default:
-                return new YotaParseNode(this.templateElement);
+                return new YotaParseNode(elementNode);
         }
         
         // Handle filtering/duplication attributes before anything else (may need duplication)
         if (!parseOptions.skipFiltering){
-            const atts = this.templateElement.attributes;
+            const atts = elementNode.attributes;
             if (atts && (atts["concept"] || atts["property"] || atts["if"])){
                 // These are not valid on varv-template element
-                if (this.templateElement.tagName==="VARV-TEMPLATE") {
+                if (elementNode==="VARV-TEMPLATE") {
                     console.log("concept, property or if used on varv-template element itself is invalid");
                 }
-                return new FilteringParseNode(this.templateElement);
+                return new FilteringParseNode(elementNode);
             }
         }
         
         // Handle HTML elements
-        switch (templateElement.tagName){
+        switch (elementNode.tagName){
             case "VARV-TEMPLATE":
                 // Not used in output
                 return null;
             case "TEMPLATE-REF":
-                return new TemplateRefParseNode(this.templateElement);
+                return new TemplateRefParseNode(elementNode);
             default:
-                return new ElementParseNode(this.templateElement);
+                return new ElementParseNode(elementNode);
         }
     }   
-    
-    
-    async instantiateChildren(targetDocument, scope){
-        let promises = [];
-        for (let child of this.children){
-            promises.push(child.instantiate(targetDocument, scope));
-        }        
-        await Promises.all(promises);        
-    }
-    async uninstantiateChildren(){
-        let promises = [];
-        for (let child of this.children){
-            promises.push(child.uninstantiate());
-        }        
-        await Promises.all(promises);        
-    }    
-    
 }
 
 window.ParseNode = ParseNode;
@@ -14563,15 +14576,12 @@ window.ParseNode = ParseNode;
 
                 <script id="YotaParseNode-script" type="disabled">
 class YotaParseNode extends ParseNode {        
-    instantiate(targetDocument, scope){
-        let instance = structuredClone(this);
-        instance.view = targetDocument.importNode(this.templateElement,false);
-        
-        return instance;
-    }
-    
-    uninstantiate(){
-        this.view.remove();
+    getView(targetDocument, scope){
+        console.log("instantiating yota", this.templateElement);
+
+        let view = new ViewParticle(this, scope);
+        view.push(targetDocument.importNode(this.templateElement,false));        
+        return view;
     }
 };
 
@@ -14581,20 +14591,20 @@ window.YotaParseNode = YotaParseNode;
 
                 <script id="TextParseNode-script" type="disabled">
 class TextParseNode extends ParseNode {        
-    instantiate(targetDocument, scope){        
-        let instance = structuredClone(this);
+    getView(targetDocument, scope){ 
+        console.log("instantiating text", this.templateElement);
         
-        instance.view = targetDocument.createTextNode();
-        instance.updatingEvaluation = new UpdatingEvaluation(instance.text, scope, function textNodeUpdated(text){                        
-            instance.view.nodeValue = text;
+        let view = new ViewParticle(this, scope); 
+        let textNode = targetDocument.createTextNode("");
+        view.updatingEvaluation = new UpdatingEvaluation(this.templateElement.nodeValue, scope, function textNodeUpdated(text){                        
+            textNode.nodeValue = text;
+        });
+        view.push(textNode);
+        view.addCleanup(()=>{
+            this.updatingEvaluation.destroy();
         });
         
-        return instance;
-    }
-    
-    uninstantiate(){
-        this.updatingEvaluation.destroy();
-        this.view.remove();
+        return view;
     }
 };
 
@@ -14613,12 +14623,74 @@ window.TextParseNode = TextParseNode;
 </script>
 
                 <script id="FilteringParseNode-script" type="disabled">
-/* 
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/ClientSide/javascript.js to edit this template
- */
+class FilteringParseNode extends ParseNode {
+    constructor(templateElement){
+        super(templateElement); 
+        
+        // We are our own child
+        this.children.push(this.parseTemplateNode(templateElement, {
+            skipFiltering: true
+        }));
+    }
+    
+    getView(targetDocument, scope){
+        console.log("instantiating filtering for ", this.templateElement);
+        let self = this;        
+        let view = new ViewParticle(this, scope);
+        
+        let conceptQuery = this.templateElement.getAttribute("concept");
+        let propertyQuery = this.templateElement.getAttribute("property");
+        let conditionalQuery = this.templateElement.getAttribute("if");
+        
+        // Ensure that all inputs are fully evaluated before calling evaluateFilter
+        view.needsConcept = conceptQuery!==null;
+        view.needsProperty = propertyQuery!==null;        
+        view.needsConditional = conditionalQuery!==null;        
+        if (view.needsConcept){
+            view.conceptUpdatingEvaluation = new UpdatingEvaluation(conceptQuery, scope, function conceptAttributeUpdated(text){                        
+                view.needsConcept = false;
+                view.concept = text;
+                self.evaluateFilter(view, scope);
+            });
+        }    
+        if (view.needsProperty){
+            view.propertyUpdatingEvaluation = new UpdatingEvaluation(propertyQuery, scope, function propertyAttributeUpdated(text){                        
+                view.needsProperty = false;
+                view.property = text;
+                self.evaluateFilter(view, scope);
+            });
+        }   
+        if (view.needsConditional){
+            view.conditionalUpdatingEvaluation = new UpdatingEvaluation(propertyQuery, scope, function conditionalAttributeUpdated(text){                        
+                view.needsConditional = false;
+                view.conditional = text;
+                self.evaluateFilter(view, scope);
+            });
+        }             
+        
+        return view;
+    }
+    
+    async evaluateFilter(view, scope){
+        if (view.needsConcept||view.needsProperty||view.needsConditional) return; // Not ready yet
+        
+        // TODO: Setup context based on scope
+        let context = {};
+        
+        // Concept enumeration queries (possibly filtered)
+        if (view.concept){ 
+            if (view.property) throw new Exception("Concept enumerations with property lookups not supported yet");
+            if (view.conditional) throw new Exception("Concept enumerations with conditionals not supported yet");
 
+            let instances = await VarvEngine.lookupInstances(VarvEngine.getAllImplementingConceptNames(view.concept), null, context);
+        } else {
+            // Scope-based queries
+        }
+        
+    }
+};
 
+window.FilteringParseNode = FilteringParseNode;
 
 </script>
 
@@ -14629,68 +14701,69 @@ class ElementParseNode extends ParseNode {
         
         // Parse the children
         for (let childNode of templateElement.childNodes){
-            this.children.push(this.parseChildNode(childNode));
+            this.children.push(this.parseTemplateNode(childNode));
         }
     }
     
-    async instantiate(targetDocument, scope){
+    getView(targetDocument, scope){
+        console.log("instantiating element", this.templateElement);
+        
         // Create the element itself
-        let instance = structuredClone(this);
-        instance.view = targetDocument.createElement(this.templateElement.tagName);
-        instance.view.scope = scope;
-        instance.view.templateElement = this.templateElement;
-        instance.view.parseNode = this;
+        let view = new ViewParticle(this, scope);
+        let element = targetDocument.createElement(this.templateElement.tagName);
+        view.push(element);
+        element.scope = scope;
+        element.templateElement = this.templateElement;
+        element.parseNode = this;
         
         // Evaluate all attributes
-        instance.updatingEvaluations = [];
         for(let attr of Array.from(this.templateElement.attributes)) {
             // Filtering attributes are ignored
             if (attr.name==="concept" || attr.name==="property" || attr.name==="if") continue;
             
             // The rest are evaluated
-            instance.updatingEvaluations.push(new UpdatingEvaluation(attr.value, scope, function attributeNodeUpdated(value){
+            let updatingEvaluation = new UpdatingEvaluation(attr.value, scope, function attributeNodeUpdated(value){
                 let shouldUpdateAttribute = true;
 
                 // Check for special attributes
                 if (attr.name==="value"){
-                    if (instance.view.tagName==="INPUT" || instance.view.tagName==="TEXTAREA"){
+                    if (this.templateElement.tagName==="INPUT" || this.templateElement.tagName==="TEXTAREA"){
                         shouldUpdateAttribute = false;
-                        if (instance.view.type==="checkbox"){
-                            instance.view.checked = value==="true" || value===true;
+                        if (this.templateElement.type==="checkbox"){
+                            element.checked = value==="true" || value===true;
                         } else {
-                            instance.view.value = value;
+                            element.value = value;
                         }                                    
-                    } else if (instance.view.tagName==="SELECT"){
+                    } else if (view.view.tagName==="SELECT"){
                         // STUB: wait for the rest of the tree to render so that our OPTIONS nodes are ready
                         shouldUpdateAttribute = false;
-                        instance.view.value = value;
-                    } else if (instance.view.tagName==="DIV"){
+                        element.value = value;
+                    } else if (view.view.tagName==="DIV"){
                         shouldUpdateAttribute = false;
-                        if (!instance.view.blockReadbacks){
-                            instance.view.innerHTML = value;
+                        if (!element.blockReadbacks){
+                            element.innerHTML = value;
                         }
                     }
                 } else if(attr.name === "disabled" && value === "false") {
                     // Don't move disabled=false over
                     shouldUpdateAttribute = false;
-                    instance.view.removeAttribute(attr.name);
+                    element.removeAttribute(attr.name);
                 }
                 if (shouldUpdateAttribute){
-                    instance.view.setAttribute(attr.name, value);                            
+                    element.setAttribute(attr.name, value);                            
                 }
-            }));
+            });
+            view.addCleanup(()=>{
+                updatingEvaluation.destroy();
+            });
         }        
         
-        await instance.instantiateChildren(targetDocument, scope);
+        // TODO: Do something with the children
+        for (let child of this.children){
+            child.getView(targetDocument, scope);
+        }        
         
-        return instance;
-    }
-    
-    async uninstantiate(){
-        await uninstantiateChildren();
-        for (let updatingEvalutation of this.updatingEvaluations){
-            updatingEvalutation.destroy();
-        }
+        return view;
     }
 }
 
@@ -14700,7 +14773,7 @@ window.ElementParseNode = ElementParseNode;
 
                 <script id="RootParseNode-script" type="disabled">
 class RootParseNode extends ElementParseNode {           
-    async instantiate(){        
+    render(){        
         // Find the target document
         let targetFrameSpec = this.templateElement.getAttribute("target-iframe");
         let targetDocument;
@@ -14714,7 +14787,11 @@ class RootParseNode extends ElementParseNode {
         
         let scope = [];
         
-        return this.instantiate(targetDocument, scope);
+        // Find the target element
+        // TODO
+        
+        let view = this.getView(targetDocument, scope);
+        
     }
 };
 
@@ -14837,7 +14914,13 @@ window.ConceptInstanceBinding = ConceptInstanceBinding;
                 <script id="DOMView-script" type="disabled">
 class DOMView {
     render(){
-        
+        document.querySelectorAll("dom-view-template").forEach(async (template)=>{
+            console.log("Parsing",template);
+            let root = new RootParseNode(template);
+            console.log("Rendering",template);
+            let view = await root.render();
+            console.log("Ready for use");
+        });
     }
     
     

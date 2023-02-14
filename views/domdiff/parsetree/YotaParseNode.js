@@ -1,13 +1,10 @@
 class YotaParseNode extends ParseNode {        
-    instantiate(targetDocument, scope){
-        let instance = structuredClone(this);
-        instance.view = targetDocument.importNode(this.templateElement,false);
-        
-        return instance;
-    }
-    
-    uninstantiate(){
-        this.view.remove();
+    getView(targetDocument, scope){
+        console.log("instantiating yota", this.templateElement);
+
+        let view = new ViewParticle(this, scope);
+        view.push(targetDocument.importNode(this.templateElement,false));        
+        return view;
     }
 };
 

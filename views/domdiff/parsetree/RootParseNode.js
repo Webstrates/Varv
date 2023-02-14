@@ -1,5 +1,5 @@
 class RootParseNode extends ElementParseNode {           
-    async instantiate(){        
+    render(){        
         // Find the target document
         let targetFrameSpec = this.templateElement.getAttribute("target-iframe");
         let targetDocument;
@@ -13,7 +13,11 @@ class RootParseNode extends ElementParseNode {
         
         let scope = [];
         
-        return this.instantiate(targetDocument, scope);
+        // Find the target element
+        // TODO
+        
+        let view = this.getView(targetDocument, scope);
+        
     }
 };
 

@@ -1,6 +1,12 @@
 class DOMView {
     render(){
-        
+        document.querySelectorAll("dom-view-template").forEach(async (template)=>{
+            console.log("Parsing",template);
+            let root = new RootParseNode(template);
+            console.log("Rendering",template);
+            let view = await root.render();
+            console.log("Ready for use");
+        });
     }
     
     

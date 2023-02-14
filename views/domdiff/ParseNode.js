@@ -4,18 +4,19 @@ class ParseNode {
         this.cleanupCallbacks = [];
         this.templateElement = templateElement;
         
+        console.log("adding ", templateElement);
         // TODO: Hooks for template element changes
         // TODO: Hooks for template changes?
     }
     
-    parseChildNode(parseOptions={}){
-        switch (this.templateElement.nodeType){
+    parseTemplateNode(elementNode, parseOptions={}){
+        switch (elementNode.nodeType){
             // Nodes that cannot have attributes are treated directly
             case Node.COMMENT_NODE:
                 // Drop all comments to minify view as much as possible - we cannot update them properly anyways
                 return null;
             case Node.TEXT_NODE:
-                return new TextParseNode(this.templateElement);
+                return new TextParseNode(elementNode);
                 
             // Nodes that may have attributes are handled below 
             case Node.ELEMENT_NODE:
@@ -23,49 +24,32 @@ class ParseNode {
                 
             // Unknown nodes are copied verbatim
             default:
-                return new YotaParseNode(this.templateElement);
+                return new YotaParseNode(elementNode);
         }
         
         // Handle filtering/duplication attributes before anything else (may need duplication)
         if (!parseOptions.skipFiltering){
-            const atts = this.templateElement.attributes;
+            const atts = elementNode.attributes;
             if (atts && (atts["concept"] || atts["property"] || atts["if"])){
                 // These are not valid on varv-template element
-                if (this.templateElement.tagName==="VARV-TEMPLATE") {
+                if (elementNode==="VARV-TEMPLATE") {
                     console.log("concept, property or if used on varv-template element itself is invalid");
                 }
-                return new FilteringParseNode(this.templateElement);
+                return new FilteringParseNode(elementNode);
             }
         }
         
         // Handle HTML elements
-        switch (templateElement.tagName){
+        switch (elementNode.tagName){
             case "VARV-TEMPLATE":
                 // Not used in output
                 return null;
             case "TEMPLATE-REF":
-                return new TemplateRefParseNode(this.templateElement);
+                return new TemplateRefParseNode(elementNode);
             default:
-                return new ElementParseNode(this.templateElement);
+                return new ElementParseNode(elementNode);
         }
     }   
-    
-    
-    async instantiateChildren(targetDocument, scope){
-        let promises = [];
-        for (let child of this.children){
-            promises.push(child.instantiate(targetDocument, scope));
-        }        
-        await Promises.all(promises);        
-    }
-    async uninstantiateChildren(){
-        let promises = [];
-        for (let child of this.children){
-            promises.push(child.uninstantiate());
-        }        
-        await Promises.all(promises);        
-    }    
-    
 }
 
 window.ParseNode = ParseNode;

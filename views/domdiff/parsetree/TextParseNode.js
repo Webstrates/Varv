@@ -1,18 +1,18 @@
 class TextParseNode extends ParseNode {        
-    instantiate(targetDocument, scope){        
-        let instance = structuredClone(this);
+    getView(targetDocument, scope){ 
+        console.log("instantiating text", this.templateElement);
         
-        instance.view = targetDocument.createTextNode();
-        instance.updatingEvaluation = new UpdatingEvaluation(instance.text, scope, function textNodeUpdated(text){                        
-            instance.view.nodeValue = text;
+        let view = new ViewParticle(this, scope); 
+        let textNode = targetDocument.createTextNode("");
+        view.updatingEvaluation = new UpdatingEvaluation(this.templateElement.nodeValue, scope, function textNodeUpdated(text){                        
+            textNode.nodeValue = text;
+        });
+        view.push(textNode);
+        view.addCleanup(()=>{
+            this.updatingEvaluation.destroy();
         });
         
-        return instance;
-    }
-    
-    uninstantiate(){
-        this.updatingEvaluation.destroy();
-        this.view.remove();
+        return view;
     }
 };
 
