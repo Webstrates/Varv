@@ -234,7 +234,7 @@ class FilterProperty extends Filter {
         }
     }
     
-    async prepare(lookup){
+    prepare(lookup){
         if(lookup === null) {
             throw new Error("No property ["+this.property+"] found!");
         }
@@ -255,8 +255,13 @@ class FilterProperty extends Filter {
     async filter(context, localConcept, assert) {
         let markStart = VarvPerformance.start();
 
-        let lookup = await this.prepare(await VarvEngine.lookupProperty(context.target, localConcept, this.property));
-        let value = await lookup.property.getValue(lookup.target);
+        let lookup = this.prepare(await VarvEngine.lookupProperty(context.target, localConcept, this.property));
+        let possiblePromiseOrValue = lookup.property.getValue(lookup.target);
+
+        if(possiblePromiseOrValue instanceof Promise) {
+            possiblePromiseOrValue = await possiblePromiseOrValue;
+        }
+
         let typeCastedValue = this.value;
         try {
             //TODO: Not sure if we should typecast here?
@@ -265,7 +270,7 @@ class FilterProperty extends Filter {
             //Ignore
         }
 
-        let result = Filter.filterValue(value, typeCastedValue, this.op, assert);
+        let result = Filter.filterValue(possiblePromiseOrValue, typeCastedValue, this.op, assert);
 
         VarvPerformance.stop("FilterProperty.filter", markStart);
 

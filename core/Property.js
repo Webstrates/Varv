@@ -665,28 +665,32 @@ class Property {
         PropertyCache.removeCachedProperty(uuid+"."+this.name);
     }
 
-    async getValue(uuid, forceDerivedReload) {
+    getValue(uuid, forceDerivedReload) {
         let mark = VarvPerformance.start();
 
         if(this.derived != null) {
-            const derivedOldValue = this.derivedOldValues.get(uuid);
+            return new Promise(async (resolve, reject)=>{
+                const derivedOldValue = this.derivedOldValues.get(uuid);
 
-            if(typeof derivedOldValue !== "undefined" && !forceDerivedReload) {
-                return derivedOldValue;
-            }
+                if(typeof derivedOldValue !== "undefined" && !forceDerivedReload) {
+                    resolve(derivedOldValue);
+                }
 
-            const derivedValue = await this.deriveValue(uuid);
-            this.derivedOldValues.set(uuid, derivedValue);
-            if(typeof derivedOldValue !== "undefined" && !this.isSame(derivedValue, derivedOldValue)) {
-                await this.updated(uuid, derivedValue, false);
-            }
+                const derivedValue = await this.deriveValue(uuid);
+                this.derivedOldValues.set(uuid, derivedValue);
+                if(typeof derivedOldValue !== "undefined" && !this.isSame(derivedValue, derivedOldValue)) {
+                    await this.updated(uuid, derivedValue, false);
+                }
 
-            VarvPerformance.stop("Property.getValue.derived", mark);
+                VarvPerformance.stop("Property.getValue.derived", mark);
 
-            return derivedValue;
+                resolve(derivedValue);
+
+            });
         }
 
         if(this.getCallbacks.length === 0) {
+            VarvPerformance.stop("Property.getValue.error", mark);
             throw new Error("No getCallbacks available for property ["+this.name+"]");
         }
 
@@ -696,31 +700,38 @@ class Property {
             return cachedProperty;
         }
 
-        for(let getCallback of this.getCallbacks) {
-            try {
-                let value = null;
+        return new Promise(async (resolve, reject)=>{
 
-                let callbackReturn = getCallback(uuid);
+            for(let getCallback of this.getCallbacks) {
+                try {
+                    let value = null;
 
-                if(callbackReturn instanceof Promise) {
-                    callbackReturn = await callbackReturn
+                    let callbackReturn = getCallback(uuid);
+
+                    if(callbackReturn instanceof Promise) {
+                        callbackReturn = await callbackReturn
+                    }
+
+                    value = this.typeCast(callbackReturn);
+
+                    PropertyCache.setCachedProperty(uuid+"."+this.name, value);
+
+                    VarvPerformance.stop("Property.getValue.nonCached", mark);
+
+                    resolve(value);
+
+                    return;
+                } catch(e) {
+                    //console.warn("Something went wrong (Using Default):", e);
+
+                    // Return default value, if no callback returns a value
                 }
-
-                value = this.typeCast(callbackReturn);
-
-                PropertyCache.setCachedProperty(uuid+"."+this.name, value);
-
-                VarvPerformance.stop("Property.getValue.nonCached", mark);
-
-                return value;
-            } catch(e) {
-                //console.warn("Something went wrong (Using Default):", e);
-
-                // Return default value, if no callback returns a value
             }
-        }
 
-        return this.getDefaultValue();
+            VarvPerformance.stop("Property.getValue.defaultValue", mark);
+
+            resolve(this.getDefaultValue());
+        });
     }
 
     getDefaultValue() {
