@@ -92,11 +92,21 @@ class DirectDatastore extends Datastore {
 
         if(query != null) {
             let markFilter = VarvPerformance.start();
+            let allPromises = [];
             for(let uuid of uuidSet) {
-                if(await query.filter({target: uuid}, localConcept)) {
+                allPromises.push(query.filter({target: uuid}, localConcept));
+            }
+
+            let filterResult = await Promise.all(allPromises);
+
+            let index = 0;
+            for(let uuid of uuidSet) {
+                if (filterResult[index]) {
                     result.push(uuid);
                 }
+                index++;
             }
+
             VarvPerformance.stop("DirectDatastore.lookupInstances.filter", markFilter);
         } else {
             result.push(...uuidSet);

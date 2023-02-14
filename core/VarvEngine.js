@@ -728,7 +728,11 @@ class VarvEngine {
                 contextConcept = contextTarget;
                 contextTarget = null;
             } else {
-                contextConcept = await VarvEngine.getConceptFromUUID(contextTarget);
+                let promiseOrValue = VarvEngine.getConceptFromUUID(contextTarget);
+                if(promiseOrValue instanceof Promise) {
+                    promiseOrValue = await promiseOrValue;
+                }
+                contextConcept = promiseOrValue;
             }
 
             let property = contextConcept.getProperty(propertyName);

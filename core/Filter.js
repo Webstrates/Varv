@@ -255,12 +255,10 @@ class FilterProperty extends Filter {
     async filter(context, localConcept, assert) {
         let markStart = VarvPerformance.start();
 
-        let lookup = this.prepare(await VarvEngine.lookupProperty(context.target, localConcept, this.property));
-        let possiblePromiseOrValue = lookup.property.getValue(lookup.target);
+        let lookupProperty = await VarvEngine.lookupProperty(context.target, localConcept, this.property)
 
-        if(possiblePromiseOrValue instanceof Promise) {
-            possiblePromiseOrValue = await possiblePromiseOrValue;
-        }
+        let lookup = this.prepare(lookupProperty);
+        let value = await lookup.property.getValue(lookup.target);
 
         let typeCastedValue = this.value;
         try {
@@ -270,7 +268,7 @@ class FilterProperty extends Filter {
             //Ignore
         }
 
-        let result = Filter.filterValue(possiblePromiseOrValue, typeCastedValue, this.op, assert);
+        let result = Filter.filterValue(value, typeCastedValue, this.op, assert);
 
         VarvPerformance.stop("FilterProperty.filter", markStart);
 
@@ -498,8 +496,15 @@ class FilterOr extends Filter {
 
         let pass = false;
 
+        let promises = [];
+
         for(let filter of this.filters) {
-            pass = pass || await filter.filter(context, localConcept, assert);
+            promises.push(filter.filter(context, localConcept, assert));
+        }
+
+        let filterResult = await Promise.all(promises);
+        for(let result of filterResult) {
+            pass = pass || result;
         }
 
         VarvPerformance.stop("FilterOr.filter", markStart);
@@ -521,8 +526,15 @@ class FilterAnd extends Filter {
 
         let pass = true;
 
+        let promises = [];
+
         for(let filter of this.filters) {
-            pass = pass && await filter.filter(context, localConcept, assert);
+            promises.push(filter.filter(context, localConcept, assert));
+        }
+
+        let filterResult = await Promise.all(promises);
+        for(let result of filterResult) {
+            pass = pass && result;
         }
 
         VarvPerformance.stop("FilterAnd.filter", markStart);

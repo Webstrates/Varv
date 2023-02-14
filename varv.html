@@ -1101,7 +1101,6 @@ class Property {
                 try {
                     this.derived.properties.forEach((propertyName) => {
                         VarvEngine.lookupProperty(null, concept, propertyName).then((lookupResult) => {
-                            console.log("LookupResult:", lookupResult, propertyName);
                             if(lookupResult.property != null) {
                                 if(lookupResult.concept.name === concept.name) {
                                     lookupResult.property.addUpdatedCallback(updateFunction);
@@ -2076,11 +2075,21 @@ class DirectDatastore extends Datastore {
 
         if(query != null) {
             let markFilter = VarvPerformance.start();
+            let allPromises = [];
             for(let uuid of uuidSet) {
-                if(await query.filter({target: uuid}, localConcept)) {
+                allPromises.push(query.filter({target: uuid}, localConcept));
+            }
+
+            let filterResult = await Promise.all(allPromises);
+
+            let index = 0;
+            for(let uuid of uuidSet) {
+                if (filterResult[index]) {
                     result.push(uuid);
                 }
+                index++;
             }
+
             VarvPerformance.stop("DirectDatastore.lookupInstances.filter", markFilter);
         } else {
             result.push(...uuidSet);
@@ -2529,12 +2538,10 @@ class FilterProperty extends Filter {
     async filter(context, localConcept, assert) {
         let markStart = VarvPerformance.start();
 
-        let lookup = this.prepare(await VarvEngine.lookupProperty(context.target, localConcept, this.property));
-        let possiblePromiseOrValue = lookup.property.getValue(lookup.target);
+        let lookupProperty = await VarvEngine.lookupProperty(context.target, localConcept, this.property)
 
-        if(possiblePromiseOrValue instanceof Promise) {
-            possiblePromiseOrValue = await possiblePromiseOrValue;
-        }
+        let lookup = this.prepare(lookupProperty);
+        let value = await lookup.property.getValue(lookup.target);
 
         let typeCastedValue = this.value;
         try {
@@ -2544,7 +2551,7 @@ class FilterProperty extends Filter {
             //Ignore
         }
 
-        let result = Filter.filterValue(possiblePromiseOrValue, typeCastedValue, this.op, assert);
+        let result = Filter.filterValue(value, typeCastedValue, this.op, assert);
 
         VarvPerformance.stop("FilterProperty.filter", markStart);
 
@@ -2772,8 +2779,15 @@ class FilterOr extends Filter {
 
         let pass = false;
 
+        let promises = [];
+
         for(let filter of this.filters) {
-            pass = pass || await filter.filter(context, localConcept, assert);
+            promises.push(filter.filter(context, localConcept, assert));
+        }
+
+        let filterResult = await Promise.all(promises);
+        for(let result of filterResult) {
+            pass = pass || result;
         }
 
         VarvPerformance.stop("FilterOr.filter", markStart);
@@ -2795,8 +2809,15 @@ class FilterAnd extends Filter {
 
         let pass = true;
 
+        let promises = [];
+
         for(let filter of this.filters) {
-            pass = pass && await filter.filter(context, localConcept, assert);
+            promises.push(filter.filter(context, localConcept, assert));
+        }
+
+        let filterResult = await Promise.all(promises);
+        for(let result of filterResult) {
+            pass = pass && result;
         }
 
         VarvPerformance.stop("FilterAnd.filter", markStart);
@@ -5070,7 +5091,11 @@ class VarvEngine {
                 contextConcept = contextTarget;
                 contextTarget = null;
             } else {
-                contextConcept = await VarvEngine.getConceptFromUUID(contextTarget);
+                let promiseOrValue = VarvEngine.getConceptFromUUID(contextTarget);
+                if(promiseOrValue instanceof Promise) {
+                    promiseOrValue = await promiseOrValue;
+                }
+                contextConcept = promiseOrValue;
             }
 
             let property = contextConcept.getProperty(propertyName);
@@ -7220,24 +7245,35 @@ class SelectAction extends Action {
                 let filterMark= VarvPerformance.start();
                 let filteredUUIDs = [];
 
-                for (let uuid of conceptUUIDs) {
-                    if (self.wherePart != null) {
+                if (self.wherePart != null) {
+                    let lookupWhereWithArguments = await Action.lookupArguments(self.wherePart, actionArguments);
+
+                    let allPromises = [];
+
+                    for (let uuid of conceptUUIDs) {
                         let clonedVariables = Object.assign({}, context.variables);
 
                         let filterContext = {target: uuid, lastTarget: context.target, variables: clonedVariables};
-
-                        let lookupWhereWithArguments = await Action.lookupArguments(self.wherePart, actionArguments);
 
                         let lookupWhereOptions = await Action.lookupVariables(lookupWhereWithArguments, filterContext);
 
                         let filter = await FilterAction.constructFilter(lookupWhereOptions);
 
-                        if (await filter.filter(filterContext, self.concept)) {
+                        allPromises.push(filter.filter(filterContext, self.concept));
+                    }
+
+                    let filterResult = await Promise.all(allPromises);
+
+                    let index = 0;
+                    for (let uuid of conceptUUIDs) {
+                        if(filterResult[index]) {
                             filteredUUIDs.push(uuid);
                         }
-                    } else {
-                        filteredUUIDs.push(uuid);
+                        index++;
                     }
+
+                } else {
+                    filteredUUIDs.push(...conceptUUIDs);
                 }
                 VarvPerformance.stop("SelectAction.doSelect.filtering", filterMark, {filter: self.wherePart, numConcepts: conceptUUIDs.length});
 

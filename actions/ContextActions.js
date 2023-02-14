@@ -254,24 +254,35 @@ class SelectAction extends Action {
                 let filterMark= VarvPerformance.start();
                 let filteredUUIDs = [];
 
-                for (let uuid of conceptUUIDs) {
-                    if (self.wherePart != null) {
+                if (self.wherePart != null) {
+                    let lookupWhereWithArguments = await Action.lookupArguments(self.wherePart, actionArguments);
+
+                    let allPromises = [];
+
+                    for (let uuid of conceptUUIDs) {
                         let clonedVariables = Object.assign({}, context.variables);
 
                         let filterContext = {target: uuid, lastTarget: context.target, variables: clonedVariables};
-
-                        let lookupWhereWithArguments = await Action.lookupArguments(self.wherePart, actionArguments);
 
                         let lookupWhereOptions = await Action.lookupVariables(lookupWhereWithArguments, filterContext);
 
                         let filter = await FilterAction.constructFilter(lookupWhereOptions);
 
-                        if (await filter.filter(filterContext, self.concept)) {
+                        allPromises.push(filter.filter(filterContext, self.concept));
+                    }
+
+                    let filterResult = await Promise.all(allPromises);
+
+                    let index = 0;
+                    for (let uuid of conceptUUIDs) {
+                        if(filterResult[index]) {
                             filteredUUIDs.push(uuid);
                         }
-                    } else {
-                        filteredUUIDs.push(uuid);
+                        index++;
                     }
+
+                } else {
+                    filteredUUIDs.push(...conceptUUIDs);
                 }
                 VarvPerformance.stop("SelectAction.doSelect.filtering", filterMark, {filter: self.wherePart, numConcepts: conceptUUIDs.length});
 
