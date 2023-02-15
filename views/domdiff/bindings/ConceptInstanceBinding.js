@@ -59,14 +59,6 @@ class ConceptInstanceBinding {
         const property = this.concept.getProperty(name);
         await property.setValue(this.uuid, property.typeCast(value));
     }
-
-    static async create(concept, uuid) {
-        if(typeof concept === "string") {
-            concept = VarvEngine.getConceptFromType(concept);
-        }
-
-        return new ConceptInstanceBinding(concept, uuid)
-    }
 }
 
 window.ConceptInstanceBinding = ConceptInstanceBinding;

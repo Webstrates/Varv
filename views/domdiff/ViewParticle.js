@@ -1,7 +1,13 @@
+/**
+ * A view particle mst 
+ * @type type
+ */
 class ViewParticle {
-    constructor(parseNode, scope){
+    constructor(targetDocument, parseNode, scope){
         this.view = [];
         this.cleanup = [];
+        this.scope = scope;
+        this.targetDocument = targetDocument;
     }
     
     push(element){
@@ -19,6 +25,11 @@ class ViewParticle {
         this.view.forEach((element)=>{
             element.remove();
         });
+    }
+    
+    mount(parentNode, beforeNode=null){
+        /*this.view.forEach()
+        parentNode*/
     }
 }
 

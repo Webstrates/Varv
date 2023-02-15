@@ -12,7 +12,7 @@ class ElementParseNode extends ParseNode {
         console.log("instantiating element", this.templateElement);
         
         // Create the element itself
-        let view = new ViewParticle(this, scope);
+        let view = new ViewParticle(targetDocument, this, scope);
         let element = targetDocument.createElement(this.templateElement.tagName);
         view.push(element);
         element.scope = scope;
