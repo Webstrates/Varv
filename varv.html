@@ -499,6 +499,8 @@ class Concept {
     }
 
     getProperty(name) {
+        const self = this;
+
         let markStart = VarvPerformance.start();
 
         let property = null;
@@ -507,9 +509,37 @@ class Concept {
             property = {
                 name: "uuid",
                 type: "string",
+                addUpdatedCallback: () => {
+                },
+                removeUpdatedCallback: () => {
+                },
+                isConceptType: () => {
+                    return false
+                },
+                getValue: (uuid) => {
+                    return uuid;
+                }
+            };
+        } else if(name === "concept::uuid") {
+            property = {
+                name: "uuid",
+                type: "string",
+                addUpdatedCallback: ()=>{},
+                removeUpdatedCallback: ()=>{},
                 isConceptType: ()=>{return false},
                 getValue: (uuid) => {
                     return uuid;
+                }
+            };
+        } else if(name === "concept::name") {
+            property = {
+                name: "name",
+                type: "string",
+                addUpdatedCallback: ()=>{},
+                removeUpdatedCallback: ()=>{},
+                isConceptType: ()=>{return false},
+                getValue: (uuid) => {
+                    return self.name;
                 }
             };
         } else {
