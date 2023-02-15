@@ -153,13 +153,10 @@ class Concept {
             property = {
                 name: "uuid",
                 type: "string",
-                addUpdatedCallback: () => {
-                },
-                removeUpdatedCallback: () => {
-                },
-                isConceptType: () => {
-                    return false
-                },
+                addUpdatedCallback: () => {},
+                removeUpdatedCallback: () => {},
+                isConceptType: () => false,
+                isConceptArrayType: () => false,
                 getValue: (uuid) => {
                     return uuid;
                 }
@@ -170,7 +167,8 @@ class Concept {
                 type: "string",
                 addUpdatedCallback: ()=>{},
                 removeUpdatedCallback: ()=>{},
-                isConceptType: ()=>{return false},
+                isConceptType: () => false,
+                isConceptArrayType: () => false,
                 getValue: (uuid) => {
                     return uuid;
                 }
@@ -181,7 +179,8 @@ class Concept {
                 type: "string",
                 addUpdatedCallback: ()=>{},
                 removeUpdatedCallback: ()=>{},
-                isConceptType: ()=>{return false},
+                isConceptType: () => false,
+                isConceptArrayType: () => false,
                 getValue: (uuid) => {
                     return self.name;
                 }
