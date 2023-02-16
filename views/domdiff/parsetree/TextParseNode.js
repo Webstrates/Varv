@@ -2,12 +2,11 @@ class TextParseNode extends ParseNode {
     getView(targetDocument, scope){ 
         console.log("instantiating text", this.templateElement);
         
-        let view = new ViewParticle(targetDocument, this, scope); 
         let textNode = targetDocument.createTextNode("");
+        let view = new ViewParticle(textNode, this, scope); 
         view.updatingEvaluation = new UpdatingEvaluation(this.templateElement.nodeValue, scope, function textNodeUpdated(text){                        
             textNode.nodeValue = text;
         });
-        view.push(textNode);
         view.addCleanup(()=>{
             this.updatingEvaluation.destroy();
         });

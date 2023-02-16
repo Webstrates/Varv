@@ -3,20 +3,27 @@
  * @type type
  */
 class ViewParticle {
-    constructor(targetDocument, parseNode, scope){
-        this.view = [];
+    constructor(node, parseNode, scope){
+        this.node = node;
+        this.parseNode = parseNode;
         this.cleanup = [];
         this.scope = scope;
-        this.targetDocument = targetDocument;
     }
     
-    push(element){
-        this.view.push(element);
+    getNode(){
+        // TODO: error node when null
+        return this.node;
     }
     
+    getTargetDocument(){
+        let doc = this.node.ownerDocument;
+        if (!doc.createElement) console.log("Weird root node", this, this.node, doc, this.parseNode, this.scope);
+        return doc;
+    }
+
     addCleanup(callback){
         this.cleanup.push(callback);
-    }
+    }    
     
     destroy(){
         this.cleanup.forEach((callback)=>{
@@ -25,12 +32,7 @@ class ViewParticle {
         this.view.forEach((element)=>{
             element.remove();
         });
-    }
-    
-    mount(parentNode, beforeNode=null){
-        /*this.view.forEach()
-        parentNode*/
-    }
+    }    
 }
 
 window.ViewParticle = ViewParticle;

@@ -1,21 +1,22 @@
-class FilteringParseNode extends ParseNode {
+class QueryParseNode extends ParseNode {
     constructor(templateElement){
         super(templateElement); 
         
         // We are our own only child
         this.children.push(this.parseTemplateNode(templateElement, {
-            skipFiltering: true
+            skipQuery: true
         }));
     }
     
     getView(targetDocument, scope){
-        console.log("instantiating filtering for ", this.templateElement);
+        console.log("instantiating query for ", this.templateElement);
         let self = this;        
-        let view = new ViewParticle(targetDocument, this, scope);
         
         let conceptQuery = this.templateElement.getAttribute("concept");
         let propertyQuery = this.templateElement.getAttribute("property");
         let conditionalQuery = this.templateElement.getAttribute("if");
+        let anchorNode = targetDocument.createProcessingInstruction("whenjs-query-anchor", {conceptQuery:conceptQuery,propertyQuery:propertyQuery,conditionalQuery:conditionalQuery});
+        let view = new ViewParticle(anchorNode, this, scope);
         
         // Ensure that all inputs are fully evaluated before calling evaluateFilter
         view.childViews = [];
@@ -79,7 +80,7 @@ class FilteringParseNode extends ParseNode {
         for (let i = view.childViews.length-1; i>=0; i--){
             let found = false;
             newChildScopes.forEach((newChildScope)=>{
-                if (FilteringParseNode.fastDeepEqual(view.childViews[i].localScope,newChildScope)) found = true;
+                if (QueryParseNode.fastDeepEqual(view.childViews[i].localScope,newChildScope)) found = true;
             });
             if (!found){         
                 view.childViews[i].destroy();
@@ -96,10 +97,10 @@ class FilteringParseNode extends ParseNode {
         newChildScopes.forEach((newChildScope)=>{
             let found = false;
             view.childViews.forEach((childView)=>{
-                if (FilteringParseNode.fastDeepEqual(childView.localScope,newChildScope)) found = true;
+                if (QueryParseNode.fastDeepEqual(childView.localScope,newChildScope)) found = true;
             });
             if (!found){
-                let childView = self.children[0].getView(view.targetDocument,[...view.scope, ...newChildScope]);
+                let childView = self.children[0].getView(view.getTargetDocument(),[...view.scope, ...newChildScope]);
                 childView.localScope = newChildScope;
             }            
         });
@@ -150,4 +151,4 @@ class FilteringParseNode extends ParseNode {
     };
 };
 
-window.FilteringParseNode = FilteringParseNode;
+window.QueryParseNode = QueryParseNode;

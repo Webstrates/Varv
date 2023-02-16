@@ -28,14 +28,14 @@ class ParseNode {
         }
         
         // Handle filtering/duplication attributes before anything else (may need duplication)
-        if (!parseOptions.skipFiltering){
+        if (!parseOptions.skipQuery){
             const atts = elementNode.attributes;
             if (atts && (atts["concept"] || atts["property"] || atts["if"])){
                 // These are not valid on varv-template element
                 if (elementNode==="VARV-TEMPLATE") {
                     console.log("concept, property or if used on varv-template element itself is invalid");
                 }
-                return new FilteringParseNode(elementNode);
+                return new QueryParseNode(elementNode);
             }
         }
         

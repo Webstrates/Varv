@@ -14551,20 +14551,27 @@ window.UpdatingEvaluation = UpdatingEvaluation;
  * @type type
  */
 class ViewParticle {
-    constructor(targetDocument, parseNode, scope){
-        this.view = [];
+    constructor(node, parseNode, scope){
+        this.node = node;
+        this.parseNode = parseNode;
         this.cleanup = [];
         this.scope = scope;
-        this.targetDocument = targetDocument;
     }
     
-    push(element){
-        this.view.push(element);
+    getNode(){
+        // TODO: error node when null
+        return this.node;
     }
     
+    getTargetDocument(){
+        let doc = this.node.ownerDocument;
+        if (!doc.createElement) console.log("Weird root node", this, this.node, doc, this.parseNode, this.scope);
+        return doc;
+    }
+
     addCleanup(callback){
         this.cleanup.push(callback);
-    }
+    }    
     
     destroy(){
         this.cleanup.forEach((callback)=>{
@@ -14573,12 +14580,7 @@ class ViewParticle {
         this.view.forEach((element)=>{
             element.remove();
         });
-    }
-    
-    mount(parentNode, beforeNode=null){
-        /*this.view.forEach()
-        parentNode*/
-    }
+    }    
 }
 
 window.ViewParticle = ViewParticle;
@@ -14616,14 +14618,14 @@ class ParseNode {
         }
         
         // Handle filtering/duplication attributes before anything else (may need duplication)
-        if (!parseOptions.skipFiltering){
+        if (!parseOptions.skipQuery){
             const atts = elementNode.attributes;
             if (atts && (atts["concept"] || atts["property"] || atts["if"])){
                 // These are not valid on varv-template element
                 if (elementNode==="VARV-TEMPLATE") {
                     console.log("concept, property or if used on varv-template element itself is invalid");
                 }
-                return new FilteringParseNode(elementNode);
+                return new QueryParseNode(elementNode);
             }
         }
         
@@ -14649,9 +14651,7 @@ class YotaParseNode extends ParseNode {
     getView(targetDocument, scope){
         console.log("instantiating yota", this.templateElement);
 
-        let view = new ViewParticle(targetDocument, this, scope);
-        view.push(targetDocument.importNode(this.templateElement,false));        
-        return view;
+        return new ViewParticle(targetDocument.importNode(this.templateElement,false), this, scope);
     }
 };
 
@@ -14664,12 +14664,11 @@ class TextParseNode extends ParseNode {
     getView(targetDocument, scope){ 
         console.log("instantiating text", this.templateElement);
         
-        let view = new ViewParticle(targetDocument, this, scope); 
         let textNode = targetDocument.createTextNode("");
+        let view = new ViewParticle(textNode, this, scope); 
         view.updatingEvaluation = new UpdatingEvaluation(this.templateElement.nodeValue, scope, function textNodeUpdated(text){                        
             textNode.nodeValue = text;
         });
-        view.push(textNode);
         view.addCleanup(()=>{
             this.updatingEvaluation.destroy();
         });
@@ -14692,25 +14691,26 @@ window.TextParseNode = TextParseNode;
 
 </script>
 
-                <script id="FilteringParseNode-script" type="disabled">
-class FilteringParseNode extends ParseNode {
+                <script id="QueryParseNode-script" type="disabled">
+class QueryParseNode extends ParseNode {
     constructor(templateElement){
         super(templateElement); 
         
         // We are our own only child
         this.children.push(this.parseTemplateNode(templateElement, {
-            skipFiltering: true
+            skipQuery: true
         }));
     }
     
     getView(targetDocument, scope){
-        console.log("instantiating filtering for ", this.templateElement);
+        console.log("instantiating query for ", this.templateElement);
         let self = this;        
-        let view = new ViewParticle(targetDocument, this, scope);
         
         let conceptQuery = this.templateElement.getAttribute("concept");
         let propertyQuery = this.templateElement.getAttribute("property");
         let conditionalQuery = this.templateElement.getAttribute("if");
+        let anchorNode = targetDocument.createProcessingInstruction("whenjs-query-anchor", {conceptQuery:conceptQuery,propertyQuery:propertyQuery,conditionalQuery:conditionalQuery});
+        let view = new ViewParticle(anchorNode, this, scope);
         
         // Ensure that all inputs are fully evaluated before calling evaluateFilter
         view.childViews = [];
@@ -14774,7 +14774,7 @@ class FilteringParseNode extends ParseNode {
         for (let i = view.childViews.length-1; i>=0; i--){
             let found = false;
             newChildScopes.forEach((newChildScope)=>{
-                if (FilteringParseNode.fastDeepEqual(view.childViews[i].localScope,newChildScope)) found = true;
+                if (QueryParseNode.fastDeepEqual(view.childViews[i].localScope,newChildScope)) found = true;
             });
             if (!found){         
                 view.childViews[i].destroy();
@@ -14791,10 +14791,10 @@ class FilteringParseNode extends ParseNode {
         newChildScopes.forEach((newChildScope)=>{
             let found = false;
             view.childViews.forEach((childView)=>{
-                if (FilteringParseNode.fastDeepEqual(childView.localScope,newChildScope)) found = true;
+                if (QueryParseNode.fastDeepEqual(childView.localScope,newChildScope)) found = true;
             });
             if (!found){
-                let childView = self.children[0].getView(view.targetDocument,[...view.scope, ...newChildScope]);
+                let childView = self.children[0].getView(view.getTargetDocument(),[...view.scope, ...newChildScope]);
                 childView.localScope = newChildScope;
             }            
         });
@@ -14845,7 +14845,7 @@ class FilteringParseNode extends ParseNode {
     };
 };
 
-window.FilteringParseNode = FilteringParseNode;
+window.QueryParseNode = QueryParseNode;
 
 </script>
 
@@ -14864,9 +14864,10 @@ class ElementParseNode extends ParseNode {
         console.log("instantiating element", this.templateElement);
         
         // Create the element itself
-        let view = new ViewParticle(targetDocument, this, scope);
-        let element = targetDocument.createElement(this.templateElement.tagName);
-        view.push(element);
+        let name = this.templateElement.tagName;
+        if (name==="DOM-VIEW-TEMPLATE") name = "varv-view"; // The template itself renames to view
+        let element = targetDocument.createElement(name);
+        let view = new ViewParticle(element, this, scope);
         element.scope = scope;
         element.templateElement = this.templateElement;
         element.parseNode = this;
@@ -14913,9 +14914,11 @@ class ElementParseNode extends ParseNode {
             });
         }        
         
-        // TODO: Do something with the children
+        // Attach the children
         for (let child of this.children){
-            child.getView(targetDocument, scope);
+            let childView = child.getView(targetDocument, scope); 
+            view.addCleanup(childView.destroy);
+            element.appendChild(childView.getNode());
         }        
         
         return view;
@@ -14938,15 +14941,57 @@ class RootParseNode extends ElementParseNode {
             targetDocument = frame.contentDocument;
         } else {                        
             targetDocument = document;
-        }       
+        }
         
+        // Construct the view 
         let scope = [];
+        let view = this.getView(targetDocument, scope).getNode();
         
         // Find the target element
-        // TODO
-        
-        let view = this.getView(targetDocument, scope);
-        
+        let targetSpec = this.templateElement.getAttribute("target-element");
+        if (targetFrameSpec){
+            // Rendering to an iframe
+            if (targetSpec){
+                // This template uses a custom render target element, try to find it
+                let targetElement = targetDocument.querySelector(targetSpec);
+                if (targetElement){
+                    targetElement.appendChild(view);
+                } else {
+                    console.error("DOMView: Rendering into nothingness since template target-element does not exist in target iframe: ", targetFrameSpec, targetSpec);
+                }
+            } else {
+                // Just plain add it to body
+                targetDocument.body.appendChild(view);
+            }
+        } else {
+            // Rendering to the local document
+            if (targetSpec){
+                // This template uses a custom render target element, try to find it
+                let targetElement = targetDocument.querySelector(targetSpec);
+                if (targetElement){
+                    targetElement.appendChild(view);
+                } else {
+                    console.error("DOMView: Rendering into nothingness since template target-element does not exist in document: ", targetSpec);
+                }
+            } else {
+                // Default is to render just after the template element.
+                // Special-case for CodeStrates-based templates (avoid getting deleted inside autoDOM)
+                let autoDOM = this.templateElement.closest(".autoDom");
+                if (autoDOM){
+                    // Add after autoDOM instead of inside of it
+                    if (!autoDOM.parentNode){
+                        console.log("DOMView: Was rendering an autoDOM template but it had no parent", templateElement);
+                    }
+                    autoDOM.parentNode.insertBefore(view, autoDOM.nextElementSibling);
+                } else {
+                    // Outside we just insert after the template directly
+                    if (!this.templateElement.parentNode){
+                        console.log("DOMView: Was rendering a non autoDOM template but it had no parent", templateElement);
+                    }
+                    this.templateElement.parentNode.insertBefore(view, this.templateElement.nextElementSibling);
+                }
+            }
+        }        
     }
 };
 

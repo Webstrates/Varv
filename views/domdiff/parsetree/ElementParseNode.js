@@ -12,9 +12,10 @@ class ElementParseNode extends ParseNode {
         console.log("instantiating element", this.templateElement);
         
         // Create the element itself
-        let view = new ViewParticle(targetDocument, this, scope);
-        let element = targetDocument.createElement(this.templateElement.tagName);
-        view.push(element);
+        let name = this.templateElement.tagName;
+        if (name==="DOM-VIEW-TEMPLATE") name = "varv-view"; // The template itself renames to view
+        let element = targetDocument.createElement(name);
+        let view = new ViewParticle(element, this, scope);
         element.scope = scope;
         element.templateElement = this.templateElement;
         element.parseNode = this;
@@ -61,9 +62,11 @@ class ElementParseNode extends ParseNode {
             });
         }        
         
-        // TODO: Do something with the children
+        // Attach the children
         for (let child of this.children){
-            child.getView(targetDocument, scope);
+            let childView = child.getView(targetDocument, scope); 
+            view.addCleanup(childView.destroy);
+            element.appendChild(childView.getNode());
         }        
         
         return view;
