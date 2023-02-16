@@ -113,7 +113,7 @@ class Property {
             if(this.options.derive.concepts) {
                 this.derived.concepts = this.options.derive.concepts;
                 if(!Array.isArray(this.derived.concepts)) {
-                    this.derived.properties = [this.derived.concepts];
+                    this.derived.concepts = [this.derived.concepts];
                 }
             }
 
@@ -138,6 +138,7 @@ class Property {
 
             async function resetFunction() {
                 let uuids = await VarvEngine.getAllUUIDsFromType(concept.name, true);
+
                 for(let uuid of uuids) {
                     await self.getValue(uuid, true);
                 }
@@ -165,7 +166,8 @@ class Property {
                 try {
                     this.derived.concepts.forEach((conceptName) => {
                         let concept = VarvEngine.getConceptFromType(conceptName);
-                        concept.addAddedRemovedCallback(resetFunction);
+                        concept.addAppearedCallback(resetFunction);
+                        concept.addDisappearedCallback(resetFunction);
                     });
                 } catch(e) {
                     console.warn(e);
@@ -638,7 +640,7 @@ class Property {
         try {
             result = Action.getVariable(currentFakeContext[0], lastTransformOutputVariable);
         } catch(e) {
-            console.warn(e);
+            console.debug(e);
 
             switch(this.type) {
                 case "array":
@@ -677,7 +679,7 @@ class Property {
 
                 const derivedValue = await this.deriveValue(uuid);
                 this.derivedOldValues.set(uuid, derivedValue);
-                if(typeof derivedOldValue !== "undefined" && !this.isSame(derivedValue, derivedOldValue)) {
+                if(typeof derivedOldValue === "undefined" || !this.isSame(derivedValue, derivedOldValue)) {
                     await this.updated(uuid, derivedValue, false);
                 }
 

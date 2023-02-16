@@ -39,7 +39,8 @@ class Concept {
         this.mappings = new Map();
 
         this.otherConcepts = new Set();
-        this.addedRemovedCallbacks = [];
+        this.appearedCallbacks = [];
+        this.disappearedCallbacks = [];
     }
 
     addTrigger(trigger, removeOld=false) {
@@ -276,7 +277,7 @@ class Concept {
         }       
 
         await VarvEngine.registerConceptFromUUID(wantedUUID, this);
-        await this.appeared(wantedUUID);
+        await this.appeared(wantedUUID, true);
 
         if (properties != null) {
             for (let key of Object.keys(properties)) {
@@ -295,10 +296,6 @@ class Concept {
         await this.created(wantedUUID);
 
         VarvPerformance.stop("Concept.create", mark);
-
-        for(let callback of this.addedRemovedCallbacks) {
-            await callback(wantedUUID, this);
-        }
 
         return wantedUUID;
     }
@@ -524,14 +521,14 @@ class Concept {
         await this.deleted(uuid);
 
         await this.disappeared(uuid);
-
-        for(let callback of this.addedRemovedCallbacks) {
-            await callback(uuid, this);
-        }
     }
 
-    addAddedRemovedCallback(callback) {
-        this.addedRemovedCallbacks.push(callback);
+    addAppearedCallback(callback) {
+        this.appearedCallbacks.push(callback);
+    }
+
+    addDisappearedCallback(callback) {
+        this.disappearedCallbacks.push(callback);
     }
 
     async deleted(uuid) {
@@ -550,17 +547,25 @@ class Concept {
         VarvPerformance.stop("Concept.Event.created", mark);
     }
 
-    async appeared(uuid) {
+    async appeared(uuid, skipCallback=false) {
         let mark = VarvPerformance.start();
         // This instance just appeared in at least one datastore
         await VarvEngine.sendEvent("appeared", {
             target: uuid,
             concept: this
         });
+
+        if(!skipCallback) {
+            for (let callback of this.appearedCallbacks) {
+                await callback(uuid, this);
+            }
+        }
+
         VarvPerformance.stop("Concept.Event.appeared", mark);
     }
     async disappeared(uuid) {
         let mark = VarvPerformance.start();
+
         // This instance just disappeared in at least one datastore
         await VarvEngine.sendEvent("disappeared", {
             target: uuid,
@@ -569,6 +574,11 @@ class Concept {
 
         //Unregister the UUID
         VarvEngine.deregisterConceptFromUUID(uuid);
+
+        for(let callback of this.disappearedCallbacks) {
+            await callback(uuid, this);
+        }
+
         VarvPerformance.stop("Concept.Event.disappeared", mark);
     }
 
