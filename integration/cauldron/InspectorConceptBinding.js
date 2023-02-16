@@ -295,10 +295,15 @@ class InspectorPropertyEditor extends Cauldron.InspectorElement {
             }
             VarvPerformance.stop("InspectorConceptBinding.valueUpdaterCallback", mark);
         };
-        
-        property.getValue(conceptInstance.uuid).then((value)=>{
-            self.valueUpdaterCallback(self.conceptInstance.uuid, value);
-        });
+
+        let possiblePromiseOrValue = property.getValue(conceptInstance.uuid);
+        if(possiblePromiseOrValue instanceof Promise) {
+            possiblePromiseOrValue.then((value)=>{
+                self.valueUpdaterCallback(self.conceptInstance.uuid, value);
+            });
+        } else {
+            self.valueUpdaterCallback(self.conceptInstance.uuid, possiblePromiseOrValue);
+        }
         property.addUpdatedCallback(this.valueUpdaterCallback);
     }
 

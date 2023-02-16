@@ -57,7 +57,6 @@ MenuSystem.MenuManager.registerMenuItem("TreeBrowser.TreeNode.ContextMenu", {
         return menu.context.type == "ConceptInstanceNode";
     },
     onAction: async (menuItem) =>{
-        console.log(menuItem.menu.context.context);
         menuItem.menu.context.context.concept.delete(menuItem.menu.context.context.uuid);
     }
 });
@@ -71,7 +70,6 @@ MenuSystem.MenuManager.registerMenuItem("TreeBrowser.TreeNode.ContextMenu", {
         return menu.context.type == "ConceptInstanceNode";
     },
     onAction: async (menuItem) =>{
-        console.log(menuItem.menu.context.context);
         menuItem.menu.context.context.concept.clone(menuItem.menu.context.context.uuid);
     }
 });
@@ -85,7 +83,6 @@ MenuSystem.MenuManager.registerMenuItem("TreeBrowser.TreeNode.ContextMenu", {
         return menu.context.type == "ConceptInstanceNode";
     },
     onAction: async (menuItem) =>{
-        console.log(menuItem.menu.context.context);
         menuItem.menu.context.context.concept.clone(menuItem.menu.context.context.uuid, true);
     }
 });
