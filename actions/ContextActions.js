@@ -603,7 +603,7 @@ class FilterAction extends Action {
             let operator = false;
 
             for(let op in FilterOps) {
-                if(options[op] != null) {
+                if(typeof options[op] !== "undefined") {
                     operator = op;
                     break;
                 }
@@ -660,7 +660,7 @@ class FilterAction extends Action {
             console.error(e);
         }
 
-        console.warn("No filter constructed:", options);
+        console.warn("No filter constructed using:", options);
 
         return null;
     }
