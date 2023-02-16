@@ -1396,5 +1396,23 @@ class ValueBinding {
     }
 }
 DOMView.DEBUG = false;
-DOMView.singleton = new DOMView();
+//If fragments exists postpone the DOMView until all fragments was loaded at least first time. (Fragments added later obviously does not count)
+if(typeof Fragment !== "undefined") {
+    Fragment.addAllFragmentsLoadedCallback(()=>{
+        console.log("All fragments loaded!");
+        DOMView.singleton = new DOMView();
+
+        //We started after autoDOM has run, so no mutations. Bootstrap with what we have
+        let fakeAddMutationList = [{
+            type: "childList",
+            target: document.body,
+            addedNodes: Array.from(document.querySelectorAll("dom-view-template")),
+            removedNodes: []
+        }];
+        DOMView.singleton.mutationCallback(fakeAddMutationList);
+    });
+} else {
+    //No fragments, just start
+    DOMView.singleton = new DOMView();
+}
 window.DOMView = DOMView;
