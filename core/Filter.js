@@ -38,7 +38,8 @@ window.FilterOps = Object.freeze({
     "includes": "includes",
     "includesAny": "includesAny",
     "includesAll": "includesAll",
-    "matches": "matches"
+    "matches": "matches",
+    "hasProperty": "hasProperty"
 });
 
 class Filter {
@@ -590,3 +591,34 @@ class FilterCalc extends Filter {
 }
 
 window.FilterCalc = FilterCalc;
+
+
+class FilterPropertyExists extends Filter {
+    constructor(property) {
+        super();
+
+        this.property = property;
+    }
+
+    async filter(context, localConcept, assert) {
+        let markStart = VarvPerformance.start();
+
+        let pass = true;
+
+        let concept = await VarvEngine.getConceptFromUUID(context.target);
+
+        try {
+            concept.getProperty(this.property);
+        } catch(e) {
+            //Silent fail, but mark that we saw no property
+            pass = false;
+        }
+
+        VarvPerformance.stop("FilterPropertyExists.filter", markStart);
+
+        return pass;
+    }
+}
+
+window.FilterPropertyExists = FilterPropertyExists;
+

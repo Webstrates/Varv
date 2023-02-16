@@ -612,6 +612,10 @@ class FilterAction extends Action {
             if (operator !== false) {
                 let value = options[operator];
 
+                if(operator === "hasProperty") {
+                    return new FilterPropertyExists(value);
+                }
+
                 if(options.calculation != null) {
                     //Property defined, this is a property filter
                     return new FilterCalc(options.calculation, operator, value);
