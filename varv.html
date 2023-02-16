@@ -14590,6 +14590,7 @@ class ViewParticle {
     constructor(node, parseNode, scope){
         this.node = node;
         this.parseNode = parseNode;
+        this.mountCallbacks = [];
         this.cleanup = [];
         this.scope = scope;
     }
@@ -14609,13 +14610,23 @@ class ViewParticle {
         this.cleanup.push(callback);
     }    
     
+    addOnMountedCallback(callback){
+        this.mountCallbacks.push(callback);
+    }
+    
+    mountInto(parentElement, insertBeforeNode=null){
+        parentElement.insertBefore(this.node, insertBeforeNode);
+        this.mountCallbacks.forEach((callback)=>{
+            callback(); 
+        });
+    }
+    
     destroy(){
+        console.log("Destroying particle ",this);
         this.cleanup.forEach((callback)=>{
             callback(); 
         });
-        this.view.forEach((element)=>{
-            element.remove();
-        });
+        this.node.remove();
     }    
 }
 
@@ -14676,6 +14687,15 @@ class ParseNode {
                 return new ElementParseNode(elementNode);
         }
     }   
+    
+    getErrorView(targetDocument, scope, error, ex=null){
+        console.log("instantiating error", this.templateElement);
+
+        let element = targetDocument.createElement("varv-failure");
+        element.setAttribute("title", error);
+        
+        return new ViewParticle(element, this, scope);
+    }
 }
 
 window.ParseNode = ParseNode;
@@ -14741,69 +14761,80 @@ class QueryParseNode extends ParseNode {
     getView(targetDocument, scope){
         console.log("instantiating query for ", this.templateElement);
         let self = this;        
-        
-        let conceptQuery = this.templateElement.getAttribute("concept");
-        let propertyQuery = this.templateElement.getAttribute("property");
-        let conditionalQuery = this.templateElement.getAttribute("if");
-        let anchorNode = targetDocument.createProcessingInstruction("whenjs-query-anchor", {conceptQuery:conceptQuery,propertyQuery:propertyQuery,conditionalQuery:conditionalQuery});
+        let anchorNode = targetDocument.createProcessingInstruction("whenjs-query-anchor", {});
         let view = new ViewParticle(anchorNode, this, scope);
-        
-        // Ensure that all inputs are fully evaluated before calling evaluateFilter
         view.childViews = [];
-        view.needsConcept = conceptQuery!==null;
-        view.needsProperty = propertyQuery!==null;        
-        view.needsConditional = conditionalQuery!==null;        
-        if (view.needsConcept){
-            view.conceptUpdatingEvaluation = new UpdatingEvaluation(conceptQuery, scope, function conceptAttributeUpdated(text){                        
-                view.needsConcept = false;
-                view.concept = text;
-                self.evaluateQuery(view);
-            });
-        }    
-        if (view.needsProperty){
-            view.propertyUpdatingEvaluation = new UpdatingEvaluation(propertyQuery, scope, function propertyAttributeUpdated(text){                        
-                view.needsProperty = false;
-                view.property = text;
-                self.evaluateQuery(view);
-            });
-        }   
-        if (view.needsConditional){
-            view.conditionalUpdatingEvaluation = new UpdatingEvaluation(propertyQuery, scope, function conditionalAttributeUpdated(text){                        
-                view.needsConditional = false;
-                view.conditional = text;
-                self.evaluateQuery(view);
-            });
-        }             
+        
+        this.generateConceptScopes(view);
+        
+        view.addOnMountedCallback(()=>{
+            self.stubResetView(view);
+        });
+        view.addCleanup(()=>{
+            // Empty the view
+            self.onScopesUpdated(view, []);
+        });
+        
         
         return view;
     }
     
-    async evaluateQuery(view){
-        if (view.needsConcept||view.needsProperty||view.needsConditional) return; // Not ready yet
-        
-        // Create the resulting set of child scopes for this query
-        let scopes = []; // Start out with no results
-                
-        // Concept enumeration queries (possibly filtered)
-        if (view.concept){ 
-            if (view.property) throw new Exception("Concept enumerations with property lookups not supported yet");
-            if (view.conditional) throw new Exception("Concept enumerations with conditionals not supported yet");
-            let instances = await VarvEngine.lookupInstances(VarvEngine.getAllImplementingConceptNames(view.concept));
-            scopes = await Promise.all(instances.map(async function lookupConcreteTypes(uuid){
-                let concreteConcept = await VarvEngine.getConceptFromUUID(uuid);
-                return [new ConceptInstanceBinding(concreteConcept, uuid)];
-            }));
-            
-            // TODO: Add concept added listener here
+    // Look at the concept attribute and generate some scopes
+    generateConceptScopes(view){
+        let self = this;
+        let conceptQuery = this.templateElement.getAttribute("concept");
+        if (conceptQuery!==null){
+            // Need to monitor a list of concept instances
+            let conceptUpdatingEvaluation = new UpdatingEvaluation(conceptQuery, view.scope, async function conceptAttributeUpdated(conceptName){                        
+                try {
+                    // Concept enumeration queries (possibly filtered)
+                    if (self.templateElement.getAttribute("property")) console.log("STUB: concept='' enumerations combined with property='' lookups not high-performance yet");
+                    if (self.templateElement.getAttribute("if")) console.log("STUB: concept='' enumerations combined with if='' not high-performance yet");
+                    let instances = await VarvEngine.lookupInstances(VarvEngine.getAllImplementingConceptNames(conceptName)); // TODO: Fancy filtering opportunity here
+                    let localScopes = await Promise.all(instances.map(async function lookupConcreteTypes(uuid){
+                        let concreteConcept = await VarvEngine.getConceptFromUUID(uuid);
+                        return [new ConceptInstanceBinding(concreteConcept, uuid)];
+                    }));                
+                    self.generatePropertyScopes(view, localScopes);
+                } catch (ex){
+                    self.showError(view, "Evaluating concept='"+conceptQuery+"': "+ex, ex);
+                    return;            
+                }
+            });
+
+            // TODO: also run the above for concept added callbacks
+            view.addCleanup(conceptUpdatingEvaluation.destroy);
         } else {
-            // Scope-based queries
-        }
-                
-        // Update view
-        this.onScopesUpdated(view, scopes);
-        
+            // We can skip straight to property with just the view scope
+            self.generatePropertyScopes(view, [[]]);
+        }       
     }
     
+    // Look at the property attribute and generate additional scopes for each given local scope
+    generatePropertyScopes(view, localScopes){
+        let self = this;
+        let propertyQuery = this.templateElement.getAttribute("property");
+        if (propertyQuery!==null){
+            throw new Error("property='' not supported yet");
+        } else {
+            // Skip straight to conditionals with the given local scopes
+            self.generateConditionalScopes(view, localScopes);
+        }        
+    }
+    
+    // Look at if-attribute and remove local scopes that do not fit
+    generateConditionalScopes(view, localScopes){
+        let self = this;
+        let conditionalQuery = this.templateElement.getAttribute("if");
+        if (conditionalQuery!==null){
+            throw new Error("if='' not supported yet");
+            
+        } else {
+            // When there is no 'if=', all local scopes survive directly
+            this.onScopesUpdated(view, localScopes);
+        }   
+    }
+
     onScopesUpdated(view, newChildScopes){      
         // Destroy views that are no longer in the new child scopes
         let self = this;
@@ -14832,8 +14863,27 @@ class QueryParseNode extends ParseNode {
             if (!found){
                 let childView = self.children[0].getView(view.getTargetDocument(),[...view.scope, ...newChildScope]);
                 childView.localScope = newChildScope;
+                view.childViews.push(childView);
             }            
         });
+        
+        this.stubResetView(view);
+    }
+    
+    stubResetView(view){
+        if (view.getNode().parentNode === null) return; // Not in any document yet
+        
+        // Move all our children with us, in order
+        view.childViews.forEach((childView)=>{
+            // Insert them before our anchor node
+            childView.mountInto(view.getNode().parentNode, view.getNode());
+        });
+    }
+    
+    showError(view, message, ex){
+        this.onScopesUpdated(view, []);
+        view.childViews.push(this.getErrorView(view.getTargetDocument(), view.scope, message, ex));
+        this.stubResetView(view);        
     }
     
     static fastDeepEqual(a,b){
@@ -14847,7 +14897,7 @@ class QueryParseNode extends ParseNode {
             length = a.length;
             if (length != b.length) return false;
             for (i = length; i-- !== 0;)
-              if (!equal(a[i], b[i])) return false;
+              if (!QueryParseNode.fastDeepEqual(a[i], b[i])) return false;
             return true;
           }
 
@@ -14865,7 +14915,7 @@ class QueryParseNode extends ParseNode {
           for (i = length; i-- !== 0;) {
             var key = keys[i];
 
-            if (!equal(a[key], b[key])) return false;
+            if (!QueryParseNode.fastDeepEqual(a[key], b[key])) return false;
           }
 
           return true;
@@ -14892,7 +14942,11 @@ class ElementParseNode extends ParseNode {
         
         // Parse the children
         for (let childNode of templateElement.childNodes){
-            this.children.push(this.parseTemplateNode(childNode));
+            let parseChild = this.parseTemplateNode(childNode);
+            if (parseChild){
+                // If this actually needs parsing, add it
+                this.children.push(parseChild);
+            }
         }
     }
     
@@ -14954,7 +15008,7 @@ class ElementParseNode extends ParseNode {
         for (let child of this.children){
             let childView = child.getView(targetDocument, scope); 
             view.addCleanup(childView.destroy);
-            element.appendChild(childView.getNode());
+            childView.mountInto(element);
         }        
         
         return view;
@@ -14981,7 +15035,7 @@ class RootParseNode extends ElementParseNode {
         
         // Construct the view 
         let scope = [];
-        let view = this.getView(targetDocument, scope).getNode();
+        let view = this.getView(targetDocument, scope);
         
         // Find the target element
         let targetSpec = this.templateElement.getAttribute("target-element");
@@ -14991,13 +15045,13 @@ class RootParseNode extends ElementParseNode {
                 // This template uses a custom render target element, try to find it
                 let targetElement = targetDocument.querySelector(targetSpec);
                 if (targetElement){
-                    targetElement.appendChild(view);
+                    view.mountInto(targetElement);
                 } else {
                     console.error("DOMView: Rendering into nothingness since template target-element does not exist in target iframe: ", targetFrameSpec, targetSpec);
                 }
             } else {
                 // Just plain add it to body
-                targetDocument.body.appendChild(view);
+                view.mountInto(targetDocument.body);
             }
         } else {
             // Rendering to the local document
@@ -15005,7 +15059,7 @@ class RootParseNode extends ElementParseNode {
                 // This template uses a custom render target element, try to find it
                 let targetElement = targetDocument.querySelector(targetSpec);
                 if (targetElement){
-                    targetElement.appendChild(view);
+                    view.mountInto(targetElement);
                 } else {
                     console.error("DOMView: Rendering into nothingness since template target-element does not exist in document: ", targetSpec);
                 }
@@ -15018,13 +15072,13 @@ class RootParseNode extends ElementParseNode {
                     if (!autoDOM.parentNode){
                         console.log("DOMView: Was rendering an autoDOM template but it had no parent", templateElement);
                     }
-                    autoDOM.parentNode.insertBefore(view, autoDOM.nextElementSibling);
+                    view.mountInto(autoDOM.parentNode,autoDOM.nextElementSibling);
                 } else {
                     // Outside we just insert after the template directly
                     if (!this.templateElement.parentNode){
                         console.log("DOMView: Was rendering a non autoDOM template but it had no parent", templateElement);
                     }
-                    this.templateElement.parentNode.insertBefore(view, this.templateElement.nextElementSibling);
+                    view.mountInto(this.templateElement.parentNode, this.templateElement.nextElementSibling);
                 }
             }
         }        

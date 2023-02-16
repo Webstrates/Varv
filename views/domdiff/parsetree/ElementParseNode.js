@@ -4,7 +4,11 @@ class ElementParseNode extends ParseNode {
         
         // Parse the children
         for (let childNode of templateElement.childNodes){
-            this.children.push(this.parseTemplateNode(childNode));
+            let parseChild = this.parseTemplateNode(childNode);
+            if (parseChild){
+                // If this actually needs parsing, add it
+                this.children.push(parseChild);
+            }
         }
     }
     
@@ -66,7 +70,7 @@ class ElementParseNode extends ParseNode {
         for (let child of this.children){
             let childView = child.getView(targetDocument, scope); 
             view.addCleanup(childView.destroy);
-            element.appendChild(childView.getNode());
+            childView.mountInto(element);
         }        
         
         return view;

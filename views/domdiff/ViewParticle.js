@@ -6,6 +6,7 @@ class ViewParticle {
     constructor(node, parseNode, scope){
         this.node = node;
         this.parseNode = parseNode;
+        this.mountCallbacks = [];
         this.cleanup = [];
         this.scope = scope;
     }
@@ -25,13 +26,23 @@ class ViewParticle {
         this.cleanup.push(callback);
     }    
     
+    addOnMountedCallback(callback){
+        this.mountCallbacks.push(callback);
+    }
+    
+    mountInto(parentElement, insertBeforeNode=null){
+        parentElement.insertBefore(this.node, insertBeforeNode);
+        this.mountCallbacks.forEach((callback)=>{
+            callback(); 
+        });
+    }
+    
     destroy(){
+        console.log("Destroying particle ",this);
         this.cleanup.forEach((callback)=>{
             callback(); 
         });
-        this.view.forEach((element)=>{
-            element.remove();
-        });
+        this.node.remove();
     }    
 }
 

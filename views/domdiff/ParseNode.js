@@ -50,6 +50,15 @@ class ParseNode {
                 return new ElementParseNode(elementNode);
         }
     }   
+    
+    getErrorView(targetDocument, scope, error, ex=null){
+        console.log("instantiating error", this.templateElement);
+
+        let element = targetDocument.createElement("varv-failure");
+        element.setAttribute("title", error);
+        
+        return new ViewParticle(element, this, scope);
+    }
 }
 
 window.ParseNode = ParseNode;
