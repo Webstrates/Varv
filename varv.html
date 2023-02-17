@@ -13866,14 +13866,13 @@ class DOMView {
                                                     console.warn("DOM varv template using something that is not a list of simple values, a concept or a list of concepts as a property, this is not valid", propertyType, clonedScope, currentTemplateNode);
                                                     throw new Error("Cannot use a type for the property attribute that is not a list of simple values or a concept reference");
                                                 }
-                                                let newBinding = {'concept::uuid': propertyValue.uuid};
-                                                newBinding[propertyType + ".value"] = propertyValue.uuid;
-                                                let newBinding2 = {'concept::name': propertyValue.concept.name};
-                                                newBinding2[propertyType + ".value"] = propertyValue.concept.name;
                                                 clonedScope.push(await ConceptInstanceBinding.create(propertyValue.concept, propertyValue.uuid));
                                                 clonedScope.push(new PropertyBinding(binding.concept.getProperty(propertyType), binding.uuid));
-                                                clonedScope.push(new ValueBinding(newBinding));
-                                                clonedScope.push(new ValueBinding(newBinding2));
+                                                clonedScope.push(new ValueBinding({
+                                                    'concept::uuid': propertyValue.uuid, 
+                                                    'concept::name': propertyValue.concept.name,
+                                                    [propertyType + ".value"]: propertyValue.uuid
+                                                }));
                                                 await conditionalIf(handle, outerPropertyHandleChildren, clonedScope);
                                             }
                                         }
