@@ -149,7 +149,7 @@ class Property {
                     this.derived.properties.forEach((propertyName) => {
                         VarvEngine.lookupProperty(null, concept, propertyName).then((lookupResult) => {
                             if(lookupResult.property != null) {
-                                if(lookupResult.concept.name === concept.name) {
+                                if(concept.name === lookupResult.concept.name) {
                                     lookupResult.property.addUpdatedCallback(updateFunction);
                                 } else {
                                     lookupResult.property.addUpdatedCallback(resetFunction);

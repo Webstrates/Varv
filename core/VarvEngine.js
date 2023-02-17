@@ -245,6 +245,7 @@ class VarvEngine {
      * @returns {Array}
      */
     static getAllImplementingConcepts(primaryTypeName){
+
         // Find all concepts with type, including other concepts
         let primaryConcept = null;
         let otherConcepts = VarvEngine.concepts.filter((concept)=>{
@@ -259,8 +260,11 @@ class VarvEngine {
 
             return false;
         }); 
-        
-        otherConcepts.unshift(primaryConcept);
+
+        if(primaryConcept != null) {
+            otherConcepts.unshift(primaryConcept);
+        }
+
         return otherConcepts;
     }
 
@@ -547,6 +551,10 @@ class VarvEngine {
 
             VarvEngine.concepts = await ConceptLoader.loadSpec(spec);
 
+            VarvEngine.concepts.forEach((concept)=>{
+                concept.doAfterSpecLoadSetup(ConceptLoader.DEBUG);
+            });
+
             await VarvEngine.sendEvent("engineReloaded", VarvEngine.concepts);
 
             if (VarvEngine.DEBUG) {
@@ -613,12 +621,19 @@ class VarvEngine {
         });
     }
 
-    static async lookupTarget(concept) {
+    static async lookupTarget(concept, useOtherConcepts=true) {
         let target = null;
 
         let mark = VarvPerformance.start();
 
-        let uuids = await VarvEngine.lookupInstances(concept.name, null, null,2, null);
+        let instanceTypes = [];
+        instanceTypes.push(concept.name);
+
+        if(useOtherConcepts) {
+            instanceTypes.push(...VarvEngine.getAllImplementingConceptNames(concept.name));
+        }
+
+        let uuids = await VarvEngine.lookupInstances(instanceTypes, null, null,2, null);
         if(uuids.length > 0) {
             target = uuids[0];
             if(uuids.length > 1) {

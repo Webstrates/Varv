@@ -353,12 +353,16 @@ class Concept {
         if(debug) {
             console.groupCollapsed("Finishing concept:", this.name);
         }
-        this.finishProperties(debug);
+        //this.finishProperties(debug);
         this.finishBehaviours(debug);
         this.setupTriggers(debug);
         if(debug) {
             console.groupEnd();
         }
+    }
+
+    doAfterSpecLoadSetup(debug) {
+        this.finishProperties(debug);
     }
 
     finishProperties(debug) {
@@ -379,6 +383,7 @@ class Concept {
             console.groupEnd();
         }
     }
+
 
     finishBehaviours(debug) {
         if(debug) {
@@ -626,6 +631,10 @@ class Concept {
     }
 
     isA(conceptType) {
+        if(conceptType instanceof Concept) {
+            conceptType = conceptType.name;
+        }
+
         return this.name === conceptType || this.otherConcepts.has(conceptType);
     }
 }
