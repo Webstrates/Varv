@@ -752,7 +752,7 @@ class FilterPropertyType extends Filter {
     async filter(context, localConcept, assert) {
         let markStart = VarvPerformance.start();
 
-        let pass = true;
+        let pass = false;
 
         try {
             let concept = await VarvEngine.getConceptFromUUID(context.target);
@@ -760,9 +760,18 @@ class FilterPropertyType extends Filter {
 
             let type = property.getFullTypeString();
 
-            pass = this.types.includes(type);
+            if(Array.isArray(type)) {
+                for(let t of type) {
+                    if(this.types.includes(t)) {
+                        pass = true;
+                        break;
+                    }
+                }
+            } else {
+                pass = this.types.includes(type);
+            }
         } catch(e) {
-            pass = false;
+            //Silent ignore
         }
 
         VarvPerformance.stop("FilterPropertyType.filter", markStart);

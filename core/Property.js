@@ -182,20 +182,20 @@ class Property {
         if(typeof type === "string") {
             let possibleConcept = VarvEngine.getConceptFromType(type);
             if(possibleConcept != null) {
-                type = "concept";
+                type = ["concept", type];
             }
         }
 
         if(type === "array") {
             let arrayType = this.getArrayType();
+            type = arrayType+"[]";
+
             if(typeof arrayType === "string") {
                 let possibleConcept = VarvEngine.getConceptFromType(arrayType);
                 if (possibleConcept != null) {
-                    arrayType = "concept";
+                    type = ["concept[]", arrayType+"[]"];
                 }
             }
-
-            type = arrayType+"[]";
         }
 
         return type;

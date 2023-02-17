@@ -1175,20 +1175,20 @@ class Property {
         if(typeof type === "string") {
             let possibleConcept = VarvEngine.getConceptFromType(type);
             if(possibleConcept != null) {
-                type = "concept";
+                type = ["concept", type];
             }
         }
 
         if(type === "array") {
             let arrayType = this.getArrayType();
+            type = arrayType+"[]";
+
             if(typeof arrayType === "string") {
                 let possibleConcept = VarvEngine.getConceptFromType(arrayType);
                 if (possibleConcept != null) {
-                    arrayType = "concept";
+                    type = ["concept[]", arrayType+"[]"];
                 }
             }
-
-            type = arrayType+"[]";
         }
 
         return type;
@@ -3101,7 +3101,7 @@ class FilterPropertyType extends Filter {
     async filter(context, localConcept, assert) {
         let markStart = VarvPerformance.start();
 
-        let pass = true;
+        let pass = false;
 
         try {
             let concept = await VarvEngine.getConceptFromUUID(context.target);
@@ -3109,9 +3109,18 @@ class FilterPropertyType extends Filter {
 
             let type = property.getFullTypeString();
 
-            pass = this.types.includes(type);
+            if(Array.isArray(type)) {
+                for(let t of type) {
+                    if(this.types.includes(t)) {
+                        pass = true;
+                        break;
+                    }
+                }
+            } else {
+                pass = this.types.includes(type);
+            }
         } catch(e) {
-            pass = false;
+            //Silent ignore
         }
 
         VarvPerformance.stop("FilterPropertyType.filter", markStart);
