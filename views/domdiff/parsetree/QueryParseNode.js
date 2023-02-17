@@ -122,7 +122,7 @@ class QueryParseNode extends ParseNode {
                                 });
                             } else {
                                 // Single property value, no duplication
-                                if (!(propertyValue instanceof ConceptInstanceBinding)) throw new Error("Cannot use a type for the property attribute that is not a list of simple values or a concept reference");
+                                if (!(propertyValue instanceof ConceptInstanceBinding)) throw new Error("Cannot use a type for the property attribute that is not a list of references, a list of simple values or a single concept reference: "+propertyValue);
 
                                 // Access uuid as .value, property.value or (optionally) as.value
                                 let values = new ValueBinding({
@@ -133,12 +133,12 @@ class QueryParseNode extends ParseNode {
                                     values.bindings[as+".value"] = propertyValue.uuid;
                                 }
 
-                                return [
+                                return [[
                                     ...localScope,
                                     new ConceptInstanceBinding(propertyValue.concept, propertyValue.uuid),
                                     new PropertyBinding(binding.concept.getProperty(property), binding.uuid),
                                     values
-                                ];
+                                ]];
                             }
                         }                    
                     }));

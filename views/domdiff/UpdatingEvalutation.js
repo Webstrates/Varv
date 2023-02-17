@@ -58,8 +58,10 @@ class UpdatingEvaluation {
                     return binding.getValueFor(propertyName);
                 });
             }
-            if (binding && binding.concept){
-                let property = binding.concept.getProperty(propertyName);
+            if (binding instanceof ConceptInstanceBinding){
+                console.log("Binding update for",propertyName);
+                let property = binding.getProperty(propertyName);
+                console.log("Property was",property);
 
                 let callback = async function updateUpdatingStringEvaluation(uuid){
                     //Only update this stringEvaluation if the changed property was on the watched concept instance

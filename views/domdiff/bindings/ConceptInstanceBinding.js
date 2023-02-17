@@ -7,47 +7,44 @@ class ConceptInstanceBinding {
     }
 
     hasBindingFor(name) {
-        let lookupName = name;
+        try {
+            this.getProperty(name);
+            return true;
+        } catch (ex) {
+            return false;
+        }
+    }
+    
+    getProperty(lookupName){
         if(lookupName.startsWith(this.concept.name+".")) {
             lookupName = lookupName.substring(this.concept.name.length+1);
         }
-        
-        try {
-            this.concept.getProperty(lookupName);
-            return true;
-        } catch (ex) {
-            // Ignored
-        }
-        
-        return false;
+        return this.concept.getProperty(lookupName);
     }
 
     async getValueFor(name) {
-        let lookupName = name;
-        if(lookupName.startsWith(this.concept.name+".")) {
-            lookupName = lookupName.substring(this.concept.name.length+1);
-        }
-        
+        console.log("Getting value for "+name);
         let property = null;
-        
         try {
-            property = this.concept.getProperty(lookupName);
+            property = this.getProperty(name);
         } catch(e) {
             //Ignore
         }
 
+        console.log("Property is ",property);
         if(property === null) {
             return undefined;
         }
 
         let value = await property.getValue(this.uuid);
+        console.log("Value is ",this.uuid, value);
         if (property.isConceptType()) {
             if (!value) return undefined; // No uuid set
-            return await ConceptInstanceBinding.create(VarvEngine.getConceptFromUUID(value), value);
+            return new ConceptInstanceBinding(VarvEngine.getConceptFromUUID(value), value);
         } else if (property.isConceptArrayType()) {
             let conceptArray = [];
             for(let entry of value) {
-                conceptArray.push(await ConceptInstanceBinding.create(VarvEngine.getConceptFromUUID(entry), entry));
+                conceptArray.push(new ConceptInstanceBinding(VarvEngine.getConceptFromUUID(entry), entry));
             }
             return conceptArray;
         } else {

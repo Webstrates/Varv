@@ -9,6 +9,8 @@ class ViewParticle {
         this.mountCallbacks = [];
         this.cleanup = [];
         this.scope = scope;
+        
+        node.viewParticle = this;
     }
     
     getNode(){
