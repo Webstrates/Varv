@@ -92,7 +92,7 @@ class QueryParseNode extends ParseNode {
                         let as = self.templateElement.getAttribute("as");
                         let propertyValue = await binding.getValueFor(property);
                         console.log("Value wat", propertyValue);
-                        if (propertyValue !== null) {
+                        if (propertyValue !== null && propertyValue !== undefined) {
                             if (Array.isArray(propertyValue)) {
                                 // We need to map the array into additional childscopes
                                 // STUB: No sorting of property values in SPEC?
@@ -140,7 +140,9 @@ class QueryParseNode extends ParseNode {
                                     values
                                 ]];
                             }
-                        }                    
+                        } else {
+                            return []; // Empty scope if no value
+                        }
                     }));
                     
                     // Concat the results into one big array
