@@ -15025,8 +15025,65 @@ class QueryParseNode extends ParseNode {
         let self = this;
         let conditionalQuery = this.templateElement.getAttribute("if");
         if (conditionalQuery!==null){
-            throw new Error("if='' not supported yet");
-            
+            // Monitor the if-condition for changes
+            if (view.conditionalUpdatingEvaluation) view.conditionalEvaluation.destroy();
+            view.conditionalUpdatingEvaluation = new UpdatingEvaluation(conditionalQuery, view.scope, async function conditionalAttributeUpdated(condition){                        
+                try {
+                    // Configure the if-test
+                    let negate = false;
+                    let isTestingInstanceOf = false;
+                    let testType;
+                    let conditionSource = condition;
+                    if(condition.startsWith("!")){
+                        conditionSource = condition.substring(1);
+                        negate = true;
+                    }                    
+                    if (conditionSource.includes("concept ")){ // Instance-of if
+                        isTestingInstanceOf = true;
+
+                        testType = conditionSource.substring(conditionSource.indexOf("concept ")+8);
+                        conditionSource = conditionSource.replace("concept "+testType, "").trim();
+                        if (conditionSource.length === 0){
+                            conditionSource = "concept::uuid"; // Use most recently bound concept
+                        }
+                    }
+                    
+                    // Perform the conditional test
+                    let isIncluded = await Promise.all(localScopes.map(async function applyConditional(localScope){
+                        // Sanity checks
+                        let binding = await DOMView.getBindingFromScope(conditionSource, [...view.scope, ...localScope]);
+                        if (!binding) throw new Error("if='"+condition+"' selecting boolean '"+conditionSource+"' not bound in scope");
+                        
+                        // Actual test
+                        let conditionalValue = false;
+                        try {
+                            if (isTestingInstanceOf){
+                                let testTarget = await binding.getValueFor(conditionSource);
+                                if (testTarget instanceof ConceptInstanceBinding){
+                                    testTarget = testTarget.concept;
+                                } else {
+                                    // This may be an uuid, if so, look it up instead
+                                    testTarget = await VarvEngine.getConceptFromUUID(testTarget);
+                                }
+                                conditionalValue = testTarget.isA(testType);
+                            } else {                            
+                                conditionalValue = await binding.getValueFor(conditionSource);                                
+                            }
+                            if(negate) {
+                                conditionalValue = ! conditionalValue;
+                            }
+                        } catch (ex){
+                            console.warn(ex);
+                        }
+                        return conditionalValue;
+                    }));                    
+
+                    self.onScopesUpdated(view, localScopes.filter((localScope,index)=>isIncluded[index]));            
+                } catch (ex){
+                    self.showError(view, "Evaluating if='"+conditionalQuery+"': "+ex, ex);
+                    return;            
+                }
+            });
         } else {
             // When there is no 'if=', all local scopes survive directly
             this.onScopesUpdated(view, localScopes);
@@ -15082,6 +15139,7 @@ class QueryParseNode extends ParseNode {
         this.onScopesUpdated(view, []);
         view.childViews.push(this.getErrorView(view.getTargetDocument(), view.scope, message, ex));
         this.stubResetView(view);        
+        console.log(ex);
     }
     
     static fastDeepEqual(a,b){
