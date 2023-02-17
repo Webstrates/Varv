@@ -495,8 +495,8 @@ window.LimitAction = LimitAction;
  * </p>
  *
  * <ul>
- * <li>"equals" - "number", "boolean", "string", "concept"</li>
- * <li>"unequals" - "number", "boolean", "string", "concept"</li>
+ * <li>"equals" - "number", "boolean", "string", "concept", "array"</li>
+ * <li>"unequals" - "number", "boolean", "string", "concept", "array"</li>
  * <li>"greaterThan" - "number", "string"</li>
  * <li>"lessThan" - "number", "string"</li>
  * <li>"greaterOrEquals" - "number", "string"</li>
@@ -504,6 +504,8 @@ window.LimitAction = LimitAction;
  * <li>"startsWith" - "string"</li>
  * <li>"endsWith" - "string"</li>
  * <li>"includes" - "string", "array"</li>
+ * <li>"includesAny" - "array"</li>
+ * <li>"includesAll" - "array"</li>
  * <li>"matches" - "string"</li>
  * </ul>
  * @memberOf ContextActions
@@ -600,7 +602,7 @@ class FilterAction extends Action {
 
     static constructFilterInternal(options) {
         try {
-            let operator = false;
+            let operator = null;
 
             for(let op in FilterOps) {
                 if(typeof options[op] !== "undefined") {
@@ -609,11 +611,14 @@ class FilterAction extends Action {
                 }
             }
 
-            if (operator !== false) {
+            if (operator !== null) {
                 let value = options[operator];
 
                 if(operator === "hasProperty") {
                     return new FilterPropertyExists(value);
+                }
+                if(operator === "propertyType") {
+                    return new FilterPropertyType(options.property, value);
                 }
 
                 if(options.calculation != null) {
@@ -633,9 +638,13 @@ class FilterAction extends Action {
 
                 return new FilterValue(operator, value);
             } else {
-                //This should be an "and", "or", "not" or concept filter filter
+                //This should be an "and", "or", "not" or concept filter
 
                 if(options.concept != null) {
+                    if(options.includeOthers != null) {
+                        return new FilterConcept(options.concept, options.includeOthers);
+                    }
+
                     //Concept defined, this is a concept filter
                     return new FilterConcept(options.concept);
                 }

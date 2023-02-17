@@ -655,10 +655,16 @@ class DOMTriggers {
                 }
             }
 
-            let uuids = DOMView.singleton.getConceptPath(mouseEvent.target).map((binding)=>{return binding.uuid});
+            let uuids = [];
+
             let target = null;
 
-            let properties = DOMView.singleton.getPropertyPath(mouseEvent.target);
+            let properties = [];
+
+            if(DOMView.singleton != null) {
+                uuids = DOMView.singleton.getConceptPath(mouseEvent.target).map((binding)=>{return binding.uuid});
+                properties = DOMView.singleton.getPropertyPath(mouseEvent.target);
+            }
 
             if(uuids.length > 0) {
                 //Use nearest concept uuid as target, if ClickTrigger, does not filter on concept, this is the target that will be shown

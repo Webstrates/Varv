@@ -176,6 +176,31 @@ class Property {
         }
     }
 
+    getFullTypeString() {
+        let type = this.getType();
+
+        if(typeof type === "string") {
+            let possibleConcept = VarvEngine.getConceptFromType(type);
+            if(possibleConcept != null) {
+                type = "concept";
+            }
+        }
+
+        if(type === "array") {
+            let arrayType = this.getArrayType();
+            if(typeof arrayType === "string") {
+                let possibleConcept = VarvEngine.getConceptFromType(arrayType);
+                if (possibleConcept != null) {
+                    arrayType = "concept";
+                }
+            }
+
+            type = arrayType+"[]";
+        }
+
+        return type;
+    }
+
     getType() {
         return this.type;
     }

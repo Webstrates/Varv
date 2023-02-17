@@ -39,7 +39,8 @@ window.FilterOps = Object.freeze({
     "includesAny": "includesAny",
     "includesAll": "includesAll",
     "matches": "matches",
-    "hasProperty": "hasProperty"
+    "hasProperty": "hasProperty",
+    "propertyType": "propertyType"
 });
 
 class Filter {
@@ -92,7 +93,11 @@ class Filter {
                     break;
                 }
                 case FilterOps.unequals: {
-                    pass = value !== compareValue;
+                    if(Array.isArray(value) && Array.isArray(compareValue)) {
+                        pass = JSON.stringify(value) !== JSON.stringify(compareValue);
+                    } else {
+                        pass = value !== compareValue;
+                    }
                     break;
                 }
                 case FilterOps.matches: {
@@ -174,12 +179,28 @@ class Filter {
     }
 }
 
+/**
+ * Filter based on a property
+ *
+ * @example
+ * //Filter based on property "myProperty" being equal to "someValue"
+ * {
+ *     "property": "myProperty",
+ *     "equals": "someValue"
+ * }
+ * @example
+ * //Filter based on string property "myProperty" starting with "someValue"
+ * {
+ *     "property": "myProperty",
+ *     "startsWith": "someValue"
+ * }
+ */
 class FilterProperty extends Filter {
     /**
      *
-     * @param {string} property
-     * @param {FilterOps} op
-     * @param {any} value
+     * @param {string} property The property to filter on
+     * @param {FilterOps} op The operator to use
+     * @param {any} value The value to compare to
      */
     constructor(property, op, value) {
         super();
@@ -203,7 +224,7 @@ class FilterProperty extends Filter {
                 return ["string"];
             }
             case FilterOps.unequals: {
-                return ["boolean", "number", "string", "concept"];
+                return ["boolean", "number", "string", "concept", "array"];
             }
             case FilterOps.greaterThan: {
                 return ["number", "string"];
@@ -278,12 +299,28 @@ class FilterProperty extends Filter {
 }
 window.FilterProperty = FilterProperty;
 
+/**
+ * Filter based on a variable
+ *
+ * @example
+ * //Filter based on variable "myVariable" being equal to "someValue"
+ * {
+ *     "variable": "myVariable",
+ *     "equals": "someValue"
+ * }
+ * @example
+ * //Filter based on string variable "myVariable" starting with "someValue"
+ * {
+ *     "variable": "myVariable",
+ *     "startsWith": "someValue"
+ * }
+ */
 class FilterVariable extends Filter {
     /**
      *
-     * @param {string} variable
-     * @param {FilterOps} op
-     * @param {any} value
+     * @param {string} variable The variable to filter on
+     * @param {FilterOps} op The operator to use
+     * @param {any} value The value to compare to
      */
     constructor(variable, op, value) {
         super();
@@ -305,7 +342,7 @@ class FilterVariable extends Filter {
                 return ["string"];
             }
             case FilterOps.unequals: {
-                return ["boolean", "number", "string"];
+                return ["boolean", "number", "string", "array"];
             }
             case FilterOps.greaterThan: {
                 return ["number", "string"];
@@ -381,13 +418,13 @@ class FilterValue extends Filter {
     allowedTypes() {
         switch(this.op) {
             case FilterOps.equals: {
-                return ["boolean", "number", "string"];
+                return ["boolean", "number", "string", "array"];
             }
             case FilterOps.matches: {
                 return ["string"];
             }
             case FilterOps.unequals: {
-                return ["boolean", "number", "string"];
+                return ["boolean", "number", "string", "array"];
             }
             case FilterOps.greaterThan: {
                 return ["number", "string"];
@@ -442,6 +479,22 @@ class FilterValue extends Filter {
 }
 window.FilterValue = FilterValue;
 
+/**
+ * Filters based on concept
+ *
+ * @example
+ * //Filter concepts that are not of type "myConceptType", including inherited concepts
+ * {
+ *     "concept": "myConceptType",
+ *     "includeOthers": true
+ * }
+ *
+ * //Filter concepts that are not of type "myConceptType", excluding inherited concepts
+ * {
+ *     "concept": "myConceptType",
+ *     "includeOthers": false
+ * }
+ */
 class FilterConcept extends Filter {
     constructor(conceptName, includeOthers=true) {
         super();
@@ -485,6 +538,17 @@ class FilterConcept extends Filter {
 }
 window.FilterConcept = FilterConcept;
 
+/**
+ * Filter based on multiple other filters, if any filter passes, this passes
+ *
+ * @example
+ * {
+ *     "or": [
+ *         {"property": "myProperty", "equals": "someValue"},
+ *         {"property": "myProperty", "equals": "someOtherValue"},
+ *     ]
+ * }
+ */
 class FilterOr extends Filter {
     constructor(filters) {
         super();
@@ -515,6 +579,17 @@ class FilterOr extends Filter {
 }
 window.FilterOr = FilterOr;
 
+/**
+ * Filter based on multiple other filters, if all filter passes, this passes
+ *
+ * @example
+ * {
+ *     "and": [
+ *         {"property": "myProperty", "equals": "someValue"},
+ *         {"property": "myProperty", "equals": "someOtherValue"},
+ *     ]
+ * }
+ */
 class FilterAnd extends Filter {
     constructor(filters) {
         super();
@@ -545,6 +620,14 @@ class FilterAnd extends Filter {
 }
 window.FilterAnd = FilterAnd;
 
+/**
+ * Filter based on other filter, if the other filter passes, this does not, and vice versa
+ *
+ * @example
+ * {
+ *     "not": {"property": "myProperty", "equals": "someValue"}
+ * }
+ */
 class FilterNot extends Filter {
     constructor(filter) {
         super();
@@ -569,6 +652,15 @@ class FilterNot extends Filter {
 }
 window.FilterNot = FilterNot;
 
+/**
+ * Filter based on some calculation
+ *
+ * @example
+ * {
+ *     "calculation": "10 + $someVariable$ + $someProperty$",
+ *     "equals": 1010
+ * }
+ */
 class FilterCalc extends Filter {
     constructor(calculation, operator, value) {
         super();
@@ -592,7 +684,14 @@ class FilterCalc extends Filter {
 
 window.FilterCalc = FilterCalc;
 
-
+/**
+ * Filters based on if concept has a property or not
+ *
+ * @example
+ * {
+ *     "hasProperty": "somePropertyName"
+ * }
+ */
 class FilterPropertyExists extends Filter {
     constructor(property) {
         super();
@@ -605,9 +704,8 @@ class FilterPropertyExists extends Filter {
 
         let pass = true;
 
-        let concept = await VarvEngine.getConceptFromUUID(context.target);
-
         try {
+            let concept = await VarvEngine.getConceptFromUUID(context.target);
             concept.getProperty(this.property);
         } catch(e) {
             //Silent fail, but mark that we saw no property
@@ -619,6 +717,57 @@ class FilterPropertyExists extends Filter {
         return pass;
     }
 }
-
 window.FilterPropertyExists = FilterPropertyExists;
 
+/**
+ * Filters based on property type
+ *
+ * @example
+ * //Filter all where property "myProperty" is not of type "string" or "number"
+ * {
+ *     "property": "myProperty",
+ *     "propertyType": ["number", "string"]
+ * }
+ *
+ * @example
+ * //Filter all where property "myProperty" is not of type "concept" or "concept[]"
+ * {
+ *     "property": "myProperty",
+ *     "propertyType": ["array[concept]", "concept"]
+ * }
+ */
+
+class FilterPropertyType extends Filter {
+    constructor(property, types) {
+        super();
+
+        this.property = property;
+        this.types = types;
+
+        if(!Array.isArray(this.types)) {
+            this.types = [this.types];
+        }
+    }
+
+    async filter(context, localConcept, assert) {
+        let markStart = VarvPerformance.start();
+
+        let pass = true;
+
+        try {
+            let concept = await VarvEngine.getConceptFromUUID(context.target);
+            let property = concept.getProperty(this.property);
+
+            let type = property.getFullTypeString();
+
+            pass = this.types.includes(type);
+        } catch(e) {
+            pass = false;
+        }
+
+        VarvPerformance.stop("FilterPropertyType.filter", markStart);
+
+        return pass;
+    }
+}
+window.FilterPropertyType = FilterPropertyType;

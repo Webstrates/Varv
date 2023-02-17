@@ -857,7 +857,7 @@ class VarvEngine {
         }
 
         //Check for view
-        if (DOMView.singleton.getViewElements(reference).length > 0) {
+        if (DOMView?.singleton.getViewElements(reference).length > 0) {
             if(VarvEngine.DEBUG) {
                 console.log("Was view!");
                 console.groupEnd();
