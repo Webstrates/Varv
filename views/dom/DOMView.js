@@ -920,6 +920,7 @@ class DOMView {
                                 // TODO: Move this into a post-render queue to avoid flickering
                                 shouldUpdateAttribute = false;
                                 setTimeout(()=>{
+                                    console.log("Trying to set value to ", value);
                                     element.value = value;
                                 },0);
                             } else if (element.tagName==="DIV"){
