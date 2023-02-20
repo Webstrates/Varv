@@ -67,12 +67,19 @@ class ElementParseNode extends ParseNode {
         }        
         
         // Attach the children
+        view.childViews = [];
         for (let child of this.children){
-            let childView = child.getView(targetDocument, scope); 
-            view.addCleanup(childView.destroy);
+            let childView = child.getView(targetDocument, scope);
+            view.childViews.push(childView);
             childView.mountInto(element);
         }        
-        
+
+        // Also kill all the children if we get killed
+        view.addCleanup(()=>{
+            view.childViews.forEach((childView)=>{
+                childView.destroy();
+            })
+        });
         return view;
     }
 }
