@@ -39,7 +39,7 @@ class ScopedParseNode extends ParseNode {
 
         // Add new views for newly added scopes
         // TODO: Actually insert in correct place
-        console.log("comparing",view.childViews, newChildScopes);
+        console.log("Updating view scope, old=>new",view.childViews, newChildScopes);
         newChildScopes.forEach((newChildScope)=>{
             let found = false;
             view.childViews.forEach((childView)=>{
@@ -63,6 +63,8 @@ class ScopedParseNode extends ParseNode {
             // Insert them before our anchor node
             childView.mountInto(view.getNode().parentNode, view.getNode());
         });
+        
+        view.onRendered();
     }
     
     showError(view, message, ex){

@@ -145,7 +145,6 @@ class QueryParseNode extends ScopedParseNode {
                         });
                     });
                     
-                    console.log("Found", scopeCollection);
                     self.generateConditionalScopes(view, scopeCollection);                         
                 } catch (ex){
                         self.showError(view, "Evaluating property='"+propertyQuery+"': "+ex, ex);

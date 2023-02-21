@@ -7,9 +7,10 @@ class ViewParticle {
         this.node = node;
         this.parseNode = parseNode;
         this.mountCallbacks = [];
+        this.renderCallbacks = [];
         this.cleanup = [];
         this.scope = scope;
-        
+        this.initialRender = false;
         node.viewParticle = this;
     }
     
@@ -32,11 +33,26 @@ class ViewParticle {
         this.mountCallbacks.push(callback);
     }
     
+    addOnRenderedCallback(callback){
+        this.renderCallbacks.push(callback);
+    }
+    
     mountInto(parentElement, insertBeforeNode=null){
         parentElement.insertBefore(this.node, insertBeforeNode);
         this.mountCallbacks.forEach((callback)=>{
             callback(); 
         });
+    }
+    
+    onRendered(){
+        this.initialRender = true;
+        this.renderCallbacks.forEach((callback)=>{
+            callback(); 
+        });
+    }
+    
+    hasRendered(){
+        return this.initialRender;
     }
     
     destroy(){

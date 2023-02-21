@@ -87,6 +87,11 @@ class UpdatingEvaluation {
                 let lookupQuery = token.substring(1, token.length - 1);
 
                 let value = await this.bindings.get(lookupQuery)();
+                
+                // Concept references are rewritten to their uuids
+                if (value instanceof ConceptInstanceBinding){
+                    value = value.uuid;
+                }
 
                 if (value !== undefined){
                     text = text.replace(token, value); // STUB: This can fail if the first token is replaced with something that looks like the second token
