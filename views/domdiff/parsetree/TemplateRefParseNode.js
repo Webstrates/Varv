@@ -36,7 +36,7 @@ class TemplateRefParseNode extends ScopedParseNode {
             });
             view.addCleanup(()=>{
                 view.templateUpdatingEvaluation.destroy();
-            })
+            });
         }      
     }    
 }

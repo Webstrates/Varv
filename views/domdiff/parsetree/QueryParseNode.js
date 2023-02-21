@@ -12,10 +12,12 @@ class QueryParseNode extends ScopedParseNode {
         console.log("instantiating query for ", this.templateElement);
         let view = super.getView(targetDocument, scope);        
         view.addCleanup(()=>{
+            view.conceptAppearedCallback?.delete();
+            view.conceptDisappearedCallback?.delete();
             view.conceptUpdatingEvaluation?.destroy();
             view.propertyUpdatingEvaluation?.destroy();
             view.conditionalUpdatingEvaluation?.destroy();
-        })        
+        });        
         return view;
     }
     
@@ -31,15 +33,42 @@ class QueryParseNode extends ScopedParseNode {
             // Need to monitor a list of concept instances
             view.conceptUpdatingEvaluation = new UpdatingEvaluation(conceptQuery, view.scope, async function conceptAttributeUpdated(conceptName){                        
                 try {
-                    // Concept enumeration queries (possibly filtered)
-                    if (self.templateElement.getAttribute("property")) console.log("STUB: concept='' enumerations combined with property='' lookups not high-performance yet, use filters here");
-                    if (self.templateElement.getAttribute("if")) console.log("STUB: concept='' enumerations combined with if='' not high-performance yet, use filters here");
-                    let instances = await VarvEngine.lookupInstances(VarvEngine.getAllImplementingConceptNames(conceptName)); // TODO: Fancy filtering opportunity here
-                    let localScopes = await Promise.all(instances.map(async function lookupConcreteTypes(uuid){
-                        let concreteConcept = await VarvEngine.getConceptFromUUID(uuid);
-                        return [new ConceptInstanceBinding(concreteConcept, uuid)];
-                    }));                
-                    self.generatePropertyScopes(view, localScopes);
+                    // Clean up any previous appeared/disappeared callbacks
+                    view.conceptAppearedCallback?.delete();
+                    view.conceptDisappearedCallback?.delete();
+                    
+                    // Enumerate some concepts                    
+                    let doConceptEnumeration = async function doConceptEnumerationForScopes(){
+                        // Concept enumeration queries (possibly filtered for performance)
+                        if (self.templateElement.getAttribute("property")) console.log("FIXME: concept='' enumerations combined with property='' lookups not high-performance yet, use filters here");
+                        if (self.templateElement.getAttribute("if")) console.log("FIXME: concept='' enumerations combined with if='' not high-performance yet, use filters here");
+                        let instances = await VarvEngine.lookupInstances(VarvEngine.getAllImplementingConceptNames(conceptName)); // TODO: Fancy filtering opportunity here
+                        let localScopes = await Promise.all(instances.map(async function lookupConcreteTypes(uuid){
+                            let concreteConcept = await VarvEngine.getConceptFromUUID(uuid);
+                            return [new ConceptInstanceBinding(concreteConcept, uuid)];
+                        }));                
+                        self.generatePropertyScopes(view, localScopes);
+                    };
+                    
+                    // Populate the scope
+                    await doConceptEnumeration();                    
+                    let refreshTimer;
+                    view.conceptAppearedCallback = VarvEngine.registerEventCallback("appeared", async (evt) => {
+                        if (evt.concept.isA(conceptName)){
+                            clearTimeout(refreshTimer);
+                            refreshTimer = setTimeout(()=>{
+                                doConceptEnumeration();
+                            },0);                            
+                        }
+                    });
+                    view.conceptDisappearedCallback = VarvEngine.registerEventCallback("disappeared", async (evt) => {
+                        if (evt.concept.isA(conceptName)){
+                            clearTimeout(refreshTimer);
+                            refreshTimer = setTimeout(()=>{
+                                doConceptEnumeration();
+                            },0);                            
+                        }
+                    });                    
                 } catch (ex){
                     self.showError(view, "Evaluating concept='"+conceptQuery+"': "+ex, ex);
                     return;            

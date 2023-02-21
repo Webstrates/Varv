@@ -59,6 +59,7 @@ class ScopedParseNode extends ParseNode {
         if (view.getNode().parentNode === null) return; // Not in any document yet
         
         // Move all our children with us, in order
+        console.log("FIXME: ScopedParseNode reordering moves too many nodes - this could be smarter");
         view.childViews.forEach((childView)=>{
             // Insert them before our anchor node
             childView.mountInto(view.getNode().parentNode, view.getNode());
