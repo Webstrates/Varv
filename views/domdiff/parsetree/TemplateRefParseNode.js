@@ -5,7 +5,7 @@ class TemplateRefParseNode extends ScopedParseNode {
     }    
     
     getView(targetDocument, scope){
-        console.log("instantiating template-ref for ", this.templateElement);
+        if (DOMView.DEBUG) console.log("instantiating template-ref for ", this.templateElement);
         return super.getView(targetDocument, scope);
     }
     
@@ -53,7 +53,7 @@ class TemplateInstanceParseNode extends ParseNode {
         
         // Dynamically parse and render the template now
         let referencedTemplateElement = templateBinding.getTemplateElement()
-        console.log("parsing template-instance for ", this.templateElement, referencedTemplateElement);       
+        if (DOMView.DEBUG) console.log("parsing template-instance for ", this.templateElement, referencedTemplateElement);       
         let view = new ViewParticle(targetDocument.createProcessingInstruction("varv-template-anchor", {}), this, scope);
         let parseNodes = [];
         for (let childNode of referencedTemplateElement.childNodes){
@@ -64,7 +64,7 @@ class TemplateInstanceParseNode extends ParseNode {
             }
         }        
         
-        console.log("creating template-instance view for ", view, parseNodes);
+        if (DOMView.DEBUG) console.log("creating template-instance view for ", view, parseNodes);
         view.childViews = [];
         parseNodes.forEach((parseChild)=>{
             view.childViews.push(parseChild.getView(targetDocument, scope));

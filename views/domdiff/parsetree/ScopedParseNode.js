@@ -4,7 +4,7 @@ class ScopedParseNode extends ParseNode {
     }
     
     getView(targetDocument, scope){
-        console.log("instantiating scopedparsenode abstract view for ", this.templateElement);
+        if (DOMView.DEBUG) console.log("instantiating scopedparsenode abstract view for ", this.templateElement);
         let self = this;        
         let view = new ViewParticle(targetDocument.createProcessingInstruction("varv-scope-anchor", {}), this, scope);
         view.childViews = [];        
@@ -39,7 +39,7 @@ class ScopedParseNode extends ParseNode {
 
         // Add new views for newly added scopes
         // TODO: Actually insert in correct place
-        console.log("Updating view scope, old=>new",view.childViews, newChildScopes);
+        if (DOMView.DEBUG) console.log("Updating view scope, old=>new",view.childViews, newChildScopes);
         newChildScopes.forEach((newChildScope)=>{
             let found = false;
             view.childViews.forEach((childView)=>{

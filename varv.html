@@ -14746,9 +14746,7 @@ class UpdatingEvaluation {
                 });
             }
             if (binding instanceof ConceptInstanceBinding){
-                console.log("Binding update for",propertyName);
                 let property = binding.getProperty(propertyName);
-                console.log("Property was",property);
 
                 let callback = async function updateUpdatingStringEvaluation(uuid){
                     //Only update this stringEvaluation if the changed property was on the watched concept instance
@@ -14888,9 +14886,9 @@ class ParseNode {
         this.cleanupCallbacks = [];
         this.templateElement = templateElement;
         
-        console.log("adding ", templateElement);
-        // TODO: Hooks for template element changes
-        // TODO: Hooks for template changes?
+        if (DOMView.DEBUG){
+            console.log("adding ", templateElement);
+        }
     }
     
     parseTemplateNode(elementNode, parseOptions={}){
@@ -14952,7 +14950,7 @@ window.ParseNode = ParseNode;
                 <script id="YotaParseNode-script" type="disabled">
 class YotaParseNode extends ParseNode {        
     getView(targetDocument, scope){
-        console.log("instantiating yota", this.templateElement);
+        if (DOMView.DEBUG) console.log("instantiating yota", this.templateElement);
 
         return new ViewParticle(targetDocument.importNode(this.templateElement,false), this, scope);
     }
@@ -14965,7 +14963,7 @@ window.YotaParseNode = YotaParseNode;
                 <script id="TextParseNode-script" type="disabled">
 class TextParseNode extends ParseNode {        
     getView(targetDocument, scope){ 
-        console.log("instantiating text", this.templateElement);
+        if (DOMView.DEBUG) console.log("instantiating text", this.templateElement);
         
         let textNode = targetDocument.createTextNode("");
         let view = new ViewParticle(textNode, this, scope); 
@@ -14991,7 +14989,7 @@ class ScopedParseNode extends ParseNode {
     }
     
     getView(targetDocument, scope){
-        console.log("instantiating scopedparsenode abstract view for ", this.templateElement);
+        if (DOMView.DEBUG) console.log("instantiating scopedparsenode abstract view for ", this.templateElement);
         let self = this;        
         let view = new ViewParticle(targetDocument.createProcessingInstruction("varv-scope-anchor", {}), this, scope);
         view.childViews = [];        
@@ -15026,7 +15024,7 @@ class ScopedParseNode extends ParseNode {
 
         // Add new views for newly added scopes
         // TODO: Actually insert in correct place
-        console.log("Updating view scope, old=>new",view.childViews, newChildScopes);
+        if (DOMView.DEBUG) console.log("Updating view scope, old=>new",view.childViews, newChildScopes);
         newChildScopes.forEach((newChildScope)=>{
             let found = false;
             view.childViews.forEach((childView)=>{
@@ -15119,7 +15117,7 @@ class TemplateRefParseNode extends ScopedParseNode {
     }    
     
     getView(targetDocument, scope){
-        console.log("instantiating template-ref for ", this.templateElement);
+        if (DOMView.DEBUG) console.log("instantiating template-ref for ", this.templateElement);
         return super.getView(targetDocument, scope);
     }
     
@@ -15167,7 +15165,7 @@ class TemplateInstanceParseNode extends ParseNode {
         
         // Dynamically parse and render the template now
         let referencedTemplateElement = templateBinding.getTemplateElement()
-        console.log("parsing template-instance for ", this.templateElement, referencedTemplateElement);       
+        if (DOMView.DEBUG) console.log("parsing template-instance for ", this.templateElement, referencedTemplateElement);       
         let view = new ViewParticle(targetDocument.createProcessingInstruction("varv-template-anchor", {}), this, scope);
         let parseNodes = [];
         for (let childNode of referencedTemplateElement.childNodes){
@@ -15178,7 +15176,7 @@ class TemplateInstanceParseNode extends ParseNode {
             }
         }        
         
-        console.log("creating template-instance view for ", view, parseNodes);
+        if (DOMView.DEBUG) console.log("creating template-instance view for ", view, parseNodes);
         view.childViews = [];
         parseNodes.forEach((parseChild)=>{
             view.childViews.push(parseChild.getView(targetDocument, scope));
@@ -15218,7 +15216,7 @@ class QueryParseNode extends ScopedParseNode {
     }
     
     getView(targetDocument, scope){
-        console.log("instantiating query for ", this.templateElement);
+        if (DOMView.DEBUG) console.log("instantiating query for ", this.templateElement);
         let view = super.getView(targetDocument, scope);        
         view.addCleanup(()=>{
             // Change callbacks            
@@ -15319,7 +15317,7 @@ class QueryParseNode extends ScopedParseNode {
         // Look at property attribute
         let propertyQuery = this.templateElement.getAttribute("property");
         if ((propertyQuery!==null) && propertyQuery.trim().length>0){
-            console.log("Generating property scopes...");
+            if (DOMView.DEBUG) console.log("Generating property scopes...");
             
             // Monitor property attribute for changes
             view.propertyUpdatingEvaluation = new UpdatingEvaluation(propertyQuery, view.scope, async function propertyAttributeUpdated(property){     
@@ -15329,7 +15327,7 @@ class QueryParseNode extends ScopedParseNode {
                 });
                 
                 // Find the new properties for each existing scope
-                console.log("Property attribute value is now", property);
+                if (DOMView.DEBUG) console.log("Property attribute value is now", property);
                 if (property === undefined) throw new Error("Cannot render property '"+propertyQuery+"' which evaluates to undefined");
                 try {
                     // Insert localScopes in the right order
@@ -15347,7 +15345,7 @@ class QueryParseNode extends ScopedParseNode {
                         // Find the new scopes from a value                        
                         let engineProperty = binding.getProperty(property);
                         let valueToScopes = function propertyValueToScopes(propertyValue){
-                            console.log("Property value is", propertyValue);
+                            if (DOMView.DEBUG) console.log("Property value is", propertyValue);
                             let as = self.templateElement.getAttribute("as");
                             if (propertyValue !== null && propertyValue !== undefined) {
                                 if (engineProperty.getType()==="array") {
@@ -15530,7 +15528,7 @@ class ElementParseNode extends ParseNode {
     
     getView(targetDocument, scope){
         let self = this;
-        console.log("instantiating element", this.templateElement);
+        if (DOMView.DEBUG) console.log("instantiating element", this.templateElement);
         
         // Create the element itself
         let name = this.templateElement.tagName;
@@ -15588,7 +15586,6 @@ class ElementParseNode extends ParseNode {
                         case "SELECT":
                             // Update when children option render properly
                             shouldUpdateAttribute = false;
-                            console.log("Updated with ", value);
                             element.value = value;
                             element.varvValue = value;
                             break;
@@ -15628,7 +15625,9 @@ class ElementParseNode extends ParseNode {
         if (element.tagName==="INPUT" || element.tagName==="TEXTAREA"){
             let writeBack = this.getAttributeWriteBack(this.templateElement.getAttribute("value"), scope);
             if (writeBack!==null){
-                writeBack.set(element.getAttribute("type")==="checkbox"?element.checked:element.value);
+                element.addEventListener("input", ()=>{
+                    writeBack.set(element.getAttribute("type")==="checkbox"?element.checked:element.value);
+                });
             }
         } else if (element.tagName==="SELECT"){
             let writeBack = this.getAttributeWriteBack(this.templateElement.getAttribute("value"), scope);
@@ -15842,7 +15841,6 @@ class ConceptInstanceBinding {
     }
 
     async getValueFor(name, wrapValue=true) {
-        console.log("Getting value for "+name);
         let property = null;
         try {
             property = this.getProperty(name);
@@ -15850,13 +15848,11 @@ class ConceptInstanceBinding {
             //Ignore
         }
 
-        console.log("Property is ",property);
         if(property === null) {
             return undefined;
         }
 
         let value = await property.getValue(this.uuid);
-        console.log("Value is ",this.uuid, value);
         
         if (!wrapValue) return value;
         
@@ -16015,7 +16011,7 @@ class DOMView {
     }    
 }
 
-DOMView.DEBUG = true;
+DOMView.DEBUG = false;
 DOMView.singleton = new DOMView();
 window.DOMView = DOMView;
 

@@ -23,7 +23,6 @@ class ConceptInstanceBinding {
     }
 
     async getValueFor(name, wrapValue=true) {
-        console.log("Getting value for "+name);
         let property = null;
         try {
             property = this.getProperty(name);
@@ -31,13 +30,11 @@ class ConceptInstanceBinding {
             //Ignore
         }
 
-        console.log("Property is ",property);
         if(property === null) {
             return undefined;
         }
 
         let value = await property.getValue(this.uuid);
-        console.log("Value is ",this.uuid, value);
         
         if (!wrapValue) return value;
         

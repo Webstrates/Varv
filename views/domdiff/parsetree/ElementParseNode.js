@@ -14,7 +14,7 @@ class ElementParseNode extends ParseNode {
     
     getView(targetDocument, scope){
         let self = this;
-        console.log("instantiating element", this.templateElement);
+        if (DOMView.DEBUG) console.log("instantiating element", this.templateElement);
         
         // Create the element itself
         let name = this.templateElement.tagName;
@@ -72,7 +72,6 @@ class ElementParseNode extends ParseNode {
                         case "SELECT":
                             // Update when children option render properly
                             shouldUpdateAttribute = false;
-                            console.log("Updated with ", value);
                             element.value = value;
                             element.varvValue = value;
                             break;
@@ -112,7 +111,9 @@ class ElementParseNode extends ParseNode {
         if (element.tagName==="INPUT" || element.tagName==="TEXTAREA"){
             let writeBack = this.getAttributeWriteBack(this.templateElement.getAttribute("value"), scope);
             if (writeBack!==null){
-                writeBack.set(element.getAttribute("type")==="checkbox"?element.checked:element.value);
+                element.addEventListener("input", ()=>{
+                    writeBack.set(element.getAttribute("type")==="checkbox"?element.checked:element.value);
+                });
             }
         } else if (element.tagName==="SELECT"){
             let writeBack = this.getAttributeWriteBack(this.templateElement.getAttribute("value"), scope);

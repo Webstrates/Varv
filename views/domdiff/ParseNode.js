@@ -4,9 +4,9 @@ class ParseNode {
         this.cleanupCallbacks = [];
         this.templateElement = templateElement;
         
-        console.log("adding ", templateElement);
-        // TODO: Hooks for template element changes
-        // TODO: Hooks for template changes?
+        if (DOMView.DEBUG){
+            console.log("adding ", templateElement);
+        }
     }
     
     parseTemplateNode(elementNode, parseOptions={}){

@@ -1,6 +1,6 @@
 class TextParseNode extends ParseNode {        
     getView(targetDocument, scope){ 
-        console.log("instantiating text", this.templateElement);
+        if (DOMView.DEBUG) console.log("instantiating text", this.templateElement);
         
         let textNode = targetDocument.createTextNode("");
         let view = new ViewParticle(textNode, this, scope); 

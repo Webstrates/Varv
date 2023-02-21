@@ -9,7 +9,7 @@ class QueryParseNode extends ScopedParseNode {
     }
     
     getView(targetDocument, scope){
-        console.log("instantiating query for ", this.templateElement);
+        if (DOMView.DEBUG) console.log("instantiating query for ", this.templateElement);
         let view = super.getView(targetDocument, scope);        
         view.addCleanup(()=>{
             // Change callbacks            
@@ -110,7 +110,7 @@ class QueryParseNode extends ScopedParseNode {
         // Look at property attribute
         let propertyQuery = this.templateElement.getAttribute("property");
         if ((propertyQuery!==null) && propertyQuery.trim().length>0){
-            console.log("Generating property scopes...");
+            if (DOMView.DEBUG) console.log("Generating property scopes...");
             
             // Monitor property attribute for changes
             view.propertyUpdatingEvaluation = new UpdatingEvaluation(propertyQuery, view.scope, async function propertyAttributeUpdated(property){     
@@ -120,7 +120,7 @@ class QueryParseNode extends ScopedParseNode {
                 });
                 
                 // Find the new properties for each existing scope
-                console.log("Property attribute value is now", property);
+                if (DOMView.DEBUG) console.log("Property attribute value is now", property);
                 if (property === undefined) throw new Error("Cannot render property '"+propertyQuery+"' which evaluates to undefined");
                 try {
                     // Insert localScopes in the right order
@@ -138,7 +138,7 @@ class QueryParseNode extends ScopedParseNode {
                         // Find the new scopes from a value                        
                         let engineProperty = binding.getProperty(property);
                         let valueToScopes = function propertyValueToScopes(propertyValue){
-                            console.log("Property value is", propertyValue);
+                            if (DOMView.DEBUG) console.log("Property value is", propertyValue);
                             let as = self.templateElement.getAttribute("as");
                             if (propertyValue !== null && propertyValue !== undefined) {
                                 if (engineProperty.getType()==="array") {
