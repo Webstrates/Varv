@@ -60,6 +60,8 @@ class RootParseNode extends ElementParseNode {
                 }
             }
         }        
+        
+        return view;
     }
 };
 

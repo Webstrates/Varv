@@ -1,10 +1,20 @@
 class DOMView {
+    constructor(){
+        this.renders = [];
+    }
+    
     render(){
+        // Cleanup
+        this.renders.forEach((view)=>{
+            view.destroy();
+        });
+        
+        // Render new views
         document.querySelectorAll("dom-view-template").forEach(async (template)=>{
             console.log("Parsing",template);
             let root = new RootParseNode(template);
             console.log("Rendering",template);
-            let view = await root.render();
+            this.renders.push(root.render());
             console.log("Ready for use");
         });
     }
@@ -121,3 +131,17 @@ class DOMView {
 DOMView.DEBUG = true;
 DOMView.singleton = new DOMView();
 window.DOMView = DOMView;
+
+
+//If fragments exists postpone the DOMView until all fragments was loaded at least first time. (Fragments added later obviously does not count)
+if(typeof Fragment !== "undefined") {
+    Fragment.addAllFragmentsLoadedCallback(()=>{
+        // We started after autoDOM has run, so no mutations. Bootstrap with what we have
+        console.log("DOMDiffView: Full re-render due to initial page load via Codestrates");
+        DOMView.singleton.render();
+    });
+}
+VarvEngine.registerEventCallback("engineReloaded", (evt) => {
+    console.log("DOMDiffView: Full re-render due to engine reload");
+    DOMView.singleton.render();
+});

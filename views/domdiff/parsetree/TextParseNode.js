@@ -8,7 +8,7 @@ class TextParseNode extends ParseNode {
             textNode.nodeValue = text;
         });
         view.addCleanup(()=>{
-            this.updatingEvaluation.destroy();
+            view.updatingEvaluation.destroy();
         });
         
         return view;
