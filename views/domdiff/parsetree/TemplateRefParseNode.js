@@ -87,5 +87,5 @@ class TemplateInstanceParseNode extends ParseNode {
         
         return view;
     }    
-}
+};
 window.TemplateInstanceParseNode = TemplateInstanceParseNode;
