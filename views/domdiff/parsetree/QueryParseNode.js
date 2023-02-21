@@ -135,27 +135,25 @@ class QueryParseNode extends ScopedParseNode {
                         if (!binding) throw new Error("Selecting undefined property '"+property+"' not found in scope");
                         if (!(binding instanceof ConceptInstanceBinding)) throw new Error("Property='"+propertyQuery+"' (currently '"+property+"') must be a property on a concept");
 
-                        // Find the new scopes from a value
+                        // Find the new scopes from a value                        
+                        let engineProperty = binding.getProperty(property);
                         let valueToScopes = function propertyValueToScopes(propertyValue){
                             console.log("Property value is", propertyValue);
                             let as = self.templateElement.getAttribute("as");
                             if (propertyValue !== null && propertyValue !== undefined) {
-                                if (Array.isArray(propertyValue)) {
+                                if (engineProperty.getType()==="array") {
                                     // We need to map the array into additional childscopes
                                     // STUB: No sorting of property values in SPEC?
                                     scopeMap.set(localScope, propertyValue.map((arrayEntry, index)=>{
                                         let values = new ValueBinding({});
                                         let newScope = [...localScope];
-                                        if (arrayEntry instanceof ConceptInstanceBinding) {         
-                                            newScope.push(arrayEntry); // the concept binding itself
-                                            values.bindings[".value"] = arrayEntry.uuid;
-                                        } else {
-                                            // Value only
-                                            values.bindings[".value"] = arrayEntry;
+                                        if (engineProperty.isConceptArrayType()) {         
+                                            newScope.push(new ConceptInstanceBinding(VarvEngine.getConceptFromUUID(arrayEntry),arrayEntry));
                                         }
-                                        values.bindings[".index"] = index;
 
                                         // Allow .value and .index to also be found as property.value or as.value (if defined)
+                                        values.bindings[".value"] = arrayEntry;
+                                        values.bindings[".index"] = index;
                                         values.bindings[property+".value"] = values.bindings[".value"];
                                         values.bindings[property+".index"] = values.bindings[".index"];
                                         if (as){
@@ -163,54 +161,50 @@ class QueryParseNode extends ScopedParseNode {
                                             values.bindings[as+".index"] = values.bindings[".index"];
                                         }
 
-                                        newScope.push(new PropertyBinding(binding.concept.getProperty(property), binding.uuid));
+                                        newScope.push(new PropertyBinding(engineProperty, binding.uuid));
                                         newScope.push(values);
                                         return newScope;
                                     }));
                                 } else {
                                     // Single property value, no duplication
-                                    if (!(propertyValue instanceof ConceptInstanceBinding)) throw new Error("Cannot use a type for the property attribute that is not a list of references, a list of simple values or a single concept reference: "+propertyValue);
+                                    if (!engineProperty.isConceptType()) throw new Error("Cannot use a type for the property attribute that is not a list of references, a list of simple values or a single concept reference: "+propertyValue);
 
                                     // Access uuid as .value, property.value or (optionally) as.value
                                     let values = new ValueBinding({
-                                        ".value": propertyValue.uuid,
-                                        [property+".value"]: propertyValue.uuid
+                                        ".value": propertyValue,
+                                        [property+".value"]: propertyValue
                                     });
                                     if (as){
-                                        values.bindings[as+".value"] = propertyValue.uuid;
+                                        values.bindings[as+".value"] = propertyValue;
                                     }
 
                                     scopeMap.set(localScope,[[
                                         ...localScope,
-                                        new ConceptInstanceBinding(propertyValue.concept, propertyValue.uuid),
-                                        new PropertyBinding(binding.concept.getProperty(property), binding.uuid),
+                                        new ConceptInstanceBinding(VarvEngine.getConceptFromUUID(propertyValue),propertyValue),
+                                        new PropertyBinding(engineProperty, binding.uuid),
                                         values
                                     ]]);
                                 }
-                            }                            
+                            } else {
+                                scopeMap.set(localScope,[]); // Empty scope
+                            }
                         };
 
                         // Initial setup
-                        valueToScopes(await binding.getValueFor(property));
+                        valueToScopes(await binding.getValueFor(property,false));
                         
                         // Listen for changes in the looked up property and update the scopes if changed
                         let changedCallback = async function queryParseNodePropertyChanged(uuid, value){
                             if (uuid===binding.uuid){
                                 // Update the scopeMap with the new value
-                                /**
-                                 * STUB: Unfortunately value passed in callback is useless to us since it doesn't
-                                 * include binding information, making it impossible to distinguish between strings and
-                                 * concept instance uuids.
-                                 * valueToScopes needs to be rewritten to use the property instead (and do lookups on the property type directly)
-                                 */ 
-                                valueToScopes(await binding.getValueFor(property)); // STUB
+                                valueToScopes(value);
                                 finalFiltering(scopeMap);
                             }
                         };                                
-                        binding.getProperty(property).addUpdatedCallback(changedCallback);
+                        engineProperty.addUpdatedCallback(changedCallback);
                         view.propertyChangedCallbacks.push({
                             delete: function queryParseNodePropertyChangeListenerRemoved(){
-                                binding.getProperty(property).removeUpdatedCallback(changedCallback);
+                                engineProperty.removeUpdatedCallback(changedCallback);
                             }
                         });
                     }));

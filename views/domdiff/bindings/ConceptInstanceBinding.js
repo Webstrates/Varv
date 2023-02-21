@@ -22,7 +22,7 @@ class ConceptInstanceBinding {
         return this.concept.getProperty(lookupName);
     }
 
-    async getValueFor(name) {
+    async getValueFor(name, wrapValue=true) {
         console.log("Getting value for "+name);
         let property = null;
         try {
@@ -38,6 +38,9 @@ class ConceptInstanceBinding {
 
         let value = await property.getValue(this.uuid);
         console.log("Value is ",this.uuid, value);
+        
+        if (!wrapValue) return value;
+        
         if (property.isConceptType()) {
             if (!value) return undefined; // No uuid set
             return new ConceptInstanceBinding(VarvEngine.getConceptFromUUID(value), value);
@@ -51,7 +54,7 @@ class ConceptInstanceBinding {
             return value;
         }
     }
-    
+
     async setValueFor(name, value){
         const property = this.concept.getProperty(name);
         await property.setValue(this.uuid, property.typeCast(value));
