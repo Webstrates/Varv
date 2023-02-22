@@ -1,0 +1,14 @@
+{
+    "friendlyName": "Varv engine triggers for DOM elements",
+    "description": "A set of event handlers for triggering on DOM elements",
+    "dependencies": [
+        
+    ],
+    "optionalDependencies": [
+        "#varv-engine"
+    ],
+    "assets": [],
+    "license": "MIT",
+    "version": "0.1",
+    "changelog": {}
+}
