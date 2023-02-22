@@ -25,8 +25,8 @@ class DOMView {
      * @param {type} viewName
      * @returns {unresolved}
      */
-    getViewElements(viewName){
-        return null; // STUB: what is this used for?
+    existsAsViewElement(viewName){
+        return document.querySelector("dom-view-template [view='"+viewName+"']");
     }    
     
     /**

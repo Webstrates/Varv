@@ -137,18 +137,19 @@ class QueryParseNode extends ScopedParseNode {
 
                         // Find the new scopes from a value                        
                         let engineProperty = binding.getProperty(property);
-                        let valueToScopes = function propertyValueToScopes(propertyValue){
+                        let valueToScopes = async function propertyValueToScopes(propertyValue){
                             if (DOMView.DEBUG) console.log("Property value is", propertyValue);
                             let as = self.templateElement.getAttribute("as");
-                            if (propertyValue !== null && propertyValue !== undefined) {
+                            if (propertyValue !== null && propertyValue !== undefined && propertyValue!=="") {
                                 if (engineProperty.getType()==="array") {
                                     // We need to map the array into additional childscopes
                                     // STUB: No sorting of property values in SPEC?
-                                    scopeMap.set(localScope, propertyValue.map((arrayEntry, index)=>{
+                                    
+                                    scopeMap.set(localScope, await Promise.all(propertyValue.map(async (arrayEntry, index)=>{
                                         let values = new ValueBinding({});
                                         let newScope = [...localScope];
                                         if (engineProperty.isConceptArrayType()) {         
-                                            newScope.push(new ConceptInstanceBinding(VarvEngine.getConceptFromUUID(arrayEntry),arrayEntry));
+                                            newScope.push(new ConceptInstanceBinding(await VarvEngine.getConceptFromUUID(arrayEntry),arrayEntry));
                                         }
 
                                         // Allow .value and .index to also be found as property.value or as.value (if defined)
@@ -164,7 +165,7 @@ class QueryParseNode extends ScopedParseNode {
                                         newScope.push(new PropertyBinding(engineProperty, binding.uuid));
                                         newScope.push(values);
                                         return newScope;
-                                    }));
+                                    })));
                                 } else {
                                     // Single property value, no duplication
                                     if (!engineProperty.isConceptType()) throw new Error("Cannot use a type for the property attribute that is not a list of references, a list of simple values or a single concept reference: "+propertyValue);
@@ -180,7 +181,7 @@ class QueryParseNode extends ScopedParseNode {
 
                                     scopeMap.set(localScope,[[
                                         ...localScope,
-                                        new ConceptInstanceBinding(VarvEngine.getConceptFromUUID(propertyValue),propertyValue),
+                                        new ConceptInstanceBinding(await VarvEngine.getConceptFromUUID(propertyValue),propertyValue),
                                         new PropertyBinding(engineProperty, binding.uuid),
                                         values
                                     ]]);
@@ -191,13 +192,13 @@ class QueryParseNode extends ScopedParseNode {
                         };
 
                         // Initial setup
-                        valueToScopes(await binding.getValueFor(property,false));
+                        await valueToScopes(await binding.getValueFor(property,false));
                         
                         // Listen for changes in the looked up property and update the scopes if changed
                         let changedCallback = async function queryParseNodePropertyChanged(uuid, value){
                             if (uuid===binding.uuid){
                                 // Update the scopeMap with the new value
-                                valueToScopes(value);
+                                await valueToScopes(value);
                                 finalFiltering(scopeMap);
                             }
                         };                                

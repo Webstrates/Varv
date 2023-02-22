@@ -55,20 +55,10 @@ class DOMView {
             characterDataOldValue: false
         });
     }
-
-    getViewElements(viewName) {
-        let templates = document.querySelectorAll("dom-view-template");
-        let viewElements = [];
-        templates.forEach((template)=>{
-            if (template.varvView){
-                let views = template.varvView.querySelectorAll("[view='"+viewName+"']");
-                views.forEach((view)=>{
-                    viewElements.push(view);
-                });
-            }
-        });
-        return viewElements;
-    }
+    
+    existsAsViewElement(viewName){
+        return document.querySelector("dom-view-template [view='"+viewName+"']");
+    }    
 
     async mutationCallback(mutationList) {
         try {
