@@ -15152,7 +15152,7 @@ class TemplateRefParseNode extends ScopedParseNode {
                     if (!template) throw new Error("Template with name '"+templateName+"' does not exist (yet?)");
                     
                     let localScopes = [];
-                    localScopes.push([...view.scope, new TemplateBinding(template)]);
+                    localScopes.push([new TemplateBinding(template)]);
                     
                     self.onScopesUpdated(view, localScopes);
                 } catch (ex){
