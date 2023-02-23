@@ -362,7 +362,9 @@ class Concept {
     }
 
     doAfterSpecLoadSetup(debug) {
+        let mark = VarvPerformance.start();
         this.finishProperties(debug);
+        VarvPerformance.stop("Concept.doAfterSpecLoadSetup", mark, this.name);
     }
 
     finishProperties(debug) {

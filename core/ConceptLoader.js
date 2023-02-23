@@ -48,6 +48,8 @@ class ConceptLoader {
     }
 
     static parseSpec(json) {
+        let mark = VarvPerformance.start();
+
         let parsedSpec = {
             "concepts":[],
             "dataStores": []
@@ -415,6 +417,8 @@ class ConceptLoader {
             console.groupEnd();
         }
 
+        VarvPerformance.stop("ConceptLoader.parseSpec", mark);
+
         return parsedSpec;
     }
 
@@ -424,6 +428,8 @@ class ConceptLoader {
      * @returns {Promise<any[]>}
      */
     static async loadSpec(spec) {
+        let mark = VarvPerformance.start();
+
         if(ConceptLoader.DEBUG) {
             console.groupCollapsed("Loading: ", spec);
         }
@@ -503,6 +509,8 @@ class ConceptLoader {
             console.groupEnd();
         }
 
+        VarvPerformance.stop("ConceptLoader.loadSpec", mark);
+
         return spec.concepts;
     }
     
@@ -529,6 +537,10 @@ class ConceptLoader {
     
 
     static parseTrigger(triggerName, triggerJson, concept) {
+        let mark = VarvPerformance.start();
+
+        let trigger = null;
+
         if(ConceptLoader.DEBUG) {
             console.log("Parsing trigger:", triggerName, triggerJson);
         }
@@ -537,15 +549,19 @@ class ConceptLoader {
         let triggerOptions = triggerJson[triggerType];
 
         try {
-            return Trigger.getTrigger(triggerType, triggerName, triggerOptions, concept);
+            trigger = Trigger.getTrigger(triggerType, triggerName, triggerOptions, concept);
         } catch (e) {
             console.warn(e);
         }
 
-        return null;
+        VarvPerformance.stop("ConceptLoader.parseTrigger", mark);
+
+        return trigger;
     }
 
     static parseAction(actionName, actionSetup, concept) {
+        let mark = VarvPerformance.start();
+
         let chain = new ActionChain(actionName, {}, concept);
 
         actionSetup.forEach((actionPart) => {
@@ -585,6 +601,8 @@ class ConceptLoader {
                 chain.addAction(action);
             }
         });
+
+        VarvPerformance.stop("ConceptLoader.parseAction", mark);
 
         return chain;
     }

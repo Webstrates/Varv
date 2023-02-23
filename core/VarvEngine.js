@@ -492,6 +492,7 @@ class VarvEngine {
         await queueReload();
 
         async function reload() {
+            let mark = VarvPerformance.start();
             reloading = true;
             if (VarvEngine.DEBUG) {
                 console.group("Reloading VarvEngine....");
@@ -562,6 +563,7 @@ class VarvEngine {
                 console.groupEnd();
             }
             reloading = false;
+            VarvPerformance.stop("VarvEngine.reload", mark);
         }
 
         function queueReload() {
