@@ -82,7 +82,7 @@ class TemplateInstanceParseNode extends ParseNode {
             view.childViews.forEach((childView)=>{
                 // Insert them before our anchor node
                 childView.mountInto(view.getNode().parentNode, view.getNode());
-            })
+            });
         });
         
         return view;

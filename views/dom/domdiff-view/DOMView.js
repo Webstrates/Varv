@@ -22,12 +22,6 @@ class DOMView {
         },0);        
     }
     
-    
-    /**
-     * ???
-     * @param {type} viewName
-     * @returns {unresolved}
-     */
     existsAsViewElement(viewName){
         return document.querySelector("dom-view-template [view='"+viewName+"']");
     }    
@@ -147,7 +141,7 @@ if(typeof Fragment !== "undefined") {
     // STUB: Reload when templates change
     let observer = new MutationObserver((mutations) => {
         let reload = function reloadDueToMutations(){
-            console.log("DOMDiffView: Full re-render due to templates changing");
+            console.log("STUB: DOMDiffView: Full re-render due to templates changing");
             DOMView.singleton.render();           
         };
         for(let mutation of mutations) {

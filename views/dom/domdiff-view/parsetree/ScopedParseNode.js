@@ -7,11 +7,17 @@ class ScopedParseNode extends ParseNode {
         if (DOMView.DEBUG) console.log("instantiating scopedparsenode abstract view for ", this.templateElement);
         let self = this;        
         let view = new ViewParticle(targetDocument.createProcessingInstruction("varv-scope-anchor", {}), this, scope);
+        view.topGuardElement = view.getTargetDocument().createProcessingInstruction("varv-scope-topguard", {});
         view.childViews = [];        
         this.generateScopes(view);
         
         view.addOnMountedCallback(()=>{
-            self.stubResetView(view);
+            // Plain move everything to new parent
+            view.getNode().parentElement.insertBefore(view.topGuardElement, view.getNode());
+            view.childViews.forEach((childView)=>{
+                // Insert them before our anchor node
+                childView.mountInto(view.getNode().parentElement, view.getNode());
+            });
         });
         view.addCleanup(()=>{
             // Empty the view
@@ -34,18 +40,18 @@ class ScopedParseNode extends ParseNode {
             }
         }
                 
-        // Move scopes that are in the child list but wrong order
-        // TODO: Actually reorder views
-
-        // Add new views for newly added scopes
-        // TODO: Actually insert in correct place
+        // Add new views for newly added scopes while reordering
         if (DOMView.DEBUG) console.log("Updating view scope, old=>new",view.childViews, newChildScopes);
+        let oldChildViews = view.childViews;
+        view.childViews = [];
         newChildScopes.forEach((newChildScope)=>{
-            let found = false;
-            view.childViews.forEach((childView)=>{
-                if (ScopedParseNode.fastDeepEqual(childView.localScope,newChildScope)) found = true;
+            let existingView = false;
+            oldChildViews.forEach((childView)=>{
+                if (ScopedParseNode.fastDeepEqual(childView.localScope,newChildScope)) existingView = childView;
             });
-            if (!found){
+            if (existingView){
+                view.childViews.push(existingView);
+            } else {
                 let childView = self.children[0].getView(view.getTargetDocument(),[...view.scope, ...newChildScope]);
                 childView.localScope = newChildScope;
                 view.childViews.push(childView);
@@ -57,18 +63,44 @@ class ScopedParseNode extends ParseNode {
     
     stubResetView(view){
         if (view.getNode().parentNode === null) return; // Not in any document yet
-               
-        // Move all our children with us, in order
-        view.childViews.forEach((childView)=>{
-            // Insert them before our anchor node
-            childView.mountInto(view.getNode().parentNode, view.getNode());
-        });
         
-        view.onRendered();
-        
-        if (view.childViews.length>1){
-            console.log("FIXME: ScopedParseNode reordering moves too many nodes - this could be smarter");            
+        let parent = view.getNode().parentNode;
+        let potentiallyInvalid = [...view.childViews];
+        let viewCount = view.childViews.length;
+             
+        for (let i = 0; i < viewCount; i++){
+            console.log("Validating view", view.childViews[i]);
+            let alreadyMountedCorrectly = true;
+            
+            // A view is mounted correctly if it is mounted here and no view that is supposed to be later is mounted before it
+            if (view.childViews[i].getNode().parentElement!==parent){
+                console.log("Wrong parent",view.childViews[i].getNode().parentElement);
+                alreadyMountedCorrectly = false;
+            }
+            let anchorIndex = [...parent.childNodes].indexOf(view.childViews[i].getNode());
+            if (i!==viewCount-1){
+                for (let o = i+1; o < viewCount; o++){
+                    let thisIndex = [...parent.childNodes].indexOf(view.childViews[o].getNode());
+                    if (thisIndex < anchorIndex && view.childViews[o].getNode().parentElement===parent) {
+                        console.log("Wrong location, found",anchorIndex, thisIndex,view.childViews[o].getNode());
+                        
+                        alreadyMountedCorrectly = false;
+                        break;
+                    }
+                }
+            }
+            
+            // If not mounted correctly, mount after previous view (or top guard if first view)
+            if (!alreadyMountedCorrectly){
+                let mountAfter = view.topGuardElement;                
+                if (i!==0){
+                    mountAfter = view.childViews[i-1].getNode();
+                }
+                view.childViews[i].mountInto(view.getNode().parentElement, mountAfter.nextSibling);
+            }
         }
+
+        view.onRendered();
     }
     
     showError(view, message, ex){
