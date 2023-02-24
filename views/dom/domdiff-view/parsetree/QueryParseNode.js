@@ -229,8 +229,8 @@ class QueryParseNode extends ScopedParseNode {
         
         // Clean potential previous evaluation of if-args so it stops updating
         if (view.conditionalUpdatingEvaluation) {
-            view.conditionalEvaluation.destroy();
-            view.conditionalEvaluation = null;
+            view.conditionalUpdatingEvaluation.destroy();
+            view.conditionalUpdatingEvaluation = null;
         }
         
         // Look at the attribute
