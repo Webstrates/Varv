@@ -15943,19 +15943,22 @@ class DOMView {
     }
     
     render(){
-        // Cleanup
-        this.renders.forEach((view)=>{
-            view.destroy();
-        });
-        
-        // Render new views
-        document.querySelectorAll("dom-view-template").forEach(async (template)=>{
-            console.log("Parsing",template);
-            let root = new RootParseNode(template);
-            console.log("Rendering",template);
-            this.renders.push(root.render());
-            console.log("Ready for use");
-        });
+        clearTimeout(this.renderTimer);
+        this.renderTimer = setTimeout(()=>{
+            // Cleanup
+            this.renders.forEach((view)=>{
+                view.destroy();
+            });
+
+            // Render new views
+            document.querySelectorAll("dom-view-template").forEach(async (template)=>{
+                console.log("Parsing",template);
+                let root = new RootParseNode(template);
+                console.log("Rendering",template);
+                this.renders.push(root.render());
+                console.log("Ready for use");
+            });
+        },0);        
     }
     
     
@@ -16078,6 +16081,43 @@ if(typeof Fragment !== "undefined") {
         // We started after autoDOM has run, so no mutations. Bootstrap with what we have
         console.log("DOMDiffView: Full re-render due to initial page load via Codestrates");
         DOMView.singleton.render();
+    });
+    
+    // STUB: Reload when templates change
+    let observer = new MutationObserver((mutations) => {
+        let reload = function reloadDueToMutations(){
+            console.log("DOMDiffView: Full re-render due to templates changing");
+            DOMView.singleton.render();           
+        };
+        for(let mutation of mutations) {
+            // From inside a template
+            if (
+                   (mutation.target.matches && mutation.target.matches("dom-view-template"))
+                || (mutation.target.closest && mutation.target.closest("dom-view-template"))
+                || (mutation.target.parentElement && mutation.target.parentElement.closest("dom-view-template"))){
+                reload();
+                break;
+            }
+            
+            // From outside a template
+            if (mutation.type==="childList"){
+                for (let node of [...mutation.addedNodes, ...mutation.removedNodes]){
+                    console.log("looking for ", node);
+                    if (node.tagName === "DOM-VIEW-TEMPLATE" || (node.querySelector && node.querySelector("dom-view-template"))){
+                        reload();
+                        break;
+                    }
+                }
+            }
+        };
+    });
+    observer.observe(document.body, {
+        attributes: true,
+        attributeOldValue: false,    
+        childList: true,
+        subtree: true,
+        characterData: true,
+        characterDataOldValue: false
     });
 }
 VarvEngine.registerEventCallback("engineReloaded", (evt) => {
