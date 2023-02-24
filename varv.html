@@ -7505,12 +7505,31 @@ class SelectAction extends Action {
                 conceptUUIDs = await VarvEngine.lookupInstances(VarvEngine.getAllImplementingConceptNames(options.concept), filter, context, limit, self.concept);
 
             } else if(options.target != null) {
+                console.log("Selecting target:", options.target);
+
                 //Select concept from target
                 if (Array.isArray(options.target)) {
                     conceptUUIDs.push(...options.target);
                 } else {
                     conceptUUIDs.push(options.target);
                 }
+
+                //Filter
+                let filterResults = conceptUUIDs.map((uuid)=>{
+                    return VarvEngine.getConceptFromUUID(uuid);
+                });
+
+                filterResults = await Promise.all(filterResults);
+
+                conceptUUIDs = conceptUUIDs.filter((uuid, index)=>{
+                    let shouldKeep = filterResults[index] != null;
+
+                    if(!shouldKeep) {
+                        console.warn("Could not find any concept with uuid: ["+uuid+"], ignoring!");
+                    }
+
+                    return shouldKeep;
+                });
             } else if(options.property != null) {
                 //Select concept from property of type concept or concept[]
                 let lookup = await VarvEngine.lookupProperty(context.target, self.concept, options.property);
