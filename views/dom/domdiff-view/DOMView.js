@@ -3,7 +3,7 @@ class DOMView {
         this.renders = [];
     }
     
-    render(){
+    render(suggestedDelay=10){
         clearTimeout(this.renderTimer);
         this.renderTimer = setTimeout(()=>{
             // Cleanup
@@ -19,7 +19,7 @@ class DOMView {
                 this.renders.push(root.render());
                 console.log("Ready for use");
             });
-        },0);        
+        },suggestedDelay);        
     }
     
     existsAsViewElement(viewName){
@@ -142,7 +142,7 @@ if(typeof Fragment !== "undefined") {
     let observer = new MutationObserver((mutations) => {
         let reload = function reloadDueToMutations(){
             console.log("STUB: DOMDiffView: Full re-render due to templates changing");
-            DOMView.singleton.render();           
+            DOMView.singleton.render(300);           
         };
         for(let mutation of mutations) {
             // From inside a template
@@ -157,7 +157,6 @@ if(typeof Fragment !== "undefined") {
             // From outside a template
             if (mutation.type==="childList"){
                 for (let node of [...mutation.addedNodes, ...mutation.removedNodes]){
-                    console.log("looking for ", node);
                     if (node.tagName === "DOM-VIEW-TEMPLATE" || (node.querySelector && node.querySelector("dom-view-template"))){
                         reload();
                         break;
