@@ -37,6 +37,13 @@ class ScopedParseNode extends ParseNode {
             if (!found){         
                 view.childViews[i].destroy();
                 view.childViews.splice(i,1);
+                
+                /**
+                 * TODO: If the only change in the scope is a valuebinding on the top of the scope stack
+                 * we can migrate the view by performing value updates instead of destroying it and 
+                 * recreating it here.
+                 * This happens often when reordering list entries.
+                 */ 
             }
         }
                 

@@ -21,6 +21,27 @@ class ConceptInstanceBinding {
         }
         return this.concept.getProperty(lookupName);
     }
+    
+    generateRawChangeListener(lookupName){
+        let self = this;
+        let property = this.getProperty(lookupName);
+        
+        let result = {
+            onChanged: async ()=>{console.error("DOMView bug: ConceptInstanceBinding raw change listener called without anything hooked up to it", concept, uuid, self);}
+        };
+        
+        // Listen for changes in the looked up property
+        let changedCallback = async function queryParseNodePropertyChanged(uuid, value){
+            if (uuid===self.uuid){
+                await result.onChanged(value);
+            }
+        };                                
+        property.addUpdatedCallback(changedCallback);
+        result.destroy = ()=>{
+            property.removeUpdatedCallback(changedCallback());
+        };
+        return result;
+    }
 
     async getValueFor(name, wrapValue=true) {
         let property = null;

@@ -195,19 +195,15 @@ class QueryParseNode extends ScopedParseNode {
                         await valueToScopes(await binding.getValueFor(property,false));
                         
                         // Listen for changes in the looked up property and update the scopes if changed
-                        let changedCallback = async function queryParseNodePropertyChanged(uuid, value){
-                            if (uuid===binding.uuid){
+                        let changedCallback = binding.generateRawChangeListener(property);
+                        if (changedCallback){
+                            changedCallback.onChanged = async function queryParseNodePropertyChanged(value){
                                 // Update the scopeMap with the new value
                                 await valueToScopes(value);
                                 finalFiltering(scopeMap);
-                            }
-                        };                                
-                        engineProperty.addUpdatedCallback(changedCallback);
-                        view.propertyChangedCallbacks.push({
-                            delete: function queryParseNodePropertyChangeListenerRemoved(){
-                                engineProperty.removeUpdatedCallback(changedCallback);
-                            }
-                        });
+                            };
+                            view.propertyChangedCallbacks.push(changedCallback);
+                        };                   
                     }));
                     
                     finalFiltering(scopeMap);
@@ -309,22 +305,16 @@ class QueryParseNode extends ScopedParseNode {
                         };                        
                         evaluateConditional(await binding.getValueFor(conditionSource));
                         
-                        if (binding instanceof ConceptInstanceBinding){
-                            // This is a property on a concept, it may change, listen for changes to it
-                            let onConditionalTargetPropertyChanged = function onConditionalTargetPropertyChanged(uuid, value){
-                                if (uuid===binding.uuid){
-                                    evaluateConditional(value);
-                                    onConditionalUpdateCompleted();
-                                }
+                        // Listen for changes in the looked up value and update this subscope if changed
+                        let changedCallback = binding.generateRawChangeListener(conditionSource);
+                        if (changedCallback){
+                            changedCallback.onChanged = async function queryParseNodePropertyChanged(value){
+                                // Update the scopeMap with the new value
+                                await evaluateConditional(value);
+                                onConditionalUpdateCompleted();
                             };
-                            binding.getProperty(conditionSource).addUpdatedCallback(onConditionalTargetPropertyChanged);
-                            view.conditionalPropertyUpdateListeners.push({
-                                destroy: ()=>{
-                                    binding.getProperty(conditionSource).removeUpdatedCallback(onConditionalTargetPropertyChanged);
-                                }
-                            });
-                        }
-                        
+                            view.conditionalPropertyUpdateListeners.push(changedCallback);
+                        };     
                     }));          
                     
                     onConditionalUpdateCompleted();
