@@ -56,7 +56,7 @@ class ViewParticle {
     }
     
     destroy(){
-        console.log("Destroying particle ",this);
+        if (DOMView.DEBUG) console.log("Destroying particle ",this);
         this.cleanup.forEach((callback)=>{
             callback(); 
         });

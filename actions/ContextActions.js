@@ -211,7 +211,7 @@ class SelectAction extends Action {
                 conceptUUIDs = await VarvEngine.lookupInstances(VarvEngine.getAllImplementingConceptNames(options.concept), filter, context, limit, self.concept);
 
             } else if(options.target != null) {
-                console.log("Selecting target:", options.target);
+                if(DEBUG_SELECT) console.log("Selecting target:", options.target);
 
                 //Select concept from target
                 if (Array.isArray(options.target)) {

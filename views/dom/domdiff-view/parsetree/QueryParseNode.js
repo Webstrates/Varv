@@ -244,7 +244,7 @@ class QueryParseNode extends ScopedParseNode {
         if ((conditionalQuery!==null) && conditionalQuery.trim().length>0){
             // Monitor the if-condition for changes
             view.conditionalUpdatingEvaluation = new UpdatingEvaluation(conditionalQuery, view.scope, async function conditionalAttributeUpdated(condition){                        
-                console.log("If changed: ", condition);
+                if (DOMView.DEBUG) console.log("If changed: ", condition);
                 try {
                     // Configure the if-test
                     let negate = false;

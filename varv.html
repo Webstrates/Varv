@@ -7505,7 +7505,7 @@ class SelectAction extends Action {
                 conceptUUIDs = await VarvEngine.lookupInstances(VarvEngine.getAllImplementingConceptNames(options.concept), filter, context, limit, self.concept);
 
             } else if(options.target != null) {
-                console.log("Selecting target:", options.target);
+                if(DEBUG_SELECT) console.log("Selecting target:", options.target);
 
                 //Select concept from target
                 if (Array.isArray(options.target)) {
@@ -14919,7 +14919,7 @@ class ViewParticle {
     }
     
     destroy(){
-        console.log("Destroying particle ",this);
+        if (DOMView.DEBUG) console.log("Destroying particle ",this);
         this.cleanup.forEach((callback)=>{
             callback(); 
         });
@@ -15106,12 +15106,11 @@ class ScopedParseNode extends ParseNode {
         let viewCount = view.childViews.length;
              
         for (let i = 0; i < viewCount; i++){
-            console.log("Validating view", view.childViews[i]);
+            if (DOMView.DEBUG) console.log("Validating view", view.childViews[i]);
             let alreadyMountedCorrectly = true;
             
             // A view is mounted correctly if it is mounted here and no view that is supposed to be later is mounted before it
             if (view.childViews[i].getNode().parentElement!==parent){
-                console.log("Wrong parent",view.childViews[i].getNode().parentElement);
                 alreadyMountedCorrectly = false;
             }
             let anchorIndex = [...parent.childNodes].indexOf(view.childViews[i].getNode());
@@ -15538,7 +15537,7 @@ class QueryParseNode extends ScopedParseNode {
         if ((conditionalQuery!==null) && conditionalQuery.trim().length>0){
             // Monitor the if-condition for changes
             view.conditionalUpdatingEvaluation = new UpdatingEvaluation(conditionalQuery, view.scope, async function conditionalAttributeUpdated(condition){                        
-                console.log("If changed: ", condition);
+                if (DOMView.DEBUG) console.log("If changed: ", condition);
                 try {
                     // Configure the if-test
                     let negate = false;
@@ -16023,11 +16022,11 @@ class DOMView {
 
             // Render new views
             document.querySelectorAll("dom-view-template").forEach(async (template)=>{
-                console.log("Parsing",template);
+                if (DOMView.DEBUG) console.log("Parsing",template);
                 let root = new RootParseNode(template);
-                console.log("Rendering",template);
+                if (DOMView.DEBUG) console.log("Rendering",template);
                 this.renders.push(root.render());
-                console.log("Ready for use");
+                if (DOMView.DEBUG) console.log("Ready for use");
             });
         },suggestedDelay);        
     }

@@ -13,11 +13,11 @@ class DOMView {
 
             // Render new views
             document.querySelectorAll("dom-view-template").forEach(async (template)=>{
-                console.log("Parsing",template);
+                if (DOMView.DEBUG) console.log("Parsing",template);
                 let root = new RootParseNode(template);
-                console.log("Rendering",template);
+                if (DOMView.DEBUG) console.log("Rendering",template);
                 this.renders.push(root.render());
-                console.log("Ready for use");
+                if (DOMView.DEBUG) console.log("Ready for use");
             });
         },suggestedDelay);        
     }

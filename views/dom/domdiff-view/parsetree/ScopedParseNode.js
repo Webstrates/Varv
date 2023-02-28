@@ -69,12 +69,11 @@ class ScopedParseNode extends ParseNode {
         let viewCount = view.childViews.length;
              
         for (let i = 0; i < viewCount; i++){
-            console.log("Validating view", view.childViews[i]);
+            if (DOMView.DEBUG) console.log("Validating view", view.childViews[i]);
             let alreadyMountedCorrectly = true;
             
             // A view is mounted correctly if it is mounted here and no view that is supposed to be later is mounted before it
             if (view.childViews[i].getNode().parentElement!==parent){
-                console.log("Wrong parent",view.childViews[i].getNode().parentElement);
                 alreadyMountedCorrectly = false;
             }
             let anchorIndex = [...parent.childNodes].indexOf(view.childViews[i].getNode());
