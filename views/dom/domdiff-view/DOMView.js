@@ -53,13 +53,11 @@ class DOMView {
         
         return await binding.getValueFor(bindingName);
     }    
-    
+      
     /**
-     * Gets an ordered list of concepts instances involved in rendering this view element
-     * @param {HTMLElement} viewElement
-     * @returns {string[]}
+     * Gets an ordered list from the scope mapped by the mapper function given
      */
-    getConceptPath(viewElement){        
+    getFilteredPath(viewElement, mapperFunction){        
         let element = viewElement;
         while (element != null && !element.scope){
             element = element.parentElement;
@@ -70,15 +68,25 @@ class DOMView {
         }
 
         let result = [];
-        if(element != null && element.scope != null) {
-            for (let binding of element.scope) {
-                if (binding instanceof ConceptInstanceBinding) {
-                    result.push(binding);
-                }
+        if(element != null && element.viewParticle != null) {
+            for (let binding of element.viewParticle.scope) {
+                let mappedValue = mapperFunction(binding);
+                if (mappedValue) result.push(mappedValue);
             }
         }
         return result;
-    }
+    }    
+    
+    /**
+     * Gets an ordered list of concepts instances involved in rendering this view element
+     * @param {HTMLElement} viewElement
+     * @returns {string[]}
+     */
+    getConceptPath(viewElement){
+        return this.getFilteredPath(viewElement, (binding)=>{
+            if (binding instanceof ConceptInstanceBinding) return binding;
+        });
+    }    
     
     /**
      * Gets an ordered list of template elements involved in rendering this view element
@@ -86,16 +94,9 @@ class DOMView {
      * @returns {string[]}
      */     
     getTemplatePath(viewElement){
-        let result = [];
-        let element = viewElement;
-        while (element != null){
-            if (element.templateElement){
-                result.push(element.templateElement);
-            }
-            element = element.parentElement;
-        }
-        
-        return result.reverse();
+        return this.getFilteredPath(viewElement, (binding)=>{
+            if (binding instanceof TemplateBinding) return binding.templateElement;
+        });
     }
     
     /**
@@ -104,24 +105,9 @@ class DOMView {
      * @returns {string[]}
      */    
     getPropertyPath(viewElement){
-        let element = viewElement;
-        while (element != null && !element.scope){
-            element = element.parentElement;
-            if (element==null){
-                // No concepts in this tree path at all                
-                return [];
-            }
-        }
-
-        let result = [];
-        if(element != null && element.scope != null) {
-            for (let binding of element.scope) {
-                if (binding instanceof PropertyBinding) {
-                    result.push({uuid: binding.uuid, property: binding.property});
-                }
-            }
-        }
-        return result;        
+        return this.getFilteredPath(viewElement, (binding)=>{
+            if (binding instanceof PropertyBinding) return {uuid: binding.uuid, property: binding.property};
+        });
     }    
 }
 

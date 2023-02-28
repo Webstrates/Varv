@@ -1,0 +1,11 @@
+{
+    "friendlyName": "Varv DOM Highlighting",
+    "description": "Allows applications like Cauldron to highlight concepts, properties and similar directly in the DOMView",
+    "dependencies": [
+        "#varv-engine"
+    ],
+    "assets": [],
+    "license": "MIT",
+    "version": "0.1",
+    "changelog": {}
+}

@@ -231,68 +231,7 @@ class DOMView {
                         self.stubTriggerFullRebuild(templateElement, "Engine was reloaded entirely");
                     });
 
-                    let clearHighlights = function clearHighlight(node){
-                        if (node.getAttribute && node.getAttribute("varv-domview-highlight")){
-                            node.removeAttribute("varv-domview-highlight");
-                        }
-                        return true;
-                    }
-                    let conceptHighlightCallback = EventSystem.registerEventCallback("Varv.DOMView.HighlightConcept", (evt)=>{
-                        let concept = evt.detail;
-                        self.walkView(view, clearHighlights);
-                        self.walkView(view, function highlightConcept(node){
-                            for (let conceptBinding of self.getConceptPath(node)){
-                                if (conceptBinding.concept===concept){
-                                    if (node.setAttribute){                                
-                                        node.setAttribute("varv-domview-highlight",true);
-                                    }
-                                    return false;
-                                }
-                            }
-                            return true;
-                        });
-                    });
-
-                    let instanceHighlightCallback = EventSystem.registerEventCallback("Varv.DOMView.HighlightInstance", (evt)=>{
-                        let uuid = evt.detail;
-                        self.walkView(view, clearHighlights);
-                        self.walkView(view, function highlightInstance(node){
-                            for (let conceptBinding of self.getConceptPath(node)){
-                                if (conceptBinding.uuid===uuid){
-                                    if (node.setAttribute){                                
-                                        node.setAttribute("varv-domview-highlight",true);
-                                    }
-                                    return false;
-                                }
-                            }
-                            return true;
-                        });
-                    });
-
-                    let propertyHighlightCallback = EventSystem.registerEventCallback("Varv.DOMView.HighlightProperty", (evt)=>{
-                        let property = evt.detail;
-                        self.walkView(view, clearHighlights);
-                        self.walkView(view, function highlightProperty(node){
-                            for (let entry of self.getPropertyPath(node)){
-                                if (entry.property===property){
-                                    if (node.setAttribute){                                
-                                        node.setAttribute("varv-domview-highlight",true);
-                                    }
-                                    return false;
-                                }
-                            }
-                            return true;
-                        });
-                    });
-
-                    let clearHighlightCallback = EventSystem.registerEventCallback("Varv.DOMView.ClearHighlights", (evt)=>{
-                        self.walkView(view, clearHighlights);
-                    });
                     self.addCleanup(view, () => {
-                        conceptHighlightCallback.delete();
-                        instanceHighlightCallback.delete();
-                        propertyHighlightCallback.delete();
-                        clearHighlightCallback.delete();
                         addCallback.delete();
                         deleteCallback.delete();
                         reloadCallback.delete();
@@ -386,15 +325,7 @@ class DOMView {
             }, 100);
         }
     }
-    
-    walkView(view, nodeCallback){
-        let diveIntoChildren = nodeCallback(view);
-        if (diveIntoChildren){
-            for (let child of view.childNodes){
-                this.walkView(child, nodeCallback);
-            }
-        }
-    }
+
 
     async cloneToView(targetDocument, currentViewElement, currentTemplateNode, currentScope = [], currentInsertBeforeElement=null) {
         const self = this;

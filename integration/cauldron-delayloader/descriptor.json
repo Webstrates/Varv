@@ -5,7 +5,8 @@
         "codestrates-repos #EventSystem"
     ],
     "optionalDependencies": [
-        "#varv-cauldron"
+        "#varv-cauldron",
+        "#varv-dom-highlight"
     ],
     "assets": [],
     "license": "MIT",

@@ -40,7 +40,7 @@ class ScopedParseNode extends ParseNode {
                 
                 /**
                  * TODO: If the only change in the scope is a valuebinding on the top of the scope stack
-                 * we can migrate the view by performing value updates instead of destroying it and 
+                 * we can migrate the view by performing valuebinding updates instead of destroying it and 
                  * recreating it here.
                  * This happens often when reordering list entries.
                  */ 
@@ -72,7 +72,6 @@ class ScopedParseNode extends ParseNode {
         if (view.getNode().parentNode === null) return; // Not in any document yet
         
         let parent = view.getNode().parentNode;
-        let potentiallyInvalid = [...view.childViews];
         let viewCount = view.childViews.length;
              
         for (let i = 0; i < viewCount; i++){

@@ -12692,68 +12692,7 @@ class DOMView {
                         self.stubTriggerFullRebuild(templateElement, "Engine was reloaded entirely");
                     });
 
-                    let clearHighlights = function clearHighlight(node){
-                        if (node.getAttribute && node.getAttribute("varv-domview-highlight")){
-                            node.removeAttribute("varv-domview-highlight");
-                        }
-                        return true;
-                    }
-                    let conceptHighlightCallback = EventSystem.registerEventCallback("Varv.DOMView.HighlightConcept", (evt)=>{
-                        let concept = evt.detail;
-                        self.walkView(view, clearHighlights);
-                        self.walkView(view, function highlightConcept(node){
-                            for (let conceptBinding of self.getConceptPath(node)){
-                                if (conceptBinding.concept===concept){
-                                    if (node.setAttribute){                                
-                                        node.setAttribute("varv-domview-highlight",true);
-                                    }
-                                    return false;
-                                }
-                            }
-                            return true;
-                        });
-                    });
-
-                    let instanceHighlightCallback = EventSystem.registerEventCallback("Varv.DOMView.HighlightInstance", (evt)=>{
-                        let uuid = evt.detail;
-                        self.walkView(view, clearHighlights);
-                        self.walkView(view, function highlightInstance(node){
-                            for (let conceptBinding of self.getConceptPath(node)){
-                                if (conceptBinding.uuid===uuid){
-                                    if (node.setAttribute){                                
-                                        node.setAttribute("varv-domview-highlight",true);
-                                    }
-                                    return false;
-                                }
-                            }
-                            return true;
-                        });
-                    });
-
-                    let propertyHighlightCallback = EventSystem.registerEventCallback("Varv.DOMView.HighlightProperty", (evt)=>{
-                        let property = evt.detail;
-                        self.walkView(view, clearHighlights);
-                        self.walkView(view, function highlightProperty(node){
-                            for (let entry of self.getPropertyPath(node)){
-                                if (entry.property===property){
-                                    if (node.setAttribute){                                
-                                        node.setAttribute("varv-domview-highlight",true);
-                                    }
-                                    return false;
-                                }
-                            }
-                            return true;
-                        });
-                    });
-
-                    let clearHighlightCallback = EventSystem.registerEventCallback("Varv.DOMView.ClearHighlights", (evt)=>{
-                        self.walkView(view, clearHighlights);
-                    });
                     self.addCleanup(view, () => {
-                        conceptHighlightCallback.delete();
-                        instanceHighlightCallback.delete();
-                        propertyHighlightCallback.delete();
-                        clearHighlightCallback.delete();
                         addCallback.delete();
                         deleteCallback.delete();
                         reloadCallback.delete();
@@ -12847,15 +12786,7 @@ class DOMView {
             }, 100);
         }
     }
-    
-    walkView(view, nodeCallback){
-        let diveIntoChildren = nodeCallback(view);
-        if (diveIntoChildren){
-            for (let child of view.childNodes){
-                this.walkView(child, nodeCallback);
-            }
-        }
-    }
+
 
     async cloneToView(targetDocument, currentViewElement, currentTemplateNode, currentScope = [], currentInsertBeforeElement=null) {
         const self = this;
@@ -14720,6 +14651,117 @@ new MutationObserver((mutations) => {
 </script>
 
             </div>
+            <div class="package" id="varv-dom-highlight">
+                <script id="descriptor-script" type="descriptor">
+{
+    "friendlyName": "Varv DOM Highlighting",
+    "description": "Allows applications like Cauldron to highlight concepts, properties and similar directly in the DOMView",
+    "dependencies": [
+        "#varv-engine"
+    ],
+    "assets": [],
+    "license": "MIT",
+    "version": "0.1",
+    "changelog": {}
+}
+
+</script>
+
+                <script id="DOMHighlight-script" type="disabled">
+class DOMHighlighter {      
+    constructor(){
+        let self = this;
+        
+        let conceptHighlightCallback = EventSystem.registerEventCallback("Varv.DOMView.HighlightConcept", (evt)=>{
+            let concept = evt.detail;
+            self.getViews().forEach((view)=>{
+                self.walkView(view, self.clearHighlight);
+                self.walkView(view, function highlightConcept(node){
+                    for (let conceptBinding of DOMView.singleton.getConceptPath(node)){
+                        if (conceptBinding.concept===concept){
+                            self.highlight(node);
+                            return false; // Don't highlight into children
+                        }
+                    }
+                    return true;
+                });
+            });
+        });
+        
+        let instanceHighlightCallback = EventSystem.registerEventCallback("Varv.DOMView.HighlightInstance", (evt)=>{
+            let uuid = evt.detail;
+            self.getViews().forEach((view)=>{
+                self.walkView(view, self.clearHighlight);
+                self.walkView(view, function highlightInstance(node){
+                    for (let conceptBinding of DOMView.singleton.getConceptPath(node)){
+                        if (conceptBinding.uuid===uuid){
+                            self.highlight(node);
+                            return false; // Don't highlight into children
+                        }
+                    }
+                    return true;
+                });
+            });
+        });        
+        
+        let propertyHighlightCallback = EventSystem.registerEventCallback("Varv.DOMView.HighlightProperty", (evt)=>{
+            let property = evt.detail;
+            self.getViews().forEach((view)=>{
+                self.walkView(view, self.clearHighlight);
+                self.walkView(view, function highlightProperty(node){
+                    for (let entry of DOMView.singleton.getPropertyPath(node)){
+                        if (entry.property===property){
+                            if (node.setAttribute){                                
+                                node.setAttribute("varv-domview-highlight",true);
+                            }
+                            return false;
+                        }
+                    }
+                    return true;
+                });
+            });
+        });       
+        
+        let clearHighlightCallback = EventSystem.registerEventCallback("Varv.DOMView.ClearHighlights", (evt)=>{
+            self.getViews().forEach((view)=>{
+                self.walkView(view, self.clearHighlight);
+            });
+        });        
+    }
+    
+    getViews(){
+        return document.querySelectorAll("varv-view");
+    }
+    
+    highlight(node){
+        if (node.setAttribute){                                
+            node.setAttribute("varv-domview-highlight",true);
+        }        
+    }
+        
+    clearHighlight(node){
+        if (node.getAttribute && node.getAttribute("varv-domview-highlight")){
+            node.removeAttribute("varv-domview-highlight");
+        }
+        return true;
+    }
+    
+    walkView(view, nodeCallback){
+        let diveIntoChildren = nodeCallback(view);
+        if (diveIntoChildren){
+            for (let child of view.childNodes){
+                this.walkView(child, nodeCallback);
+            }
+        }
+    }
+}
+
+window.DOMHighlighter = DOMHighlighter;
+window.DOMHighlighter.singleton = new DOMHighlighter();
+
+</script>
+                
+            </div>
             <div class="package" id="varv-domdiff-view">
                 <script id="descriptor-script" type="descriptor">
 {
@@ -15077,7 +15119,7 @@ class ScopedParseNode extends ParseNode {
                 
                 /**
                  * TODO: If the only change in the scope is a valuebinding on the top of the scope stack
-                 * we can migrate the view by performing value updates instead of destroying it and 
+                 * we can migrate the view by performing valuebinding updates instead of destroying it and 
                  * recreating it here.
                  * This happens often when reordering list entries.
                  */ 
@@ -15109,7 +15151,6 @@ class ScopedParseNode extends ParseNode {
         if (view.getNode().parentNode === null) return; // Not in any document yet
         
         let parent = view.getNode().parentNode;
-        let potentiallyInvalid = [...view.childViews];
         let viewCount = view.childViews.length;
              
         for (let i = 0; i < viewCount; i++){
@@ -15826,7 +15867,7 @@ class RootParseNode extends ElementParseNode {
         }
         
         // Construct the view 
-        let scope = [];
+        let scope = [new TemplateBinding(this.templateElement)];
         let view = this.getView(targetDocument, scope);
         
         // Find the target element
@@ -16080,13 +16121,11 @@ class DOMView {
         
         return await binding.getValueFor(bindingName);
     }    
-    
+      
     /**
-     * Gets an ordered list of concepts instances involved in rendering this view element
-     * @param {HTMLElement} viewElement
-     * @returns {string[]}
+     * Gets an ordered list from the scope mapped by the mapper function given
      */
-    getConceptPath(viewElement){        
+    getFilteredPath(viewElement, mapperFunction){        
         let element = viewElement;
         while (element != null && !element.scope){
             element = element.parentElement;
@@ -16097,15 +16136,25 @@ class DOMView {
         }
 
         let result = [];
-        if(element != null && element.scope != null) {
-            for (let binding of element.scope) {
-                if (binding instanceof ConceptInstanceBinding) {
-                    result.push(binding);
-                }
+        if(element != null && element.viewParticle != null) {
+            for (let binding of element.viewParticle.scope) {
+                let mappedValue = mapperFunction(binding);
+                if (mappedValue) result.push(mappedValue);
             }
         }
         return result;
-    }
+    }    
+    
+    /**
+     * Gets an ordered list of concepts instances involved in rendering this view element
+     * @param {HTMLElement} viewElement
+     * @returns {string[]}
+     */
+    getConceptPath(viewElement){
+        return this.getFilteredPath(viewElement, (binding)=>{
+            if (binding instanceof ConceptInstanceBinding) return binding;
+        });
+    }    
     
     /**
      * Gets an ordered list of template elements involved in rendering this view element
@@ -16113,16 +16162,9 @@ class DOMView {
      * @returns {string[]}
      */     
     getTemplatePath(viewElement){
-        let result = [];
-        let element = viewElement;
-        while (element != null){
-            if (element.templateElement){
-                result.push(element.templateElement);
-            }
-            element = element.parentElement;
-        }
-        
-        return result.reverse();
+        return this.getFilteredPath(viewElement, (binding)=>{
+            if (binding instanceof TemplateBinding) return binding.templateElement;
+        });
     }
     
     /**
@@ -16131,24 +16173,9 @@ class DOMView {
      * @returns {string[]}
      */    
     getPropertyPath(viewElement){
-        let element = viewElement;
-        while (element != null && !element.scope){
-            element = element.parentElement;
-            if (element==null){
-                // No concepts in this tree path at all                
-                return [];
-            }
-        }
-
-        let result = [];
-        if(element != null && element.scope != null) {
-            for (let binding of element.scope) {
-                if (binding instanceof PropertyBinding) {
-                    result.push({uuid: binding.uuid, property: binding.property});
-                }
-            }
-        }
-        return result;        
+        return this.getFilteredPath(viewElement, (binding)=>{
+            if (binding instanceof PropertyBinding) return {uuid: binding.uuid, property: binding.property};
+        });
     }    
 }
 
@@ -17734,7 +17761,8 @@ EventSystem.registerEventCallback("Varv.Convert.YAMLJSON", async (evt)=>{
         "codestrates-repos #EventSystem"
     ],
     "optionalDependencies": [
-        "#varv-cauldron"
+        "#varv-cauldron",
+        "#varv-dom-highlight"
     ],
     "assets": [],
     "license": "MIT",
@@ -17750,7 +17778,8 @@ EventSystem.registerEventCallback("Varv.Convert.YAMLJSON", async (evt)=>{
     let alreadyInitializedDelayLoader = false;
     EventSystem.registerEventCallback("Cauldron.OnOpen", async ()=>{
             if (!alreadyInitializedDelayLoader){
-                await wpm.require("varv-cauldron");
+                console.log("Fetching additional Varv packages for Cauldron integration");
+                await wpm.require(["varv-cauldron", "varv-dom-highlight"]);
 
                 // Cause a restart to update the TreeBrowser with the current Concepts
                 EventSystem.triggerEvent("Varv.Restart");

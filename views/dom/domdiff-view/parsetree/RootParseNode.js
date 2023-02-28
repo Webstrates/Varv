@@ -12,7 +12,7 @@ class RootParseNode extends ElementParseNode {
         }
         
         // Construct the view 
-        let scope = [];
+        let scope = [new TemplateBinding(this.templateElement)];
         let view = this.getView(targetDocument, scope);
         
         // Find the target element
