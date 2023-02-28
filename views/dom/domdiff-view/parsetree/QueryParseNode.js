@@ -228,6 +228,12 @@ class QueryParseNode extends ScopedParseNode {
         let self = this;
         
         // Clean potential previous evaluation of if-args so it stops updating
+        if (view.conditionalPropertyUpdateListeners){
+            view.conditionalPropertyUpdateListeners.forEach((listener)=>{
+                listener.destroy();
+            });
+        }
+        view.conditionalPropertyUpdateListeners = [];
         if (view.conditionalUpdatingEvaluation) {
             view.conditionalUpdatingEvaluation.destroy();
             view.conditionalUpdatingEvaluation = null;
@@ -238,6 +244,7 @@ class QueryParseNode extends ScopedParseNode {
         if ((conditionalQuery!==null) && conditionalQuery.trim().length>0){
             // Monitor the if-condition for changes
             view.conditionalUpdatingEvaluation = new UpdatingEvaluation(conditionalQuery, view.scope, async function conditionalAttributeUpdated(condition){                        
+                console.log("If changed: ", condition);
                 try {
                     // Configure the if-test
                     let negate = false;
@@ -258,37 +265,69 @@ class QueryParseNode extends ScopedParseNode {
                         }
                     }
                     
+                    // Insert localScopes in the right order
+                    let scopeMap = new Map(localScopes.map((localScope)=>{
+                        return [localScope, []];
+                    }));
+                    
+                    let onConditionalUpdateCompleted = function onConditionalUpdateCompleted(){
+                        // Flatten results to list
+                        let includedScopes = [];
+                        scopeMap.forEach((value,key)=>{
+                            if (value) includedScopes.push(key);
+                        });
+
+                        // Send to UI
+                        self.onScopesUpdated(view, includedScopes);            
+                    };                    
+
                     // Perform the conditional test
-                    let isIncluded = await Promise.all(localScopes.map(async function applyConditional(localScope){
+                    await Promise.all(localScopes.map(async function applyConditional(localScope){
                         // Sanity checks
                         let binding = await DOMView.getBindingFromScope(conditionSource, [...view.scope, ...localScope]);
                         if (!binding) throw new Error("if='"+condition+"' selecting boolean '"+conditionSource+"' not bound in scope");
                         
-                        // Actual test
-                        let conditionalValue = false;
-                        try {
-                            if (isTestingInstanceOf){
-                                let testTarget = await binding.getValueFor(conditionSource);
-                                if (testTarget instanceof ConceptInstanceBinding){
-                                    testTarget = testTarget.concept;
-                                } else {
-                                    // This may be an uuid, if so, look it up instead
-                                    testTarget = await VarvEngine.getConceptFromUUID(testTarget);
+                        let evaluateConditional = async function evaluateConditional(value){
+                            // Actual test
+                            let conditionalValue = false;
+                            try {
+                                if (isTestingInstanceOf){
+                                    // This check must be against a uuid, look it up
+                                    let testTarget = await VarvEngine.getConceptFromUUID(value);                                    
+                                    conditionalValue = testTarget.isA(testType);
+                                } else {                            
+                                    conditionalValue = value;                                
                                 }
-                                conditionalValue = testTarget.isA(testType);
-                            } else {                            
-                                conditionalValue = await binding.getValueFor(conditionSource);                                
+                                if(negate) {
+                                    conditionalValue = !conditionalValue;
+                                }
+                            } catch (ex){
+                                console.warn(ex);
                             }
-                            if(negate) {
-                                conditionalValue = ! conditionalValue;
-                            }
-                        } catch (ex){
-                            console.warn(ex);
+                            scopeMap.set(localScope, conditionalValue);
+                            
+                        };                        
+                        evaluateConditional(await binding.getValueFor(conditionSource));
+                        
+                        if (binding instanceof ConceptInstanceBinding){
+                            // This is a property on a concept, it may change, listen for changes to it
+                            let onConditionalTargetPropertyChanged = function onConditionalTargetPropertyChanged(uuid, value){
+                                if (uuid===binding.uuid){
+                                    evaluateConditional(value);
+                                    onConditionalUpdateCompleted();
+                                }
+                            };
+                            binding.getProperty(conditionSource).addUpdatedCallback(onConditionalTargetPropertyChanged);
+                            view.conditionalPropertyUpdateListeners.push({
+                                destroy: ()=>{
+                                    binding.getProperty(conditionSource).removeUpdatedCallback(onConditionalTargetPropertyChanged);
+                                }
+                            });
                         }
-                        return conditionalValue;
-                    }));                    
-
-                    self.onScopesUpdated(view, localScopes.filter((localScope,index)=>isIncluded[index]));            
+                        
+                    }));          
+                    
+                    onConditionalUpdateCompleted();
                 } catch (ex){
                     self.showError(view, "Evaluating if='"+conditionalQuery+"': "+ex, ex);
                     return;            
