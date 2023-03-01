@@ -16,14 +16,13 @@ class TemplateRefParseNode extends ScopedParseNode {
         let templateHookType = this.templateElement.getAttribute("template-hook");
         if ((templateQuery!==null) && templateQuery.trim().length>0){
             // Need to monitor a list of templates
-            view.templateUpdatingEvaluation = new UpdatingEvaluation(templateQuery, view.scope, async function templateNameAttributeChanged(templateName){                        
+            view.templateUpdatingEvaluation = new UpdatingEvaluation(templateQuery, view.scope, async function templateNameAttributeChanged(templateName){
                 try {                    
                     // Find the template and create corresponding scopes
                     let templates = document.querySelectorAll("varv-template[name='" + templateName+"']");
                     let localScopes = [];
 
                     if (templates.length===0) throw new Error("Template with name '"+templateName+"' does not exist (yet?)");
-                    console.log("hook is ", templateHookType);
                     switch (templateHookType){
                         case "all":
                             templates.forEach((template)=>{

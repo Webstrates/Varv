@@ -96,7 +96,10 @@ class UpdatingEvaluation {
                 }
             }
 
-            await this.onChangeCallback(text);
+            if (text!=this.oldUpdateText){
+                this.oldUpdateText = text; // Don't send updates when result is identical
+                await this.onChangeCallback(text);
+            }
         } catch (ex){
             console.error(ex);
         }

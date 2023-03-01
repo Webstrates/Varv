@@ -14877,7 +14877,10 @@ class UpdatingEvaluation {
                 }
             }
 
-            await this.onChangeCallback(text);
+            if (text!=this.oldUpdateText){
+                this.oldUpdateText = text; // Don't send updates when result is identical
+                await this.onChangeCallback(text);
+            }
         } catch (ex){
             console.error(ex);
         }
@@ -15108,6 +15111,8 @@ class ScopedParseNode extends ParseNode {
     onScopesUpdated(view, newChildScopes){      
         // Destroy views that are no longer in the new child scopes
         let self = this;
+        let changes = 0;
+        
         for (let i = view.childViews.length-1; i>=0; i--){
             let found = false;
             newChildScopes.forEach((newChildScope)=>{
@@ -15116,6 +15121,7 @@ class ScopedParseNode extends ParseNode {
             if (!found){         
                 view.childViews[i].destroy();
                 view.childViews.splice(i,1);
+                changes++;
                 
                 /**
                  * TODO: If the only change in the scope is a valuebinding on the top of the scope stack
@@ -15141,8 +15147,13 @@ class ScopedParseNode extends ParseNode {
                 let childView = self.children[0].getView(view.getTargetDocument(),[...view.scope, ...newChildScope]);
                 childView.localScope = newChildScope;
                 view.childViews.push(childView);
+                changes++;
             }            
         });
+        
+        if (changes===0){
+            console.log("FIXME: DOMDiffView: Potential performance optimization for ScopedParseNode. onScopesUpdated() called but returned no change in scope",this);
+        }
         
         this.stubResetView(view);
     }
@@ -15262,14 +15273,13 @@ class TemplateRefParseNode extends ScopedParseNode {
         let templateHookType = this.templateElement.getAttribute("template-hook");
         if ((templateQuery!==null) && templateQuery.trim().length>0){
             // Need to monitor a list of templates
-            view.templateUpdatingEvaluation = new UpdatingEvaluation(templateQuery, view.scope, async function templateNameAttributeChanged(templateName){                        
+            view.templateUpdatingEvaluation = new UpdatingEvaluation(templateQuery, view.scope, async function templateNameAttributeChanged(templateName){
                 try {                    
                     // Find the template and create corresponding scopes
                     let templates = document.querySelectorAll("varv-template[name='" + templateName+"']");
                     let localScopes = [];
 
                     if (templates.length===0) throw new Error("Template with name '"+templateName+"' does not exist (yet?)");
-                    console.log("hook is ", templateHookType);
                     switch (templateHookType){
                         case "all":
                             templates.forEach((template)=>{

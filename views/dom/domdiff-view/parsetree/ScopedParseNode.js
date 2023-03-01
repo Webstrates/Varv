@@ -29,6 +29,8 @@ class ScopedParseNode extends ParseNode {
     onScopesUpdated(view, newChildScopes){      
         // Destroy views that are no longer in the new child scopes
         let self = this;
+        let changes = 0;
+        
         for (let i = view.childViews.length-1; i>=0; i--){
             let found = false;
             newChildScopes.forEach((newChildScope)=>{
@@ -37,6 +39,7 @@ class ScopedParseNode extends ParseNode {
             if (!found){         
                 view.childViews[i].destroy();
                 view.childViews.splice(i,1);
+                changes++;
                 
                 /**
                  * TODO: If the only change in the scope is a valuebinding on the top of the scope stack
@@ -62,8 +65,13 @@ class ScopedParseNode extends ParseNode {
                 let childView = self.children[0].getView(view.getTargetDocument(),[...view.scope, ...newChildScope]);
                 childView.localScope = newChildScope;
                 view.childViews.push(childView);
+                changes++;
             }            
         });
+        
+        if (changes===0){
+            console.log("FIXME: DOMDiffView: Potential performance optimization for ScopedParseNode. onScopesUpdated() called but returned no change in scope",this);
+        }
         
         this.stubResetView(view);
     }
