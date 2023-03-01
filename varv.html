@@ -15259,20 +15259,30 @@ class TemplateRefParseNode extends ScopedParseNode {
     generateScopes(view){
         let self = this;
         let templateQuery = this.templateElement.getAttribute("template-name");
+        let templateHookType = this.templateElement.getAttribute("template-hook");
         if ((templateQuery!==null) && templateQuery.trim().length>0){
             // Need to monitor a list of templates
             view.templateUpdatingEvaluation = new UpdatingEvaluation(templateQuery, view.scope, async function templateNameAttributeChanged(templateName){                        
                 try {                    
-                    // Register for template updates 
-                    // TODO
-                    
                     // Find the template and create corresponding scopes
                     let templates = document.querySelectorAll("varv-template[name='" + templateName+"']");
-                    let template = templates[templates.length - 1];
-                    if (!template) throw new Error("Template with name '"+templateName+"' does not exist (yet?)");
-                    
                     let localScopes = [];
-                    localScopes.push([new TemplateBinding(template)]);
+
+                    if (templates.length===0) throw new Error("Template with name '"+templateName+"' does not exist (yet?)");
+                    console.log("hook is ", templateHookType);
+                    switch (templateHookType){
+                        case "all":
+                            templates.forEach((template)=>{
+                                localScopes.push([new TemplateBinding(template)]);
+                            });
+                            break;
+                        case "first":
+                            localScopes.push([new TemplateBinding(templates[0])]);
+                            break;
+                        case "last":
+                        default:
+                            localScopes.push([new TemplateBinding(templates[templates.length - 1])]);
+                    }
                     
                     self.onScopesUpdated(view, localScopes);
                 } catch (ex){
