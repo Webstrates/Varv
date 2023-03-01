@@ -195,8 +195,8 @@ class QueryParseNode extends ScopedParseNode {
                         await valueToScopes(await binding.getValueFor(property,false));
                         
                         // Listen for changes in the looked up property and update the scopes if changed
-                        let changedCallback = binding.generateRawChangeListener(property);
-                        if (changedCallback){
+                        if (binding.generateRawChangeListener){
+                            let changedCallback = binding.generateRawChangeListener(property);
                             changedCallback.onChanged = async function queryParseNodePropertyChanged(value){
                                 // Update the scopeMap with the new value
                                 await valueToScopes(value);
@@ -282,7 +282,6 @@ class QueryParseNode extends ScopedParseNode {
                         // Sanity checks
                         let binding = await DOMView.getBindingFromScope(conditionSource, [...view.scope, ...localScope]);
                         if (!binding) throw new Error("if='"+condition+"' selecting boolean '"+conditionSource+"' not bound in scope");
-                        
                         let evaluateConditional = async function evaluateConditional(value){
                             // Actual test
                             let conditionalValue = false;
@@ -306,8 +305,8 @@ class QueryParseNode extends ScopedParseNode {
                         evaluateConditional(await binding.getValueFor(conditionSource));
                         
                         // Listen for changes in the looked up value and update this subscope if changed
-                        let changedCallback = binding.generateRawChangeListener(conditionSource);
-                        if (changedCallback){
+                        if (binding.generateRawChangeListener){
+                            let changedCallback = binding.generateRawChangeListener(conditionSource);
                             changedCallback.onChanged = async function queryParseNodePropertyChanged(value){
                                 // Update the scopeMap with the new value
                                 await evaluateConditional(value);

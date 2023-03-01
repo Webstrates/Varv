@@ -22,7 +22,7 @@ class ConceptInstanceBinding {
         return this.concept.getProperty(lookupName);
     }
     
-    generateRawChangeListener(lookupName){
+    generateRawChangeListener(lookupName, oldValue=null){
         let self = this;
         let property = this.getProperty(lookupName);
         
@@ -32,13 +32,15 @@ class ConceptInstanceBinding {
         
         // Listen for changes in the looked up property
         let changedCallback = async function queryParseNodePropertyChanged(uuid, value){
-            if (uuid===self.uuid){
+            if (DOMView.DEBUG || DOMView.DEBUG_PERFORMANCE) console.log("Comparing ",oldValue, value);
+            if (uuid===self.uuid && value!=oldValue){
+                oldValue = value;
                 await result.onChanged(value);
             }
         };                                
         property.addUpdatedCallback(changedCallback);
         result.destroy = ()=>{
-            property.removeUpdatedCallback(changedCallback());
+            property.removeUpdatedCallback(changedCallback);
         };
         return result;
     }

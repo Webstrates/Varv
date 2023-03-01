@@ -1,7 +1,7 @@
 class UpdatingEvaluation {
     constructor(originalText, scope, onChangeCallback){
         this.originalText = originalText;
-        this.bindings = new Map();
+        this.replacements = new Map();
         this.tokens = originalText.match(/{(.+?)}/g);
         if (!this.tokens) this.tokens = [];
         this.onChangeCallback = onChangeCallback;
@@ -15,29 +15,30 @@ class UpdatingEvaluation {
             token = token.trim();
             let lookupQuery = token.substring(1, token.length - 1);
 
-            let binding = null;
-            let propertyName;
+            let replacement = {
+                value: undefined,
+                getText: null,
+                binding: null,
+                propertyName: null
+            };
             if (lookupQuery.includes("?")){
                 let regexp = /^(?<condition>.+?)\?(?<quote1>["']?)(?<true>.+?)\k<quote1>(?::(?<quote2>["']?)(?<false>.*)\k<quote2>)?$/gm;
 
                 let match = regexp.exec(lookupQuery);
 
-                propertyName = match.groups.condition;
+                replacement.propertyName = match.groups.condition;
 
                 let negated = false;
 
-                if(propertyName.startsWith("!")) {
+                if(replacement.propertyName.startsWith("!")) {
                     negated = true;
-                    propertyName = propertyName.substring(1);
+                    replacement.propertyName = replacement.propertyName.substring(1);
                 }
 
                 // Fancy { x ? y : < } query
-                binding = DOMView.getBindingFromScope(propertyName, scope);
-                this.bindings.set(lookupQuery, async ()=>{
-                    if (binding===undefined) return undefined;
-
-                    let value = await binding.getValueFor(propertyName);
-
+                binding = DOMView.getBindingFromScope(replacement.propertyName, scope);
+                replacement.textFunction = ()=>{
+                    if (replacement.binding===undefined) return undefined;
                     let trueValue = match.groups.true;
                     let falseValue = typeof match.groups.false === "undefined"?"":match.groups.false;
 
@@ -47,36 +48,47 @@ class UpdatingEvaluation {
                         falseValue = tmp;
                     }
 
-                    return value?trueValue:falseValue;
-                });
+                    return replacement.value?trueValue:falseValue;
+                };
             } else {
                 // Normal {} query, the entire thing is the name
-                propertyName = lookupQuery;
-                binding = DOMView.getBindingFromScope(propertyName, scope);
-                this.bindings.set(lookupQuery, async ()=>{
-                    if (binding===undefined) return undefined;
-                    return binding.getValueFor(propertyName);
-                });
-            }
-            if (binding instanceof ConceptInstanceBinding){
-                let property = binding.getProperty(propertyName);
-
-                let callback = async function updateUpdatingStringEvaluation(uuid){
-                    //Only update this stringEvaluation if the changed property was on the watched concept instance
-                    if(uuid === binding.uuid) {
-                        await self.update();
-                    }
+                replacement.propertyName = lookupQuery;
+                replacement.binding = DOMView.getBindingFromScope(replacement.propertyName, scope);
+                replacement.textFunction = ()=>{
+                    return replacement.value;
                 };
-                property.addUpdatedCallback(callback);
-                this.updateCallbacks.push({property: property, callback: callback});
             }
+            this.replacements.set(lookupQuery, replacement);
         }
-        this.update();
-            
+        
+        this.initialUpdate = true;
+        this.update();            
     }
     
     async update(){
+        let self = this;
         let mark = VarvPerformance.start();
+        
+        // Get the initial values the first time
+        if (this.initialUpdate){
+            await Promise.all(Array.from(this.replacements.values()).map(async (replacement)=>{
+                // Fetch initial value
+                if (!replacement.binding) return;
+                replacement.value = await replacement.binding.getValueFor(replacement.propertyName);
+                
+                // Listen for future updates, if supported by the binding                
+                if (replacement.binding.generateRawChangeListener){
+                    let changedCallback = replacement.binding.generateRawChangeListener(replacement.propertyName, replacement.value);
+                    changedCallback.onChanged = async function updateUpdatingStringEvaluation(value){
+                        replacement.value = value;
+                        await self.update();
+                    };
+                    this.updateCallbacks.push(changedCallback);
+                };                     
+            }));
+                        
+            this.initialUpdate = false;
+        }
 
         try {
             let text = this.originalText;
@@ -84,22 +96,13 @@ class UpdatingEvaluation {
                 token = token.trim();
                 let lookupQuery = token.substring(1, token.length - 1);
 
-                let value = await this.bindings.get(lookupQuery)();
-                
-                // Concept references are rewritten to their uuids
-                if (value instanceof ConceptInstanceBinding){
-                    value = value.uuid;
-                }
-
+                let value = this.replacements.get(lookupQuery).textFunction();
                 if (value !== undefined){
                     text = text.replace(token, value); // STUB: This can fail if the first token is replaced with something that looks like the second token
                 }
             }
 
-            if (text!=this.oldUpdateText){
-                this.oldUpdateText = text; // Don't send updates when result is identical
-                await this.onChangeCallback(text);
-            }
+            await this.onChangeCallback(text);
         } catch (ex){
             console.error(ex);
         }
@@ -115,9 +118,10 @@ class UpdatingEvaluation {
             return;
         }
         for (let entry of this.updateCallbacks){
-            entry.property.removeUpdatedCallback(entry.callback);
+            entry.destroy();
         }
         this.destroyed = true;
     }
 }
+
 window.UpdatingEvaluation = UpdatingEvaluation;

@@ -14782,7 +14782,7 @@ window.DOMHighlighter.singleton = new DOMHighlighter();
 class UpdatingEvaluation {
     constructor(originalText, scope, onChangeCallback){
         this.originalText = originalText;
-        this.bindings = new Map();
+        this.replacements = new Map();
         this.tokens = originalText.match(/{(.+?)}/g);
         if (!this.tokens) this.tokens = [];
         this.onChangeCallback = onChangeCallback;
@@ -14796,29 +14796,30 @@ class UpdatingEvaluation {
             token = token.trim();
             let lookupQuery = token.substring(1, token.length - 1);
 
-            let binding = null;
-            let propertyName;
+            let replacement = {
+                value: undefined,
+                getText: null,
+                binding: null,
+                propertyName: null
+            };
             if (lookupQuery.includes("?")){
                 let regexp = /^(?<condition>.+?)\?(?<quote1>["']?)(?<true>.+?)\k<quote1>(?::(?<quote2>["']?)(?<false>.*)\k<quote2>)?$/gm;
 
                 let match = regexp.exec(lookupQuery);
 
-                propertyName = match.groups.condition;
+                replacement.propertyName = match.groups.condition;
 
                 let negated = false;
 
-                if(propertyName.startsWith("!")) {
+                if(replacement.propertyName.startsWith("!")) {
                     negated = true;
-                    propertyName = propertyName.substring(1);
+                    replacement.propertyName = replacement.propertyName.substring(1);
                 }
 
                 // Fancy { x ? y : < } query
-                binding = DOMView.getBindingFromScope(propertyName, scope);
-                this.bindings.set(lookupQuery, async ()=>{
-                    if (binding===undefined) return undefined;
-
-                    let value = await binding.getValueFor(propertyName);
-
+                binding = DOMView.getBindingFromScope(replacement.propertyName, scope);
+                replacement.textFunction = ()=>{
+                    if (replacement.binding===undefined) return undefined;
                     let trueValue = match.groups.true;
                     let falseValue = typeof match.groups.false === "undefined"?"":match.groups.false;
 
@@ -14828,36 +14829,47 @@ class UpdatingEvaluation {
                         falseValue = tmp;
                     }
 
-                    return value?trueValue:falseValue;
-                });
+                    return replacement.value?trueValue:falseValue;
+                };
             } else {
                 // Normal {} query, the entire thing is the name
-                propertyName = lookupQuery;
-                binding = DOMView.getBindingFromScope(propertyName, scope);
-                this.bindings.set(lookupQuery, async ()=>{
-                    if (binding===undefined) return undefined;
-                    return binding.getValueFor(propertyName);
-                });
-            }
-            if (binding instanceof ConceptInstanceBinding){
-                let property = binding.getProperty(propertyName);
-
-                let callback = async function updateUpdatingStringEvaluation(uuid){
-                    //Only update this stringEvaluation if the changed property was on the watched concept instance
-                    if(uuid === binding.uuid) {
-                        await self.update();
-                    }
+                replacement.propertyName = lookupQuery;
+                replacement.binding = DOMView.getBindingFromScope(replacement.propertyName, scope);
+                replacement.textFunction = ()=>{
+                    return replacement.value;
                 };
-                property.addUpdatedCallback(callback);
-                this.updateCallbacks.push({property: property, callback: callback});
             }
+            this.replacements.set(lookupQuery, replacement);
         }
-        this.update();
-            
+        
+        this.initialUpdate = true;
+        this.update();            
     }
     
     async update(){
+        let self = this;
         let mark = VarvPerformance.start();
+        
+        // Get the initial values the first time
+        if (this.initialUpdate){
+            await Promise.all(Array.from(this.replacements.values()).map(async (replacement)=>{
+                // Fetch initial value
+                if (!replacement.binding) return;
+                replacement.value = await replacement.binding.getValueFor(replacement.propertyName);
+                
+                // Listen for future updates, if supported by the binding                
+                if (replacement.binding.generateRawChangeListener){
+                    let changedCallback = replacement.binding.generateRawChangeListener(replacement.propertyName, replacement.value);
+                    changedCallback.onChanged = async function updateUpdatingStringEvaluation(value){
+                        replacement.value = value;
+                        await self.update();
+                    };
+                    this.updateCallbacks.push(changedCallback);
+                };                     
+            }));
+                        
+            this.initialUpdate = false;
+        }
 
         try {
             let text = this.originalText;
@@ -14865,22 +14877,13 @@ class UpdatingEvaluation {
                 token = token.trim();
                 let lookupQuery = token.substring(1, token.length - 1);
 
-                let value = await this.bindings.get(lookupQuery)();
-                
-                // Concept references are rewritten to their uuids
-                if (value instanceof ConceptInstanceBinding){
-                    value = value.uuid;
-                }
-
+                let value = this.replacements.get(lookupQuery).textFunction();
                 if (value !== undefined){
                     text = text.replace(token, value); // STUB: This can fail if the first token is replaced with something that looks like the second token
                 }
             }
 
-            if (text!=this.oldUpdateText){
-                this.oldUpdateText = text; // Don't send updates when result is identical
-                await this.onChangeCallback(text);
-            }
+            await this.onChangeCallback(text);
         } catch (ex){
             console.error(ex);
         }
@@ -14896,11 +14899,12 @@ class UpdatingEvaluation {
             return;
         }
         for (let entry of this.updateCallbacks){
-            entry.property.removeUpdatedCallback(entry.callback);
+            entry.destroy();
         }
         this.destroyed = true;
     }
 }
+
 window.UpdatingEvaluation = UpdatingEvaluation;
 
 </script>
@@ -15151,8 +15155,13 @@ class ScopedParseNode extends ParseNode {
             }            
         });
         
-        if (changes===0){
-            console.log("FIXME: DOMDiffView: Potential performance optimization for ScopedParseNode. onScopesUpdated() called but returned no change in scope",this);
+        if ((DOMView.DEBUG||DOMView.DEBUG_PERFORMANCE) && changes===0){
+            try { 
+                console.log("FIXME: DOMDiffView: Potential performance optimization for ScopedParseNode. onScopesUpdated() called but returned no change in scope",this);
+                throw new Error("!");
+            } catch (ex) {
+                console.log(ex);
+            }
         }
         
         this.stubResetView(view);
@@ -15556,8 +15565,8 @@ class QueryParseNode extends ScopedParseNode {
                         await valueToScopes(await binding.getValueFor(property,false));
                         
                         // Listen for changes in the looked up property and update the scopes if changed
-                        let changedCallback = binding.generateRawChangeListener(property);
-                        if (changedCallback){
+                        if (binding.generateRawChangeListener){
+                            let changedCallback = binding.generateRawChangeListener(property);
                             changedCallback.onChanged = async function queryParseNodePropertyChanged(value){
                                 // Update the scopeMap with the new value
                                 await valueToScopes(value);
@@ -15643,7 +15652,6 @@ class QueryParseNode extends ScopedParseNode {
                         // Sanity checks
                         let binding = await DOMView.getBindingFromScope(conditionSource, [...view.scope, ...localScope]);
                         if (!binding) throw new Error("if='"+condition+"' selecting boolean '"+conditionSource+"' not bound in scope");
-                        
                         let evaluateConditional = async function evaluateConditional(value){
                             // Actual test
                             let conditionalValue = false;
@@ -15667,8 +15675,8 @@ class QueryParseNode extends ScopedParseNode {
                         evaluateConditional(await binding.getValueFor(conditionSource));
                         
                         // Listen for changes in the looked up value and update this subscope if changed
-                        let changedCallback = binding.generateRawChangeListener(conditionSource);
-                        if (changedCallback){
+                        if (binding.generateRawChangeListener){
+                            let changedCallback = binding.generateRawChangeListener(conditionSource);
                             changedCallback.onChanged = async function queryParseNodePropertyChanged(value){
                                 // Update the scopeMap with the new value
                                 await evaluateConditional(value);
@@ -16024,7 +16032,7 @@ class ConceptInstanceBinding {
         return this.concept.getProperty(lookupName);
     }
     
-    generateRawChangeListener(lookupName){
+    generateRawChangeListener(lookupName, oldValue=null){
         let self = this;
         let property = this.getProperty(lookupName);
         
@@ -16034,13 +16042,15 @@ class ConceptInstanceBinding {
         
         // Listen for changes in the looked up property
         let changedCallback = async function queryParseNodePropertyChanged(uuid, value){
-            if (uuid===self.uuid){
+            if (DOMView.DEBUG || DOMView.DEBUG_PERFORMANCE) console.log("Comparing ",oldValue, value);
+            if (uuid===self.uuid && value!=oldValue){
+                oldValue = value;
                 await result.onChanged(value);
             }
         };                                
         property.addUpdatedCallback(changedCallback);
         result.destroy = ()=>{
-            property.removeUpdatedCallback(changedCallback());
+            property.removeUpdatedCallback(changedCallback);
         };
         return result;
     }
@@ -16200,6 +16210,7 @@ class DOMView {
 }
 
 DOMView.DEBUG = false;
+DOMView.DEBUG_PERFORMANCE = false;
 DOMView.singleton = new DOMView();
 window.DOMView = DOMView;
 
