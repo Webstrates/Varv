@@ -1138,14 +1138,22 @@ class Property {
 
         if(this.derived != null) {
             async function updateFunction(uuid) {
-                await self.getValue(uuid, true);
+                try {
+                    await self.getValue(uuid, true);
+                } catch(e) {
+                    console.warn("Error while updating derived value for ["+self.name+"]:", e, self);
+                }
             }
 
             async function resetFunction() {
                 let uuids = await VarvEngine.getAllUUIDsFromType(concept.name, true);
 
                 for(let uuid of uuids) {
-                    await self.getValue(uuid, true);
+                    try {
+                        await self.getValue(uuid, true);
+                    } catch(e) {
+                        console.warn("Error while updating derived value for ["+self.name+"]:", e, self);
+                    }
                 }
             }
 
