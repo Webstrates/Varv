@@ -32,7 +32,6 @@ class ConceptInstanceBinding {
         
         // Listen for changes in the looked up property
         let changedCallback = async function queryParseNodePropertyChanged(uuid, value){
-            if (DOMView.DEBUG || DOMView.DEBUG_PERFORMANCE) console.log("Comparing ",oldValue, value);
             if (uuid===self.uuid && value!=oldValue){
                 oldValue = value;
                 await result.onChanged(value);
@@ -45,7 +44,7 @@ class ConceptInstanceBinding {
         return result;
     }
 
-    async getValueFor(name, wrapValue=true) {
+    async getValueFor(name) {
         let property = null;
         try {
             property = this.getProperty(name);
@@ -57,22 +56,7 @@ class ConceptInstanceBinding {
             return undefined;
         }
 
-        let value = await property.getValue(this.uuid);
-        
-        if (!wrapValue) return value;
-        
-        if (property.isConceptType()) {
-            if (!value) return undefined; // No uuid set
-            return new ConceptInstanceBinding(VarvEngine.getConceptFromUUID(value), value);
-        } else if (property.isConceptArrayType()) {
-            let conceptArray = [];
-            for(let entry of value) {
-                conceptArray.push(new ConceptInstanceBinding(VarvEngine.getConceptFromUUID(entry), entry));
-            }
-            return conceptArray;
-        } else {
-            return value;
-        }
+        return await property.getValue(this.uuid);
     }
 
     async setValueFor(name, value){

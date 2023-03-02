@@ -69,7 +69,7 @@ class ScopedParseNode extends ParseNode {
             }            
         });
         
-        if ((DOMView.DEBUG||DOMView.DEBUG_PERFORMANCE) && changes===0){
+        if ((DOMView.DEBUG||DOMView.DEBUG_PERFORMANCE) && changes===0 && newChildScopes.length>0){
             try { 
                 console.log("FIXME: DOMDiffView: Potential performance optimization for ScopedParseNode. onScopesUpdated() called but returned no change in scope",this);
                 throw new Error("!");

@@ -112,7 +112,7 @@ class DOMView {
 }
 
 DOMView.DEBUG = false;
-DOMView.DEBUG_PERFORMANCE = false;
+DOMView.DEBUG_PERFORMANCE = true;
 DOMView.singleton = new DOMView();
 window.DOMView = DOMView;
 
