@@ -1715,16 +1715,20 @@ class Property {
                     resolve(derivedOldValue);
                 }
 
-                const derivedValue = await this.deriveValue(uuid);
-                this.derivedOldValues.set(uuid, derivedValue);
-                if(typeof derivedOldValue === "undefined" || !this.isSame(derivedValue, derivedOldValue)) {
-                    await this.updated(uuid, derivedValue, false);
+                try {
+                    const derivedValue = await this.deriveValue(uuid);
+                    this.derivedOldValues.set(uuid, derivedValue);
+                    if (typeof derivedOldValue === "undefined" || !this.isSame(derivedValue, derivedOldValue)) {
+                        await this.updated(uuid, derivedValue, false);
+                    }
+
+                    VarvPerformance.stop("Property.getValue.derived", mark);
+
+                    return resolve(derivedValue);
+                } catch(e) {
+                    VarvPerformance.stop("Property.getValue.derived", mark);
+                    return reject(e);
                 }
-
-                VarvPerformance.stop("Property.getValue.derived", mark);
-
-                resolve(derivedValue);
-
             });
         }
 
