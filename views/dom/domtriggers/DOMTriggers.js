@@ -379,6 +379,82 @@ Trigger.registerTrigger("mousemove", MousemoveTrigger);
 window.MousemoveTrigger = MousemoveTrigger;
 
 /**
+ * A trigger "mouseover" that listens for mouseover events on DOM elements
+ * @memberOf Triggers
+ * @example
+ * {
+ *     "mouseover": {
+ *         "concept": "theConceptIWantToHearMouseoverTriggerOn"
+ *     }
+ * }
+ * @example
+ * //Match concept exact, not allowing any injected concepts to match
+ * {
+ *     "mouseover": {
+ *         "concept": "theConceptIWantToHearMouseoverTriggerOn",
+ *         "exactConceptMatch": true
+ *     }
+ * }
+ * @example
+ * {
+ *     "mouseover": {
+ *         "view": "aViewBindingIWantToHearMouseoverTriggerOn"
+ *     }
+ * }
+ * @example
+ * {
+ *     "mouseover": {
+ *         "property": "aPropertyIWantToHearMouseoverTriggerOn"
+ *     }
+ * }
+ */
+class MouseoverTrigger extends MouseTrigger {
+    constructor(name, options, concept) {
+        super(name, options, concept, "mouseover");
+    }
+}
+Trigger.registerTrigger("mouseover", MouseoverTrigger);
+window.MouseoverTrigger = MouseoverTrigger;
+
+/**
+ * A trigger "mouseout" that listens for mouseout events on DOM elements
+ * @memberOf Triggers
+ * @example
+ * {
+ *     "mouseout": {
+ *         "concept": "theConceptIWantToHearMouseoutTriggerOn"
+ *     }
+ * }
+ * @example
+ * //Match concept exact, not allowing any injected concepts to match
+ * {
+ *     "mouseout": {
+ *         "concept": "theConceptIWantToHearMouseoutTriggerOn",
+ *         "exactConceptMatch": true
+ *     }
+ * }
+ * @example
+ * {
+ *     "mouseout": {
+ *         "view": "aViewBindingIWantToHearMouseoutTriggerOn"
+ *     }
+ * }
+ * @example
+ * {
+ *     "mouseout": {
+ *         "property": "aPropertyIWantToHearMouseoutTriggerOn"
+ *     }
+ * }
+ */
+class MouseoutTrigger extends MouseTrigger {
+    constructor(name, options, concept) {
+        super(name, options, concept, "mouseout");
+    }
+}
+Trigger.registerTrigger("mouseout", MouseoutTrigger);
+window.MouseoutTrigger = MouseoutTrigger;
+
+/**
  * A trigger "wheel" that listens for wheel events on DOM elements
  * @memberOf Triggers
  * @example
@@ -697,6 +773,12 @@ class DOMTriggers {
         });
         targetDocument.body.addEventListener("mousemove", (evt)=>{
             mouseHandler(evt, "mousemove");
+        });
+        targetDocument.body.addEventListener("mouseover", (evt)=>{
+            mouseHandler(evt, "mouseover");
+        });
+        targetDocument.body.addEventListener("mouseout", (evt)=>{
+            mouseHandler(evt, "mouseout");
         });
         targetDocument.body.addEventListener("mouseup", (evt)=>{
             mouseHandler(evt, "mouseup");
