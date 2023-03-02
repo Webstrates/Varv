@@ -15257,26 +15257,7 @@ class ScopedParseNode extends ParseNode {
         // Destroy views that are no longer in the new child scopes
         let self = this;
         let changes = 0;
-        
-        for (let i = view.childViews.length-1; i>=0; i--){
-            let found = false;
-            newChildScopes.forEach((newChildScope)=>{
-                if (ScopedParseNode.fastDeepEqual(view.childViews[i].localScope,newChildScope)) found = true;
-            });
-            if (!found){         
-                /**
-                 * TODO: If the only change in the scope is a PropertyArrayEntryBinding index on the top of the scope stack
-                 * we can migrate the view by performing binding updates instead of destroying it and recreating it here.
-                 * This happens often when reordering list entries.
-                 */ 
-
-                
-                view.childViews[i].destroy();
-                view.childViews.splice(i,1);
-                changes++;                
-            }
-        }
-                
+                      
         // Add new views for newly added scopes while reordering
         if (DOMView.DEBUG) console.log("Updating view scope, old=>new",view.childViews, newChildScopes);
         let oldChildViews = view.childViews;
@@ -15287,14 +15268,63 @@ class ScopedParseNode extends ParseNode {
                 if (ScopedParseNode.fastDeepEqual(childView.localScope,newChildScope)) existingView = childView;
             });
             if (existingView){
+                oldChildViews.splice(oldChildViews.indexOf(existingView),1);
                 view.childViews.push(existingView);
             } else {
-                let childView = self.children[0].getView(view.getTargetDocument(),[...view.scope, ...newChildScope]);
-                childView.localScope = newChildScope;
-                view.childViews.push(childView);
-                changes++;
+                view.childViews.push(()=>{
+                    /**
+                     * Very specific performance optimization:
+                     * TODO: If the only change in the scope is a PropertyArrayEntryBinding index on the top of the scope stack
+                     * we can migrate the view by performing binding updates instead of destroying it and recreating it here.
+                     * This happens often when reordering list entries.
+                     */
+                    let newLastOfScope = newChildScope[newChildScope.length-1];
+                    if (newLastOfScope instanceof PropertyArrayEntryBinding){
+                        for (let oldChildView of oldChildViews){
+                            let oldLastOfScope = oldChildView.localScope[oldChildView.localScope.length-1];
+                            if (oldLastOfScope instanceof PropertyArrayEntryBinding){
+                                if (newLastOfScope.property == oldLastOfScope.property &&
+                                        newLastOfScope.uuid == oldLastOfScope.uuid){
+                                    // Identical tops (except index), compare rest of their localScope                                    
+                                    if (DOMView.DEBUG || DOMView.DEBUG_PERFORMANCE) console.log("Could optimize maybe");
+                                    if (ScopedParseNode.fastDeepEqual(newChildScope.slice(0,-1),oldChildView.localScope.slice(0,-1))){
+                                        if (DOMView.DEBUG || DOMView.DEBUG_PERFORMANCE) console.log("Optimized",oldChildView);
+                                        oldChildViews.splice(oldChildViews.indexOf(oldChildView),1);
+                                        oldLastOfScope.updateIndex(newLastOfScope.index);
+                                        return oldChildView;
+                                    }
+                                }                                
+                            }
+                        };
+                    }
+                    // /very specific performance optimization
+                    
+                    // Couldn't recover anything, just create a new view
+                    let childView = self.children[0].getView(view.getTargetDocument(),[...view.scope, ...newChildScope]);
+                    childView.localScope = newChildScope;
+                    changes++;
+                    return childView;
+                });
             }            
         });
+        
+        // Run optimizing functions
+        view.childViews = view.childViews.map((value)=>{
+            if (typeof(value)==="function") return value();
+            return value;
+        });
+        
+        for (let i = view.childViews.length-1; i>=0; i--){
+            let found = false;
+            newChildScopes.forEach((newChildScope)=>{
+                if (ScopedParseNode.fastDeepEqual(view.childViews[i].localScope,newChildScope)) found = true;
+            });
+            if (!found){         
+                view.childViews[i].destroy();
+                view.childViews.splice(i,1);
+                changes++;                
+            }
+        }        
         
         if ((DOMView.DEBUG||DOMView.DEBUG_PERFORMANCE) && changes===0 && newChildScopes.length>0){
             try { 
@@ -16172,6 +16202,11 @@ class PropertyArrayEntryBinding extends PropertyBinding {
             return this.boundValue;
         }
     }
+    
+    updateIndex(newIndex){
+        console.log("TODO: PropertyArrayEntryBinding should generate index value updates when high-performance recovery of UI is used");
+        this.index = newIndex;
+    }
 }
 
 window.PropertyArrayEntryBinding = PropertyArrayEntryBinding;
@@ -16365,7 +16400,7 @@ class DOMView {
 }
 
 DOMView.DEBUG = false;
-DOMView.DEBUG_PERFORMANCE = true;
+DOMView.DEBUG_PERFORMANCE = false;
 DOMView.singleton = new DOMView();
 window.DOMView = DOMView;
 

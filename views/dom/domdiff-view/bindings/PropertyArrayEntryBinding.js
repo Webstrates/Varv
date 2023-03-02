@@ -30,6 +30,11 @@ class PropertyArrayEntryBinding extends PropertyBinding {
             return this.boundValue;
         }
     }
+    
+    updateIndex(newIndex){
+        console.log("TODO: PropertyArrayEntryBinding should generate index value updates when high-performance recovery of UI is used");
+        this.index = newIndex;
+    }
 }
 
 window.PropertyArrayEntryBinding = PropertyArrayEntryBinding;
