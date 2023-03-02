@@ -132,6 +132,7 @@ class Property {
         const self = this;
 
         if(this.derived != null) {
+            let mark = VarvPerformance.start();
             async function updateFunction(uuid) {
                 try {
                     await self.getValue(uuid, true);
@@ -181,6 +182,8 @@ class Property {
                     console.warn(e);
                 }
             }
+
+            VarvPerformance.stop("Property.finishSetup.derived", mark);
         }
     }
 

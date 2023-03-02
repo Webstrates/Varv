@@ -580,7 +580,7 @@ class Concept {
         });
 
         //Unregister the UUID
-        VarvEngine.deregisterConceptFromUUID(uuid);
+        VarvEngine.deregisterConceptFromUUID(uuid, this);
 
         for(let callback of this.disappearedCallbacks) {
             await callback(uuid, this);

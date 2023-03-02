@@ -405,8 +405,14 @@ class VarvEngine {
         VarvPerformance.stop("VarvEngine.registerConceptFromUUID", mark);
     }
 
-    static deregisterConceptFromUUID(uuid) {
+    static deregisterConceptFromUUID(uuid, concept) {
         this.conceptUUIDCache.delete(uuid);
+
+        //Also clear lookupTarget cache for this concept, if the concept was the target
+        let possibleCache = VarvEngine.lookupTargetCache.get(concept.name);
+        if(possibleCache?.data === uuid) {
+            VarvEngine.lookupTargetCache.delete(concept.name);
+        }
 
         //Legacy register of all direct datastores
         for(let ds of Datastore.getAllDatastores()) {
@@ -517,6 +523,8 @@ class VarvEngine {
 
             VarvEngine.conceptUUIDCache.clear();
             VarvEngine.conceptTypeMap.clear();
+            VarvEngine.lookupPropertyCache.clear();
+            VarvEngine.lookupTargetCache.clear();
             PropertyCache.reset();
 
             if (VarvEngine.DEBUG) {
@@ -628,6 +636,13 @@ class VarvEngine {
 
         let mark = VarvPerformance.start();
 
+        let cache = VarvEngine.lookupTargetCache.get(concept.name);
+        if(cache != null) {
+            VarvPerformance.stop("VarvEngine.lookupTarget.cached", mark);
+            cache.hit++;
+            return cache.data;
+        }
+
         let instanceTypes = [];
         instanceTypes.push(concept.name);
 
@@ -643,6 +658,11 @@ class VarvEngine {
             }
 
             VarvPerformance.stop("VarvEngine.lookupTarget", mark);
+
+            VarvEngine.lookupTargetCache.set(concept.name, {
+                data: target,
+                hit: 0
+            });
 
             return target;
         }
@@ -670,11 +690,23 @@ class VarvEngine {
 
         const mark = VarvPerformance.start();
 
+        const lookupPropertyCacheKey = "CTX:"+(contextTarget?.target!=null?contextTarget.target:"NULL")+"CPT:"+(localConcept!=null?localConcept.name:"NULL")+"PN:"+propertyName;
+
+        let cache = VarvEngine.lookupPropertyCache.get(lookupPropertyCacheKey);
+
+        if(cache != null) {
+            if(cache.isValid()) {
+                cache.hit++;
+                VarvPerformance.stop("VarvEngine.lookupProperty.cached", mark);
+                return cache.data;
+            } else {
+                VarvEngine.lookupPropertyCache.delete(lookupPropertyCacheKey);
+            }
+        }
+
         if(VarvEngine.DEBUG || DEBUG_LOOKUP_PROPERTY) {
             console.groupCollapsed("Looking up property:", propertyName, contextTarget, localConcept);
-            if(localConcept == null && contextTarget == null) {
-                console.trace();
-            }
+            console.trace();
         }
 
         //Lookup of form concept.property, overrides all the other lookup types
@@ -723,12 +755,22 @@ class VarvEngine {
 
                     VarvPerformance.stop("VarvEngine.lookupProperty.concept.property", mark);
 
-                    return {
+                    let result = {
                         property: lookupProperty,
                         concept: lookupConcept,
                         target: lookupTarget,
                         type: "specificConcept"
                     }
+
+                    VarvEngine.lookupPropertyCache.set(lookupPropertyCacheKey, {
+                        isValid: () => {
+                            return VarvEngine.lookupTargetCache.get(lookupConcept.name) != null;
+                        },
+                        hit: 0,
+                        data: result
+                    });
+
+                    return result;
                 } else {
                     throw new Error("Lookup property on ["+split.join(".")+"], property does not exist: "+propertyName);
                 }
@@ -1210,5 +1252,7 @@ VarvEngine.DEBUG = false;
 VarvEngine.VarvEngineEventPrefix = "VarvEngineEvent.";
 VarvEngine.conceptTypeMap = new Map();
 VarvEngine.conceptUUIDCache = new Map();
+VarvEngine.lookupPropertyCache = new Map();
+VarvEngine.lookupTargetCache = new Map();
 
 window.VarvEngine = VarvEngine;
