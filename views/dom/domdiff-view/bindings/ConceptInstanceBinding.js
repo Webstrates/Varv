@@ -22,12 +22,13 @@ class ConceptInstanceBinding {
         return this.concept.getProperty(lookupName);
     }
     
-    generateRawChangeListener(lookupName, oldValue=null){
+    generateRawChangeListener(lookupName, initialValue=null){
         let self = this;
+        let oldValue = initialValue;
         let property = this.getProperty(lookupName);
         
         let result = {
-            onChanged: async ()=>{console.error("DOMView bug: ConceptInstanceBinding raw change listener called without anything hooked up to it", concept, uuid, self);}
+            onChanged: async ()=>{console.error("DOMView bug: ConceptInstanceBinding raw change listener called without anything hooked up to it", self.concept, self.uuid, self);}
         };
         
         // Listen for changes in the looked up property

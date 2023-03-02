@@ -186,7 +186,7 @@ class ScopedParseNode extends ParseNode {
 
           for (i = length; i-- !== 0;) {
             var key = keys[i];
-
+            if (key.startsWith("_")) continue;
             if (!ScopedParseNode.fastDeepEqual(a[key], b[key])) return false;
           }
 

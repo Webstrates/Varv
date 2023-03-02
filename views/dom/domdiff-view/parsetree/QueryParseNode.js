@@ -116,7 +116,7 @@ class QueryParseNode extends ScopedParseNode {
             view.propertyUpdatingEvaluation = new UpdatingEvaluation(propertyQuery, view.scope, async function propertyAttributeUpdated(property){     
                 // Clean up previous callbacks
                 view.propertyChangedCallbacks.forEach((callback)=>{
-                    callback.delete();
+                    callback.destroy();
                 });
                 
                 // Find the new properties for each existing scope
