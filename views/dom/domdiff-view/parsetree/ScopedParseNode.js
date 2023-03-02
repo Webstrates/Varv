@@ -37,16 +37,16 @@ class ScopedParseNode extends ParseNode {
                 if (ScopedParseNode.fastDeepEqual(view.childViews[i].localScope,newChildScope)) found = true;
             });
             if (!found){         
-                view.childViews[i].destroy();
-                view.childViews.splice(i,1);
-                changes++;
-                
                 /**
-                 * TODO: If the only change in the scope is a valuebinding on the top of the scope stack
-                 * we can migrate the view by performing valuebinding updates instead of destroying it and 
-                 * recreating it here.
+                 * TODO: If the only change in the scope is a PropertyArrayEntryBinding index on the top of the scope stack
+                 * we can migrate the view by performing binding updates instead of destroying it and recreating it here.
                  * This happens often when reordering list entries.
                  */ 
+
+                
+                view.childViews[i].destroy();
+                view.childViews.splice(i,1);
+                changes++;                
             }
         }
                 
@@ -72,7 +72,7 @@ class ScopedParseNode extends ParseNode {
         if ((DOMView.DEBUG||DOMView.DEBUG_PERFORMANCE) && changes===0 && newChildScopes.length>0){
             try { 
                 console.log("FIXME: DOMDiffView: Potential performance optimization for ScopedParseNode. onScopesUpdated() called but returned no change in scope",this);
-                throw new Error("!");
+                throw new Error("stacktrace");
             } catch (ex) {
                 console.log(ex);
             }

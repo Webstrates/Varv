@@ -7,7 +7,7 @@ class ValueBinding {
         return this.bindings.hasOwnProperty(name);
     }
 
-    async getValueFor(name) {
+    getValueFor(name) {
         return this.bindings[name];
     }
 }

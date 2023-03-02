@@ -142,48 +142,22 @@ class QueryParseNode extends ScopedParseNode {
                             let as = self.templateElement.getAttribute("as");
                             if (propertyValue !== null && propertyValue !== undefined && propertyValue!=="") {
                                 if (engineProperty.getType()==="array") {
-                                    // We need to map the array into additional childscopes
-                                    // STUB: No sorting of property values in SPEC?
-                                    
+                                    // We need to map the array into additional childscopes with arrayentry bindings
                                     scopeMap.set(localScope, await Promise.all(propertyValue.map(async (arrayEntry, index)=>{
-                                        let values = new ValueBinding({});
                                         let newScope = [...localScope];
                                         if (engineProperty.isConceptArrayType()) {         
                                             newScope.push(new ConceptInstanceBinding(await VarvEngine.getConceptFromUUID(arrayEntry),arrayEntry));
                                         }
-
-                                        // Allow .value and .index to also be found as property.value or as.value (if defined)
-                                        values.bindings[".value"] = arrayEntry;
-                                        values.bindings[".index"] = index;
-                                        values.bindings[property+".value"] = values.bindings[".value"];
-                                        values.bindings[property+".index"] = values.bindings[".index"];
-                                        if (as){
-                                            values.bindings[as+".value"] = values.bindings[".value"];
-                                            values.bindings[as+".index"] = values.bindings[".index"];
-                                        }
-
-                                        newScope.push(new PropertyBinding(engineProperty, binding.uuid));
-                                        newScope.push(values);
+                                        newScope.push(new PropertyArrayEntryBinding(engineProperty, binding.uuid, arrayEntry, index, as));
                                         return newScope;
                                     })));
                                 } else {
                                     // Single property value, no duplication
                                     if (!engineProperty.isConceptType()) throw new Error("Cannot use a type for the property attribute that is not a list of references, a list of simple values or a single concept reference: "+propertyValue);
-
-                                    // Access uuid as .value, property.value or (optionally) as.value
-                                    let values = new ValueBinding({
-                                        ".value": propertyValue,
-                                        [property+".value"]: propertyValue
-                                    });
-                                    if (as){
-                                        values.bindings[as+".value"] = propertyValue;
-                                    }
-
                                     scopeMap.set(localScope,[[
                                         ...localScope,
                                         new ConceptInstanceBinding(await VarvEngine.getConceptFromUUID(propertyValue),propertyValue),
-                                        new PropertyBinding(engineProperty, binding.uuid),
-                                        values
+                                        new PropertyBinding(engineProperty, binding.uuid, propertyValue, as)
                                     ]]);
                                 }
                             } else {

@@ -15264,16 +15264,16 @@ class ScopedParseNode extends ParseNode {
                 if (ScopedParseNode.fastDeepEqual(view.childViews[i].localScope,newChildScope)) found = true;
             });
             if (!found){         
-                view.childViews[i].destroy();
-                view.childViews.splice(i,1);
-                changes++;
-                
                 /**
-                 * TODO: If the only change in the scope is a valuebinding on the top of the scope stack
-                 * we can migrate the view by performing valuebinding updates instead of destroying it and 
-                 * recreating it here.
+                 * TODO: If the only change in the scope is a PropertyArrayEntryBinding index on the top of the scope stack
+                 * we can migrate the view by performing binding updates instead of destroying it and recreating it here.
                  * This happens often when reordering list entries.
                  */ 
+
+                
+                view.childViews[i].destroy();
+                view.childViews.splice(i,1);
+                changes++;                
             }
         }
                 
@@ -15299,7 +15299,7 @@ class ScopedParseNode extends ParseNode {
         if ((DOMView.DEBUG||DOMView.DEBUG_PERFORMANCE) && changes===0 && newChildScopes.length>0){
             try { 
                 console.log("FIXME: DOMDiffView: Potential performance optimization for ScopedParseNode. onScopesUpdated() called but returned no change in scope",this);
-                throw new Error("!");
+                throw new Error("stacktrace");
             } catch (ex) {
                 console.log(ex);
             }
@@ -15653,48 +15653,22 @@ class QueryParseNode extends ScopedParseNode {
                             let as = self.templateElement.getAttribute("as");
                             if (propertyValue !== null && propertyValue !== undefined && propertyValue!=="") {
                                 if (engineProperty.getType()==="array") {
-                                    // We need to map the array into additional childscopes
-                                    // STUB: No sorting of property values in SPEC?
-                                    
+                                    // We need to map the array into additional childscopes with arrayentry bindings
                                     scopeMap.set(localScope, await Promise.all(propertyValue.map(async (arrayEntry, index)=>{
-                                        let values = new ValueBinding({});
                                         let newScope = [...localScope];
                                         if (engineProperty.isConceptArrayType()) {         
                                             newScope.push(new ConceptInstanceBinding(await VarvEngine.getConceptFromUUID(arrayEntry),arrayEntry));
                                         }
-
-                                        // Allow .value and .index to also be found as property.value or as.value (if defined)
-                                        values.bindings[".value"] = arrayEntry;
-                                        values.bindings[".index"] = index;
-                                        values.bindings[property+".value"] = values.bindings[".value"];
-                                        values.bindings[property+".index"] = values.bindings[".index"];
-                                        if (as){
-                                            values.bindings[as+".value"] = values.bindings[".value"];
-                                            values.bindings[as+".index"] = values.bindings[".index"];
-                                        }
-
-                                        newScope.push(new PropertyBinding(engineProperty, binding.uuid));
-                                        newScope.push(values);
+                                        newScope.push(new PropertyArrayEntryBinding(engineProperty, binding.uuid, arrayEntry, index, as));
                                         return newScope;
                                     })));
                                 } else {
                                     // Single property value, no duplication
                                     if (!engineProperty.isConceptType()) throw new Error("Cannot use a type for the property attribute that is not a list of references, a list of simple values or a single concept reference: "+propertyValue);
-
-                                    // Access uuid as .value, property.value or (optionally) as.value
-                                    let values = new ValueBinding({
-                                        ".value": propertyValue,
-                                        [property+".value"]: propertyValue
-                                    });
-                                    if (as){
-                                        values.bindings[as+".value"] = propertyValue;
-                                    }
-
                                     scopeMap.set(localScope,[[
                                         ...localScope,
                                         new ConceptInstanceBinding(await VarvEngine.getConceptFromUUID(propertyValue),propertyValue),
-                                        new PropertyBinding(engineProperty, binding.uuid),
-                                        values
+                                        new PropertyBinding(engineProperty, binding.uuid, propertyValue, as)
                                     ]]);
                                 }
                             } else {
@@ -16125,7 +16099,7 @@ class ValueBinding {
         return this.bindings.hasOwnProperty(name);
     }
 
-    async getValueFor(name) {
+    getValueFor(name) {
         return this.bindings[name];
     }
 }
@@ -16136,18 +16110,71 @@ window.ValueBinding = ValueBinding;
 
                 <script id="PropertyBinding-script" type="disabled">
 class PropertyBinding {
-    constructor(property, uuid) {
+    constructor(property, uuid, boundValue, as=null) {
         this.uuid = uuid;
         this.property = property;
+        this.boundValue = boundValue;
+        this.as = as;
     }
     
     hasBindingFor(name){
-        // We don't supply this ourselves
+        if (name===".value") return true;
+        if (this.as){
+            // We are available under as.value
+            return name===this.as+".value";
+        } else {
+            return name===this.property.name+".value";
+        }
+        
         return false;
+    }
+    
+    getValueFor(name){
+        if (!this.hasBindingFor(name)) throw new Error("PropertyBinding asked for value for "+name+" but only supports "+this.property.name+".value/"+this.as+".value");
+        return this.boundValue;
     }
 }
 
 window.PropertyBinding = PropertyBinding;
+
+</script>
+
+                <script id="PropertyArrayEntryBinding-script" type="disabled">
+class PropertyArrayEntryBinding extends PropertyBinding {
+    constructor(property, uuid, boundValue, index, as=null) {
+        super(property, uuid, boundValue, as);
+        this.index = index;
+    }
+    
+    hasBindingFor(name){
+        // We don't supply this ourselves
+        if (super.hasBindingFor(name)){
+            return true;
+        }
+        
+        if (name===".index") return true;
+        if (this.as){
+            // We are available under as.value
+            return name===this.as+".index";
+        } else {
+            return name===this.property.name+".index";
+        }
+        
+        return false;
+    }
+    
+    getValueFor(name){
+        if (!this.hasBindingFor(name)) throw new Error("PropertyArrayEntryBinding asked for value for "+name+" but does not support it");
+        
+        if (name.endsWith(".index")){
+            return this.index;
+        } else {
+            return this.boundValue;
+        }
+    }
+}
+
+window.PropertyArrayEntryBinding = PropertyArrayEntryBinding;
 
 </script>
 
