@@ -495,7 +495,7 @@ class VarvEngine {
         });
 
         firstRun = false;
-        await queueReload();
+        await queueReload(true);
 
         async function reload() {
             let mark = VarvPerformance.start();
@@ -574,7 +574,7 @@ class VarvEngine {
             VarvPerformance.stop("VarvEngine.reload", mark);
         }
 
-        function queueReload() {
+        function queueReload(initial=false) {
             return new Promise((resolve)=>{
                 if(VarvEngine.DEBUG) {
                     console.log("Queuing reload...");
@@ -589,16 +589,18 @@ class VarvEngine {
                     if(!reloading) {
                         reloading = true;
                         reload().then(()=>{
-                            iziToast.success({
-                                title: '',
-                                message: 'Successfully loaded Varv!',
-                                transitionIn: "fadeIn",
-                                transitionOut: 'fadeOut',
-                                position: "topCenter",
-                                timeout: 2000,
-                                close: false,
-                                closeOnClick: true
-                            });
+                            if (!initial){
+                                iziToast.success({
+                                    title: '',
+                                    message: 'Successfully loaded Varv!',
+                                    transitionIn: "fadeIn",
+                                    transitionOut: 'fadeOut',
+                                    position: "topCenter",
+                                    timeout: 2000,
+                                    close: false,
+                                    closeOnClick: true
+                                });
+                            }
                             reloading = false;
                             resolve();
                         }).catch((e)=>{
@@ -622,7 +624,7 @@ class VarvEngine {
                             resolve();
                         });
                     }
-                }, RELOAD_TIMEOUT);
+                }, initial?1:RELOAD_TIMEOUT);
             });
         }
 
