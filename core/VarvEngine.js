@@ -443,9 +443,13 @@ class VarvEngine {
     }
 
     /**
-     * Starts the VarvEngine
+     * Legacy start, no longer used, Varv starts by itself
      */
     static async start() {
+        console.log("await VarvEngine.start() legacy function no longer does anything, Varv is always started - you can remove this call from your code");
+    }
+    
+    static async init(){
         let reloading = false;
         let reloadQueueId = null;
 
@@ -1258,3 +1262,15 @@ VarvEngine.lookupPropertyCache = new Map();
 VarvEngine.lookupTargetCache = new Map();
 
 window.VarvEngine = VarvEngine;
+
+wpm.onAllInstalled(async ()=>{
+    if(typeof Fragment !== "undefined") {    
+        Fragment.addAllFragmentsLoadedCallback(async ()=>{
+            console.log("Starting VarvEngine with Codestrates");
+            await VarvEngine.init();
+        });
+    } else {
+        console.log("Starting VarvEngine");
+        await VarvEngine.init();
+    };
+});
