@@ -24,7 +24,13 @@ class ConceptInstanceBinding {
     
     generateRawChangeListener(lookupName, initialValue=null){
         let self = this;
-        let oldValue = initialValue;
+        let oldValue;
+        if (Array.isArray(initialValue)){
+            oldValue = initialValue.slice();
+        } else {
+            oldValue = initialValue;
+        }
+        
         let property = this.getProperty(lookupName);
         
         let result = {
@@ -33,9 +39,22 @@ class ConceptInstanceBinding {
         
         // Listen for changes in the looked up property
         let changedCallback = async function queryParseNodePropertyChanged(uuid, value){
-            if (uuid===self.uuid && value!=oldValue){
-                oldValue = value;
-                await result.onChanged(value);
+            if (uuid===self.uuid){
+                let identical = false;            
+                if (Array.isArray(value)){
+                    identical = ScopedParseNode.fastDeepEqual(value, oldValue);
+                } else {
+                    identical = (oldValue===value);
+                }
+
+                if (!identical){
+                    if (Array.isArray(value)){
+                        oldValue = value.slice();
+                    } else {
+                        oldValue = value;
+                    }
+                    await result.onChanged(value);
+                }
             }
         };                                
         property.addUpdatedCallback(changedCallback);

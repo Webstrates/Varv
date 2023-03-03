@@ -15283,10 +15283,9 @@ class ScopedParseNode extends ParseNode {
                         for (let oldChildView of oldChildViews){
                             let oldLastOfScope = oldChildView.localScope[oldChildView.localScope.length-1];
                             if (oldLastOfScope instanceof PropertyArrayEntryBinding){
-                                if (newLastOfScope.property == oldLastOfScope.property &&
-                                        newLastOfScope.uuid == oldLastOfScope.uuid){
+                                if (oldLastOfScope.identicalExceptIndex(newLastOfScope)){
                                     // Identical tops (except index), compare rest of their localScope                                    
-                                    if (DOMView.DEBUG || DOMView.DEBUG_PERFORMANCE) console.log("Could optimize maybe");
+                                    if (DOMView.DEBUG || DOMView.DEBUG_PERFORMANCE) console.log("Could optimize maybe", newChildScope, oldChildView.localScope);
                                     if (ScopedParseNode.fastDeepEqual(newChildScope.slice(0,-1),oldChildView.localScope.slice(0,-1))){
                                         if (DOMView.DEBUG || DOMView.DEBUG_PERFORMANCE) console.log("Optimized",oldChildView);
                                         oldChildViews.splice(oldChildViews.indexOf(oldChildView),1);
@@ -15314,17 +15313,18 @@ class ScopedParseNode extends ParseNode {
             return value;
         });
         
-        for (let i = view.childViews.length-1; i>=0; i--){
+        for (let i = oldChildViews.length-1; i>=0; i--){
             let found = false;
-            newChildScopes.forEach((newChildScope)=>{
-                if (ScopedParseNode.fastDeepEqual(view.childViews[i].localScope,newChildScope)) found = true;
+            view.childViews.forEach((childView)=>{
+                if (childView===oldChildViews[i]) found = true;
             });
             if (!found){         
-                view.childViews[i].destroy();
-                view.childViews.splice(i,1);
+                oldChildViews[i].destroy();
+                oldChildViews.splice(i,1);
                 changes++;                
             }
         }        
+        if (oldChildViews.length!==0) console.log("FIXME: DOMView oldChildViews postcondition inconsistency detected: 0!="+oldChildViews.length,oldChildViews);
         
         if ((DOMView.DEBUG||DOMView.DEBUG_PERFORMANCE) && changes===0 && newChildScopes.length>0){
             try { 
@@ -16206,7 +16206,6 @@ class PropertyArrayEntryBinding extends PropertyBinding {
     }
     
     updateIndex(newIndex){
-        console.log("TODO: PropertyArrayEntryBinding should generate index value updates when high-performance recovery of UI is used");
         this._reIndexCount++;
         this.index = newIndex;
         this._indexCallbacks.forEach((callback)=>{
@@ -16224,7 +16223,7 @@ class PropertyArrayEntryBinding extends PropertyBinding {
 
     removeIndexCallback(callback) {
         let index = this._indexCallbacks.indexOf(callback);
-        if (index==-1){
+        if (index===-1){
             console.warn("Cannot remove indexcallback that isn't part of list of callbacks: "+callback+" list is "+this._indexCallbacks);
             return;
         }
@@ -16242,7 +16241,7 @@ class PropertyArrayEntryBinding extends PropertyBinding {
         let changedCallback = false;
         if (name==="view::reused"){
             changedCallback = async function indexChanged(){
-                await result.onChanged(self.reIndexCount);
+                await result.onChanged(self._reIndexCount);
             };                 
         } else if (name.endsWith(".index")){
             changedCallback = async function indexChanged(){
@@ -16257,6 +16256,12 @@ class PropertyArrayEntryBinding extends PropertyBinding {
             };
         }
         return result;
+    }
+    
+    identicalExceptIndex(otherBinding){
+        return this.property === otherBinding.property &&
+                this.uuid === otherBinding.uuid &&
+                this.boundValue === otherBinding.boundValue;
     }
 }
 
@@ -16291,7 +16296,13 @@ class ConceptInstanceBinding {
     
     generateRawChangeListener(lookupName, initialValue=null){
         let self = this;
-        let oldValue = initialValue;
+        let oldValue;
+        if (Array.isArray(initialValue)){
+            oldValue = initialValue.slice();
+        } else {
+            oldValue = initialValue;
+        }
+        
         let property = this.getProperty(lookupName);
         
         let result = {
@@ -16300,9 +16311,22 @@ class ConceptInstanceBinding {
         
         // Listen for changes in the looked up property
         let changedCallback = async function queryParseNodePropertyChanged(uuid, value){
-            if (uuid===self.uuid && value!=oldValue){
-                oldValue = value;
-                await result.onChanged(value);
+            if (uuid===self.uuid){
+                let identical = false;            
+                if (Array.isArray(value)){
+                    identical = ScopedParseNode.fastDeepEqual(value, oldValue);
+                } else {
+                    identical = (oldValue===value);
+                }
+
+                if (!identical){
+                    if (Array.isArray(value)){
+                        oldValue = value.slice();
+                    } else {
+                        oldValue = value;
+                    }
+                    await result.onChanged(value);
+                }
             }
         };                                
         property.addUpdatedCallback(changedCallback);

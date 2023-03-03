@@ -34,7 +34,6 @@ class PropertyArrayEntryBinding extends PropertyBinding {
     }
     
     updateIndex(newIndex){
-        console.log("TODO: PropertyArrayEntryBinding should generate index value updates when high-performance recovery of UI is used");
         this._reIndexCount++;
         this.index = newIndex;
         this._indexCallbacks.forEach((callback)=>{
@@ -52,7 +51,7 @@ class PropertyArrayEntryBinding extends PropertyBinding {
 
     removeIndexCallback(callback) {
         let index = this._indexCallbacks.indexOf(callback);
-        if (index==-1){
+        if (index===-1){
             console.warn("Cannot remove indexcallback that isn't part of list of callbacks: "+callback+" list is "+this._indexCallbacks);
             return;
         }
@@ -70,7 +69,7 @@ class PropertyArrayEntryBinding extends PropertyBinding {
         let changedCallback = false;
         if (name==="view::reused"){
             changedCallback = async function indexChanged(){
-                await result.onChanged(self.reIndexCount);
+                await result.onChanged(self._reIndexCount);
             };                 
         } else if (name.endsWith(".index")){
             changedCallback = async function indexChanged(){
@@ -85,6 +84,12 @@ class PropertyArrayEntryBinding extends PropertyBinding {
             };
         }
         return result;
+    }
+    
+    identicalExceptIndex(otherBinding){
+        return this.property === otherBinding.property &&
+                this.uuid === otherBinding.uuid &&
+                this.boundValue === otherBinding.boundValue;
     }
 }
 

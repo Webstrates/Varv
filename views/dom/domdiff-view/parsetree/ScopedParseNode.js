@@ -56,10 +56,9 @@ class ScopedParseNode extends ParseNode {
                         for (let oldChildView of oldChildViews){
                             let oldLastOfScope = oldChildView.localScope[oldChildView.localScope.length-1];
                             if (oldLastOfScope instanceof PropertyArrayEntryBinding){
-                                if (newLastOfScope.property == oldLastOfScope.property &&
-                                        newLastOfScope.uuid == oldLastOfScope.uuid){
+                                if (oldLastOfScope.identicalExceptIndex(newLastOfScope)){
                                     // Identical tops (except index), compare rest of their localScope                                    
-                                    if (DOMView.DEBUG || DOMView.DEBUG_PERFORMANCE) console.log("Could optimize maybe");
+                                    if (DOMView.DEBUG || DOMView.DEBUG_PERFORMANCE) console.log("Could optimize maybe", newChildScope, oldChildView.localScope);
                                     if (ScopedParseNode.fastDeepEqual(newChildScope.slice(0,-1),oldChildView.localScope.slice(0,-1))){
                                         if (DOMView.DEBUG || DOMView.DEBUG_PERFORMANCE) console.log("Optimized",oldChildView);
                                         oldChildViews.splice(oldChildViews.indexOf(oldChildView),1);
@@ -87,17 +86,18 @@ class ScopedParseNode extends ParseNode {
             return value;
         });
         
-        for (let i = view.childViews.length-1; i>=0; i--){
+        for (let i = oldChildViews.length-1; i>=0; i--){
             let found = false;
-            newChildScopes.forEach((newChildScope)=>{
-                if (ScopedParseNode.fastDeepEqual(view.childViews[i].localScope,newChildScope)) found = true;
+            view.childViews.forEach((childView)=>{
+                if (childView===oldChildViews[i]) found = true;
             });
             if (!found){         
-                view.childViews[i].destroy();
-                view.childViews.splice(i,1);
+                oldChildViews[i].destroy();
+                oldChildViews.splice(i,1);
                 changes++;                
             }
         }        
+        if (oldChildViews.length!==0) console.log("FIXME: DOMView oldChildViews postcondition inconsistency detected: 0!="+oldChildViews.length,oldChildViews);
         
         if ((DOMView.DEBUG||DOMView.DEBUG_PERFORMANCE) && changes===0 && newChildScopes.length>0){
             try { 
