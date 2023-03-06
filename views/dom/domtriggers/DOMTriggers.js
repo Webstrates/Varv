@@ -132,20 +132,30 @@ class MouseTrigger extends Trigger {
                 //Set target to the property's owner.
                 resultContext.target = foundPropertyBinding.uuid;
 
-                try {
-                    let propertyValueLookup = foundPropertyBinding.property.name + ".value";
-                    let propertyValue = await DOMView.singleton.evaluateValueInScope(propertyValueLookup, context.targetElement.scope);
-                    Action.setVariable(resultContext, "propertyValue", propertyValue);
-                } catch(e) {
-                    console.warn("Error evaluating property value:", e);
-                }
+                if(context.targetElement.viewParticle != null) {
+                    if(typeof foundPropertyBinding.boundValue !== "undefined") {
+                        Action.setVariable(resultContext, "propertyValue", foundPropertyBinding.value);
+                    }
+                    if(typeof foundPropertyBinding.index !== "undefined") {
+                        Action.setVariable(resultContext, "propertyIndex", foundPropertyBinding.index);
+                    }
 
-                try {
-                    let propertyIndexLookup = foundPropertyBinding.property.name + ".index";
-                    let propertyIndex = await DOMView.singleton.evaluateValueInScope(propertyIndexLookup, context.targetElement.scope);
-                    Action.setVariable(resultContext, "propertyIndex", propertyIndex);
-                } catch(e) {
-                    console.warn("Error evaluating property index:", e);
+                } else {
+                    try {
+                        let propertyValueLookup = foundPropertyBinding.property.name + ".value";
+                        let propertyValue = await DOMView.singleton.evaluateValueInScope(propertyValueLookup, context.targetElement.scope);
+                        Action.setVariable(resultContext, "propertyValue", propertyValue);
+                    } catch(e) {
+                        console.warn("Error evaluating property value:", e);
+                    }
+
+                    try {
+                        let propertyIndexLookup = foundPropertyBinding.property.name + ".index";
+                        let propertyIndex = await DOMView.singleton.evaluateValueInScope(propertyIndexLookup, context.targetElement.scope);
+                        Action.setVariable(resultContext, "propertyIndex", propertyIndex);
+                    } catch(e) {
+                        console.warn("Error evaluating property index:", e);
+                    }
                 }
             }
 
