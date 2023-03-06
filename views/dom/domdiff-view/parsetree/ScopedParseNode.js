@@ -72,9 +72,14 @@ class ScopedParseNode extends ParseNode {
                     // /very specific performance optimization
                     
                     // Couldn't recover anything, just create a new view
-                    let childView = self.children[0].getView(view.getTargetDocument(),[...view.scope, ...newChildScope]);
-                    childView.localScope = newChildScope;
+                    let childView;
+                    if (newLastOfScope instanceof RuntimeExceptionBinding){
+                        childView = self.getErrorView(view.getTargetDocument(), [...view.scope, ...newChildScope], newLastOfScope.errorMessage, newLastOfScope.ex);
+                    } else {
+                        childView = self.children[0].getView(view.getTargetDocument(),[...view.scope, ...newChildScope]);
+                    }
                     changes++;
+                    childView.localScope = newChildScope;
                     return childView;
                 });
             }            
@@ -152,10 +157,10 @@ class ScopedParseNode extends ParseNode {
     }
     
     showError(view, message, ex){
+        console.log(ex);
         this.onScopesUpdated(view, []);
         view.childViews.push(this.getErrorView(view.getTargetDocument(), view.scope, message, ex));
         this.stubResetView(view);        
-        console.log(ex);
     }
     
     static fastDeepEqual(a,b){

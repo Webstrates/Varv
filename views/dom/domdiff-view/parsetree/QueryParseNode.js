@@ -138,30 +138,34 @@ class QueryParseNode extends ScopedParseNode {
                         // Find the new scopes from a value                        
                         let engineProperty = binding.getProperty(property);
                         let valueToScopes = async function propertyValueToScopes(propertyValue){
-                            if (DOMView.DEBUG) console.log("Property value is", propertyValue);
-                            let as = self.templateElement.getAttribute("as");
-                            if (propertyValue !== null && propertyValue !== undefined && propertyValue!=="") {
-                                if (engineProperty.getType()==="array") {
-                                    // We need to map the array into additional childscopes with arrayentry bindings
-                                    scopeMap.set(localScope, await Promise.all(propertyValue.map(async (arrayEntry, index)=>{
-                                        let newScope = [...localScope];
-                                        if (engineProperty.isConceptArrayType()) {         
-                                            newScope.push(new ConceptInstanceBinding(await VarvEngine.getConceptFromUUID(arrayEntry),arrayEntry));
-                                        }
-                                        newScope.push(new PropertyArrayEntryBinding(engineProperty, binding.uuid, arrayEntry, index, as));
-                                        return newScope;
-                                    })));
+                            try {
+                                if (DOMView.DEBUG) console.log("Property value is", propertyValue);
+                                let as = self.templateElement.getAttribute("as");
+                                if (propertyValue !== null && propertyValue !== undefined && propertyValue!=="") {
+                                    if (engineProperty.getType()==="array") {
+                                        // We need to map the array into additional childscopes with arrayentry bindings
+                                        scopeMap.set(localScope, await Promise.all(propertyValue.map(async (arrayEntry, index)=>{
+                                            let newScope = [...localScope];
+                                            if (engineProperty.isConceptArrayType()) {         
+                                                newScope.push(new ConceptInstanceBinding(await VarvEngine.getConceptFromUUID(arrayEntry),arrayEntry));
+                                            }
+                                            newScope.push(new PropertyArrayEntryBinding(engineProperty, binding.uuid, arrayEntry, index, as));
+                                            return newScope;
+                                        })));
+                                    } else {
+                                        // Single property value, no duplication
+                                        if (!engineProperty.isConceptType()) throw new Error("Cannot use a type for the property attribute that is not a list of references, a list of simple values or a single concept reference: "+propertyValue);
+                                        scopeMap.set(localScope,[[
+                                            ...localScope,
+                                            new ConceptInstanceBinding(await VarvEngine.getConceptFromUUID(propertyValue),propertyValue),
+                                            new PropertyBinding(engineProperty, binding.uuid, propertyValue, as)
+                                        ]]);
+                                    }
                                 } else {
-                                    // Single property value, no duplication
-                                    if (!engineProperty.isConceptType()) throw new Error("Cannot use a type for the property attribute that is not a list of references, a list of simple values or a single concept reference: "+propertyValue);
-                                    scopeMap.set(localScope,[[
-                                        ...localScope,
-                                        new ConceptInstanceBinding(await VarvEngine.getConceptFromUUID(propertyValue),propertyValue),
-                                        new PropertyBinding(engineProperty, binding.uuid, propertyValue, as)
-                                    ]]);
+                                    scopeMap.set(localScope,[]); // Empty scope
                                 }
-                            } else {
-                                scopeMap.set(localScope,[]); // Empty scope
+                            } catch (ex){
+                                scopeMap.set(localScope, [[new RuntimeExceptionBinding("Converting property value to scopes failed",ex)]]);
                             }
                         };
 
@@ -255,6 +259,12 @@ class QueryParseNode extends ScopedParseNode {
                     // Perform the conditional test
                     await Promise.all(localScopes.map(async function applyConditional(localScope){
                         // Sanity checks
+                        if (localScope.length>0 && (localScope[localScope.length-1] instanceof RuntimeExceptionBinding)){
+                            // Pass thru exceptions always, no if-ing
+                            console.log("Passing thru error",localScope);
+                            scopeMap.set(localScope, true);
+                            return;
+                        }
                         let binding = await DOMView.getBindingFromScope(conditionSource, [...view.scope, ...localScope]);
                         if (!binding) throw new Error("if='"+condition+"' selecting boolean '"+conditionSource+"' not bound in scope");
                         let evaluateConditional = async function evaluateConditional(value){

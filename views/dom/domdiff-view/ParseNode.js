@@ -52,10 +52,10 @@ class ParseNode {
     }   
     
     getErrorView(targetDocument, scope, error, ex=null){
-        console.log("instantiating error", this.templateElement);
+        console.log("DOMView runtime error", error, ex, scope, this.templateElement, this);
 
         let element = targetDocument.createElement("varv-failure");
-        element.setAttribute("title", error);
+        element.setAttribute("title", error + "\n" + ex);
         
         return new ViewParticle(element, this, scope);
     }
