@@ -1,0 +1,15 @@
+{
+    "friendlyName": "MirrorVerse Audio Router",
+    "description": "GUI for routing audio in MirrorVerse",
+    "dependencies": [
+        "codestrates-repos #editor_monaco",
+        "webstrate-components-repos #MaterialMenu",
+        "webstrate-components-repos #WebstrateComponents_Tools"
+    ],
+    "optionalDependencies": [
+    ],
+    "assets": [],
+    "license": "MIT",
+    "version": "0.1",
+    "changelog": {}
+}

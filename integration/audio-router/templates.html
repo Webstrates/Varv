@@ -1,0 +1,55 @@
+<template id="mirrorverse-audio-router-decisionNode">
+  <div class="mirrorVerseAudioRouterDecisionNode mirrorVerseAudioRouterNode connectionTarget decisionConnectTarget">
+    <h1 class="title"></h1>
+    <div class="id"></div>
+    <div class="concept">
+      <select>
+        <option value="client">client</option>
+        <option value="currentRoom">currentRoom</option>
+        <option value="toolManager">toolManager</option>
+      </select>
+    </div>
+    <div class="property">
+      <select>
+      </select>
+    </div>
+    <div class="decisions">Decisions</div>
+  </div>
+</template>
+<template id="mirrorverse-audio-router-rootNode">
+  <div class="mirrorVerseAudioRouterRootNode mirrorVerseAudioRouterNode">
+    <h1 class="title"></h1>
+    <div class="connectionOut"></div>
+  </div>
+</template>
+
+<template id="mirrorverse-audio-router-ValueNode">
+  <div class="mirrorVerseAudioRouterValueNode mirrorVerseAudioRouterNode decisionConnectTarget">
+    <div class="muted type">Muted: <input type="checkbox"></div>
+    <div class="volume type">Volume: <input type="number" min="0" max="1" step="0.01"></div>
+    <div class="audioFilter type">Filter: <select><option value="none">none</option><option value="muffled">muffled</option><option value="overdrive">overdrive</option></select></div>
+  </div>
+</template>
+
+<template id="mirrorverse-audio-router-decision">
+  <div class="decision">
+    <div class="select">
+      <select class="comparator">
+        <option value="equals">==</option>
+        <option value="unequals">!=</option>
+        <option value="greaterThan">&gt;</option>
+        <option value="lessThan">&lt;</option>
+        <option value="greaterOrEquals">&gt;=</option>
+        <option value="lessOrEquals">&lt;=</option>
+      </select>
+      <input type="text" class="value">
+    </div>
+    <div class="boolean">
+      <select class="value">
+        <option value="true">true</option>
+        <option value="false">false</option>
+      </select>
+    </div>
+    <div class="connectionOut"></div>
+  </div>
+</template>

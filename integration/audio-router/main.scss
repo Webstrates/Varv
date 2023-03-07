@@ -1,0 +1,89 @@
+.mirrorverse-audio-router-maximized {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+svg.mirrorverse-audio-router-maximized {
+  pointer-events: none;
+}
+
+.mirrorVerseAudioRouterNode {
+  display: inline-flex;
+  border: 1px solid black;
+  border-radius: 10px;
+  padding: 1em;
+  user-select: none;
+  flex-direction: column;
+  align-items: center;
+  position: absolute;
+  gap: 0.25em;
+}
+
+.mirrorVerseAudioRouterValueNode {
+  .type {
+    &.hidden {
+      display: none;
+    }
+  }
+}
+
+.mirrorVerseAudioRouterDecisionNode {
+  .decisions {
+    display: flex;
+    align-items: center;
+    gap: 0.25em;
+
+    .decision {
+      border: 1px solid black;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+
+      .connectionOut {
+        display: inline-block;
+        width: 1em;
+        height: 1em;
+        background-color: #4D7A97;
+      }
+
+      .select {
+        input {
+          width: 2em;
+        }
+      }
+
+      &.boolean {
+        .select {
+          display: none;
+        }
+      }
+
+      &:not(.boolean) {
+        .boolean {
+          display: none;
+        }
+      }
+    }
+  }
+}
+
+.mirrorVerseAudioRouterRootNode {
+  .title {
+    color: red;
+  }
+
+  .connectionOut {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    background-color: green;
+  }
+}
+
+.mirrorverse-audio-routing-connection {
+  stroke: #1f389c;
+  stroke-width: 2px;
+}
