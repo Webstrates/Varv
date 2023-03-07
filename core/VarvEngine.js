@@ -628,7 +628,7 @@ class VarvEngine {
                             resolve();
                         });
                     }
-                }, initial?1:RELOAD_TIMEOUT);
+                }, initial?0:RELOAD_TIMEOUT);
             });
         }
 
