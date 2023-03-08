@@ -12,6 +12,7 @@ svg.mirrorverse-audio-router-maximized {
 
 .mirrorVerseAudioRouterNode {
   display: inline-flex;
+  justify-content: center;
   border: 1px solid black;
   border-radius: 10px;
   padding: 1em;
@@ -27,6 +28,10 @@ svg.mirrorverse-audio-router-maximized {
     &.hidden {
       display: none;
     }
+  }
+
+  &.error {
+    border-color: orangered;
   }
 }
 
@@ -72,6 +77,8 @@ svg.mirrorverse-audio-router-maximized {
 
 .mirrorVerseAudioRouterRootNode {
   border-radius: 50%;
+  width: 5em;
+  height: 5em;
 
   .title {
     color: red;

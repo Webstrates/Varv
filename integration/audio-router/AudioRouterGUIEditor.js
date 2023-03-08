@@ -25,7 +25,9 @@ class AudioRouterGUIEditor extends Editor {
         this.editorDiv[0].appendChild(this.playArea);
         this.editorDiv[0].appendChild(this.svgArea);
 
-        this.playAreaContextMenu = MenuSystem.MenuManager.createMenu("mirrorverse-audio-router-playAreaContext");
+        this.playAreaContextMenu = MenuSystem.MenuManager.createMenu("mirrorverse-audio-router-playAreaContext",{
+            groupDividers: true
+        });
         this.audioRouterNodeContextMenu = MenuSystem.MenuManager.createMenu("mirrorverse-audio-router-audioRouterNodeContext");
 
         this.editorDiv[0].appendChild(this.playAreaContextMenu.html);
@@ -83,6 +85,8 @@ class AudioRouterGUIEditor extends Editor {
         MenuSystem.MenuManager.registerMenuItem("mirrorverse-audio-router-playAreaContext", {
             label: "Insert Decision Node",
             icon: IconRegistry.createIcon("mdc:extension"),
+            group: "DecisionNode",
+            groupOrder: 10,
             order: 0,
             onAction: (evt)=>{
                 let id = makeid(10);
@@ -104,8 +108,10 @@ class AudioRouterGUIEditor extends Editor {
 
         ["muted", "volume", "audioFilter"].forEach((rootName)=>{
             MenuSystem.MenuManager.registerMenuItem("mirrorverse-audio-router-playAreaContext", {
-                label: "Insert "+rootName+" root",
+                label: "Insert "+rootName+" root node",
                 icon: IconRegistry.createIcon("mdc:extension"),
+                group: "RootNode",
+                groupOrder: 0,
                 order: 0,
                 onAction: (evt)=>{
                     let id = makeid(10);
@@ -131,6 +137,26 @@ class AudioRouterGUIEditor extends Editor {
                     }
 
                     return !found;
+                }
+            });
+
+            MenuSystem.MenuManager.registerMenuItem("mirrorverse-audio-router-playAreaContext", {
+                label: "Insert "+rootName+" value node",
+                icon: IconRegistry.createIcon("mdc:extension"),
+                group: "ValueNode",
+                groupOrder: 20,
+                order: 0,
+                onAction: (evt)=>{
+                    let value = true;
+
+                    if(rootName === "volume") {
+                        value = 0.0;
+                    } else if(rootName === "audioFilter") {
+                        value = "none";
+                    }
+
+                    let node = new ValueNode(rootName, value, getRelativePos(evt.menu.openPosition), self.svgArea, ()=>{self.updatedCallback()});
+                    node.render(self.playArea);
                 }
             });
         })
@@ -196,11 +222,25 @@ class AudioRouterGUIEditor extends Editor {
             attributeFilter: ["data-x", "data-y"],
             subtree: true
         });
+
+        let svgMutationObserver = new MutationObserver((mutations)=>{
+            self.checkTypes();
+        });
+        svgMutationObserver.observe(this.svgArea, {
+            childList: true,
+            subtree: true
+        });
     }
 
     redrawSvgLines() {
         this.svgArea.querySelectorAll("line").forEach((line)=>{
             line.svgLine.redraw();
+        });
+    }
+
+    checkTypes() {
+        this.playArea.querySelectorAll(".mirrorVerseAudioRouterNode").forEach((elm)=>{
+            elm.audioRoutingNode.checkType();
         });
     }
 
@@ -229,9 +269,9 @@ class AudioRouterGUIEditor extends Editor {
 
         if(json.unused != null) {
             json.unused.forEach((unused)=>{
-                switch(unused.type) {
+                switch(unused.nodeType) {
                     case "ValueNode": {
-                        let node = new ValueNode("muted", unused.value, unused.position, self.svgArea, ()=>{self.updatedCallback()});
+                        let node = new ValueNode(unused.type, unused.value, unused.position, self.svgArea, ()=>{self.updatedCallback()});
                         //Append?
                         node.render(self.playArea);
                         break;
@@ -263,6 +303,8 @@ class AudioRouterGUIEditor extends Editor {
         }
 
         this.redrawSvgLines();
+
+        this.checkTypes();
 
         self.handleModelChanges = true;
     }
@@ -298,7 +340,7 @@ class AudioRouterGUIEditor extends Editor {
                     decisionResult.connection = connectionNode.id;
                 } else if(connectionNode instanceof ValueNode) {
                     connectionNode.html.classList.remove("unused");
-                    decisionResult.connection = {"value": connectionNode.value, "position": connectionNode.getPosition()}
+                    decisionResult.connection = {"value": connectionNode.value, "position": connectionNode.getPosition(), type: connectionNode.type}
                 } else {
                     throw new Error("Unknown decision connection:"+JSON.stringify(connectionNode, null, 2));
                 }
@@ -366,16 +408,17 @@ class AudioRouterGUIEditor extends Editor {
 
             if(node instanceof ValueNode) {
                 result.unused.push({
-                    "type": "ValueNode",
+                    "nodeType": "ValueNode",
                     "position": node.getPosition(),
-                    "value": node.value
+                    "value": node.value,
+                    "type": node.type
                 });
             }
             if(node instanceof DecisionNode) {
                 let decisionResult = handleDecisionNode(node);
                 result.nodes[node.id] = decisionResult;
                 result.unused.push({
-                    "type": "DecisionNode",
+                    "nodeType": "DecisionNode",
                     "id": node.id
                 })
             }
@@ -408,12 +451,47 @@ class Node {
         this.updateCallback = updateCallback;
     }
 
+    checkType() {
+        console.warn("Override in subclass:", this);
+    }
+
+    findRootNode() {
+        let parent = this.findParentNode();
+        while(parent != null) {
+            if(parent instanceof RootNode) {
+                return parent;
+            }
+
+            parent = parent.findParentNode();
+        }
+
+        return null;
+    }
+
+    findParentNode() {
+        for(let line of this.svg.querySelectorAll("line")) {
+            if(line.svgLine.endElement === this.html) {
+                let audioNodeElm = line.svgLine.startElement.closest(".mirrorVerseAudioRouterNode");
+                if(audioNodeElm != null) {
+                    let audioRouterNode = audioNodeElm.audioRoutingNode;
+                    return audioRouterNode;
+                }
+            }
+        }
+
+        return null;
+    }
+
     delete() {
         console.warn("Override in subclass:", this);
     }
 
     disconnectFromParent() {
         console.warn("Override in subclass:", this);
+    }
+
+    onConnection(parentNode) {
+        this.checkType();
     }
 
     getPosition() {
@@ -545,6 +623,17 @@ class ValueNode extends Node {
         this.setup();
     }
 
+    checkType() {
+        //Do nothing
+        let root = this.findRootNode();
+
+        this.html.classList.remove("error");
+
+        if(root != null && root.rootName !== this.type) {
+            this.html.classList.add("error");
+        }
+    }
+
     disconnectFromParent() {
         const self = this;
 
@@ -558,6 +647,8 @@ class ValueNode extends Node {
                 });
             }
         });
+
+        this.checkType();
     }
 
     delete() {
@@ -634,6 +725,10 @@ class RootNode extends Node {
         this.connectionLine = null;
 
         this.setup(json);
+    }
+
+    checkType() {
+        //Do nothing
     }
 
     delete() {
@@ -758,6 +853,8 @@ class RootNode extends Node {
             this.children.push(decisionNode);
 
             this.connectionLine = new SVGLine(this.html.querySelector(".connectionOut"), decisionNode.html, this.svg, true);
+
+            decisionNode.onConnection(this);
         }
 
         this.updated();
@@ -812,7 +909,7 @@ class Decision extends Node {
             let connectionNode = new DecisionNode(this.decision.connection, json, this.svg, this.updateCallback);;
             this.connect(connectionNode);
         } else if(typeof this.decision.connection === "object" && this.decision.connection != null) {
-            let valueNode = new ValueNode("muted", this.decision.connection.value, this.decision.connection.position, this.svg, this.updateCallback);
+            let valueNode = new ValueNode(this.decision.connection.type, this.decision.connection.value, this.decision.connection.position, this.svg, this.updateCallback);
             this.connect(valueNode);
         }
 
@@ -941,6 +1038,8 @@ class Decision extends Node {
             this.children.push(node);
 
             this.connectionLine = new SVGLine(this.html.querySelector(".connectionOut"), node.html, this.svg, true);
+
+            node.onConnection(this);
         }
 
         this.updated();
@@ -959,6 +1058,10 @@ class DecisionNode extends Node {
         this.data = json.nodes[this.id];
 
         this.setup(json);
+    }
+
+    checkType() {
+        //Do nothing
     }
 
     disconnectFromParent() {
