@@ -1,19 +1,18 @@
 <template id="mirrorverse-audio-router-decisionNode">
   <div class="mirrorVerseAudioRouterDecisionNode mirrorVerseAudioRouterNode connectionTarget decisionConnectTarget">
-    <h1 class="title"></h1>
-    <div class="id"></div>
-    <div class="concept">
-      <select>
+    <div class="hidden">Name: <span class="title"></span></div>
+    <div class="hidden">Id: <span class="id"></span></div>
+    <div class="concept">Concept: <select>
         <option value="client">client</option>
         <option value="currentRoom">currentRoom</option>
         <option value="toolManager">toolManager</option>
       </select>
     </div>
-    <div class="property">
-      <select>
+    <div class="property">Property: <select>
       </select>
     </div>
-    <div class="decisions">Decisions</div>
+    <div>Decisions: <button type="button" class="addDecision">+</button><button type="button" class="removeDecision">-</button></div>
+    <div class="decisions"></div>
   </div>
 </template>
 <template id="mirrorverse-audio-router-rootNode">

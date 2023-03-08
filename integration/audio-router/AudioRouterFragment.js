@@ -25,6 +25,14 @@ class AudioRouterFragment extends Fragment {
         function sanitize(jsonRaw) {
             let json = JSON.parse(jsonRaw);
 
+            if(json.unused != null) {
+                json.unused.forEach((unused) => {
+                    if (unused.type === "DecisionNode") {
+                        delete json.nodes[unused.id];
+                    }
+                });
+            }
+
             return JSON.stringify(json, (key, value)=>{
                 if(key === "position") {
                     return null;
