@@ -29,6 +29,9 @@ class AudioRouterFragment extends Fragment {
                 if(key === "position") {
                     return null;
                 }
+                if(key === "unused") {
+                    return null;
+                }
                 return value;
             }, 0);
         }

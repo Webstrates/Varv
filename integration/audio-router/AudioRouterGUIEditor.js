@@ -71,15 +71,39 @@ class AudioRouterGUIEditor extends Editor {
             this.playArea.lastChild.remove();
         }
 
+        function updatedCallback() {
+            self.handleModelChanged();
+        }
+
         if(json.rootConnections != null) {
             Array.from(Object.keys(json.rootConnections)).forEach((rootName) => {
-                let rootNode = new RootNode(rootName, json, self.svgArea, ()=>{
-                    self.handleModelChanged();
-                });
+                let rootNode = new RootNode(rootName, json, self.svgArea, updatedCallback);
                 rootNode.render(self.playArea);
             });
 
             this.redrawSvgLines();
+        }
+
+        if(json.unused != null) {
+            json.unused.forEach((unused)=>{
+                switch(unused.type) {
+                    case "ValueNode": {
+                        let node = new ValueNode("muted", unused.value, unused.position, self.svgArea, updatedCallback);
+                        //Append?
+                        node.render(self.playArea);
+                        break;
+                    }
+
+                    case "DecisionNode": {
+                        let node = new DecisionNode(unused.id, json, self.svgArea, updatedCallback);
+                        node.render(self.playArea);
+                        break;
+                    }
+
+                    default:
+                        console.warn("Unknown unused type:", unused);
+                }
+            });
         }
 
         self.handleModelChanges = true;
@@ -97,7 +121,8 @@ class AudioRouterGUIEditor extends Editor {
     getValue() {
         let result = {
             "rootConnections": {},
-            "nodes": {}
+            "nodes": {},
+            "unused": []
         };
 
         function handleDecision(decision) {
@@ -114,6 +139,7 @@ class AudioRouterGUIEditor extends Editor {
                     result.nodes[connectionNode.id] = decisionNodeResult;
                     decisionResult.connection = connectionNode.id;
                 } else if(connectionNode instanceof ValueNode) {
+                    connectionNode.html.classList.remove("unused");
                     decisionResult.connection = {"value": connectionNode.value, "position": connectionNode.getPosition()}
                 } else {
                     throw new Error("Unknown decision connection:"+JSON.stringify(connectionNode, null, 2));
@@ -126,6 +152,8 @@ class AudioRouterGUIEditor extends Editor {
         }
 
         function handleDecisionNode(decisionNode) {
+            decisionNode.html.classList.remove("unused");
+
             let decisionNodeResult = {
                 "name": decisionNode.data.name,
                 "concept": decisionNode.data.concept,
@@ -145,7 +173,13 @@ class AudioRouterGUIEditor extends Editor {
             return decisionNodeResult;
         }
 
+        //Mark all as unused
+        this.playArea.querySelectorAll(".mirrorVerseAudioRouterNode").forEach((elm)=>{
+            elm.classList.add("unused");
+        });
+
         this.playArea.querySelectorAll(".mirrorVerseAudioRouterRootNode").forEach((rootElm)=>{
+            rootElm.classList.remove("unused");
             let rootNode = rootElm.audioRoutingNode;
 
             let rootResult = {
@@ -164,6 +198,28 @@ class AudioRouterGUIEditor extends Editor {
 
             } else if(rootNode.children.length > 1) {
                 throw new Error("Weird setup, root node has more than 1 decision node beneath it?");
+            }
+        });
+
+        this.playArea.querySelectorAll(".mirrorVerseAudioRouterNode.unused").forEach((elm)=>{
+            elm.classList.remove("unused");
+
+            let node = elm.audioRoutingNode;
+
+            if(node instanceof ValueNode) {
+                result.unused.push({
+                    "type": "ValueNode",
+                    "position": node.getPosition(),
+                    "value": node.value
+                });
+            }
+            if(node instanceof DecisionNode) {
+                let decisionResult = handleDecisionNode(node);
+                result.nodes[node.id] = decisionResult;
+                result.unused.push({
+                    "type": "DecisionNode",
+                    "id": node.id
+                })
             }
         });
 
@@ -620,8 +676,47 @@ class Decision extends Node {
     }
 
     connect(node) {
+        if(node instanceof DecisionNode) {
+            //Check if node is our own parent
+            let ourNode = this.html.closest(".mirrorVerseAudioRouterNode")?.audioRoutingNode;
+
+            //Check if we would create a loop
+            let foundLoop = false;
+            function findLoop(testNode) {
+                if(testNode === ourNode) {
+                    foundLoop = true;
+                    return;
+                }
+
+                testNode.children.forEach((child)=>{
+                    //Decisions inside here, as we are children of a DecisionNode
+                    if(child.children.length > 0) {
+                        if(child.children[0] instanceof DecisionNode) {
+                            findLoop(child.children[0]);
+                        }
+                    }
+                })
+            }
+
+            findLoop(node);
+
+            if(foundLoop) {
+                console.log("Found loop, unable to connect:", node);
+                return;
+            }
+        }
+
         this.svg.querySelectorAll("line").forEach((line)=>{
             if(line.svgLine.endElement == node.html) {
+                let fromNode = line.svgLine.startElement.closest(".mirrorVerseAudioRouterNode").audioRoutingNode;
+
+                fromNode.children.forEach((decision)=>{
+                    if(decision.connectionLine === line.svgLine) {
+                        decision.connectionLine = null;
+                        decision.children = [];
+                    }
+                })
+
                 line.svgLine.remove();
             }
         });
@@ -688,7 +783,7 @@ class DecisionNode extends Node {
         this.html.querySelector(".id").textContent = this.id;
         this.html.querySelector(".concept select").value = this.data.concept;
 
-        this.updatePropertyDropdown();
+        this.updatePropertyDropdown(true);
 
         this.html.querySelector(".property select").value = this.data.property;
 
@@ -700,7 +795,7 @@ class DecisionNode extends Node {
         })
     }
 
-    updatePropertyDropdown() {
+    updatePropertyDropdown(skipSelect = false) {
         let propertySelect = this.html.querySelector(".property select");
         propertySelect.innerHTML = "";
 
@@ -711,6 +806,10 @@ class DecisionNode extends Node {
 
             propertySelect.appendChild(option);
         });
+
+        if(!skipSelect) {
+            this.data.property = propertySelect.value;
+        }
     }
 }
 

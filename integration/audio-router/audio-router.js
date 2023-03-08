@@ -57,8 +57,10 @@ class MirrorVerseAudioRouter {
 
                     decisionActions.push(where);
 
-                    createConnectionNode(nodeId, decisionIndex, decision.connection, rootName);
-                    decisionActions.push(nodeId+"NodeConnection"+decisionIndex);
+                    if(decision.connection != null) {
+                        createConnectionNode(nodeId, decisionIndex, decision.connection, rootName);
+                        decisionActions.push(nodeId + "NodeConnection" + decisionIndex);
+                    }
                 }
             }
         }
