@@ -65,7 +65,7 @@ class MirrorVerseAudioRouter {
 
         if(json.rootConnections != null) {
             for(let rootName of Object.keys(json.rootConnections)) {
-                let nodeId = json.rootConnections[rootName];
+                let nodeId = json.rootConnections[rootName].connection;
 
                 let actionKey = rootName+"RootConnection";
                 outputVarv.concepts.audioManager.actions[actionKey] = [
