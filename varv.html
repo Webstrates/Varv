@@ -22524,36 +22524,38 @@ class AudioRouterGUIEditor extends Editor {
             }
         });
 
-        MenuSystem.MenuManager.registerMenuItem("mirrorverse-audio-router-playAreaContext", {
-            label: "Insert muted root",
-            icon: IconRegistry.createIcon("mdc:extension"),
-            order: 0,
-            onAction: (evt)=>{
-                let id = makeid(10);
-                let fakeJson = {
-                    "rootConnections": {}
-                }
-
-                fakeJson.rootConnections["muted"] = {
-                    position: getRelativePos(evt.menu.openPosition),
-                    connection: null
-                }
-
-                let node = new RootNode("muted", fakeJson, self.svgArea, ()=>{self.updatedCallback()});
-                node.render(self.playArea);
-            },
-            onOpen: (evt)=>{
-                let found = false;
-                for(let node of self.playArea.querySelectorAll(".mirrorVerseAudioRouterRootNode")) {
-                    if(node.audioRoutingNode.rootName === "muted") {
-                        found = true;
-                        break;
+        ["muted", "volume", "audioFilter"].forEach((rootName)=>{
+            MenuSystem.MenuManager.registerMenuItem("mirrorverse-audio-router-playAreaContext", {
+                label: "Insert "+rootName+" root",
+                icon: IconRegistry.createIcon("mdc:extension"),
+                order: 0,
+                onAction: (evt)=>{
+                    let id = makeid(10);
+                    let fakeJson = {
+                        "rootConnections": {}
                     }
-                }
 
-                return !found;
-            }
-        });
+                    fakeJson.rootConnections[rootName] = {
+                        position: getRelativePos(evt.menu.openPosition),
+                        connection: null
+                    }
+
+                    let node = new RootNode(rootName, fakeJson, self.svgArea, ()=>{self.updatedCallback()});
+                    node.render(self.playArea);
+                },
+                onOpen: (evt)=>{
+                    let found = false;
+                    for(let node of self.playArea.querySelectorAll(".mirrorVerseAudioRouterRootNode")) {
+                        if(node.audioRoutingNode.rootName === rootName) {
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    return !found;
+                }
+            });
+        })
 
         MenuSystem.MenuManager.registerMenuItem("mirrorverse-audio-router-audioRouterNodeContext", {
             label: "Delete",
@@ -23165,11 +23167,7 @@ class RootNode extends Node {
 
     connect(decisionNode) {
         if(decisionNode != null) {
-            this.svg.querySelectorAll("line").forEach((line) => {
-                if (line.svgLine.endElement == decisionNode.html) {
-                    line.svgLine.remove();
-                }
-            });
+            decisionNode.disconnectFromParent();
         }
 
         if(this.connectionLine != null) {
@@ -23350,20 +23348,7 @@ class Decision extends Node {
         }
 
         if(node != null) {
-            this.svg.querySelectorAll("line").forEach((line) => {
-                if (line.svgLine.endElement == node.html) {
-                    let fromNode = line.svgLine.startElement.closest(".mirrorVerseAudioRouterNode").audioRoutingNode;
-
-                    fromNode.children.forEach((decision) => {
-                        if (decision.connectionLine === line.svgLine) {
-                            decision.connectionLine = null;
-                            decision.children = [];
-                        }
-                    })
-
-                    line.svgLine.remove();
-                }
-            });
+            node.disconnectFromParent();
         }
 
         if(this.connectionLine != null) {
