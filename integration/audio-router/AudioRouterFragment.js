@@ -18,7 +18,11 @@ class AudioRouterFragment extends Fragment {
             json = {};
         }
 
-        fragment.raw = JSON.stringify(MirrorVerseAudioRouter.toVarv(json));
+        if(options.pretty) {
+            fragment.raw = JSON.stringify(MirrorVerseAudioRouter.toVarv(json), null, 2);
+        } else {
+            fragment.raw = JSON.stringify(MirrorVerseAudioRouter.toVarv(json));
+        }
         fragment.auto = true;
 
         return fragment.html[0];

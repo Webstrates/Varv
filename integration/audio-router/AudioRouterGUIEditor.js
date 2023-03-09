@@ -1356,7 +1356,7 @@ class SVGLine {
 //Setup cauldron menu item
 MenuSystem.MenuManager.registerMenuItem("TreeBrowser.TreeNode.ContextMenu", {
     label: "Edit with AudioRouter GUI",
-    icon: IconRegistry.createIcon("mdc:extension"),
+    icon: IconRegistry.createIcon("mdc:account_tree"),
     group: "EditActions",
     groupOrder: 0,
     order: 200,
@@ -1386,4 +1386,25 @@ EventSystem.registerEventCallback("Varv.Open.AudioRouterGUI", (evt)=>{
     }
 
     EventSystem.triggerEvent("Cauldron.Open.FragmentEditor", detail);
+});
+
+MenuSystem.MenuManager.registerMenuItem("Cauldron.Editor.Toolbar", {
+    label: "Export",
+    icon: IconRegistry.createIcon("mdc:ios_share"),
+    group: "EditActions",
+    groupOrder: 0,
+    order: 200,
+    onOpen: (menu) => {
+        return menu.context instanceof AudioRouterFragment;
+    },
+    onAction: (menuItem) => {
+        let fragment = menuItem.menu.context;
+
+        fragment.require({pretty: true}).then((codeFragment)=>{
+            WPMv2.stripProtection(codeFragment);
+            fragment.html[0].parentNode.insertBefore(codeFragment, fragment.html[0].nextElementSibling);
+        }).catch((e)=>{
+            console.warn("Unable to export AudioRouter to varv:")
+        });
+    }
 });

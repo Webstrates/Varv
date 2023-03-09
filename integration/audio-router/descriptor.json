@@ -4,6 +4,7 @@
     "dependencies": [
         "codestrates-repos #editor_monaco",
         "webstrate-components-repos #MaterialMenu",
+        "webstrate-components-repos #MaterialDesignOutlinedIcons",
         "webstrate-components-repos #WebstrateComponents_Tools"
     ],
     "optionalDependencies": [
