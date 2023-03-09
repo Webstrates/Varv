@@ -84,7 +84,7 @@ class AudioRouterGUIEditor extends Editor {
 
         MenuSystem.MenuManager.registerMenuItem("mirrorverse-audio-router-playAreaContext", {
             label: "Insert Decision Node",
-            icon: IconRegistry.createIcon("mdc:extension"),
+            icon: IconRegistry.createIcon("mdc:schema"),
             group: "DecisionNode",
             groupOrder: 10,
             order: 0,
@@ -108,9 +108,23 @@ class AudioRouterGUIEditor extends Editor {
         });
 
         ["muted", "volume", "audioFilter"].forEach((rootName)=>{
+            let icon = "";
+
+            if(rootName == "volume") {
+                icon = "mdc:volume_up";
+            }
+
+            if(rootName == "muted") {
+                icon = "mdc:volume_mute";
+            }
+
+            if(rootName == "audioFilter") {
+                icon = "mdc:filter_alt";
+            }
+
             MenuSystem.MenuManager.registerMenuItem("mirrorverse-audio-router-playAreaContext", {
                 label: "Insert "+rootName+" root node",
-                icon: IconRegistry.createIcon("mdc:extension"),
+                icon: IconRegistry.createIcon(icon),
                 group: "RootNode",
                 groupOrder: 0,
                 order: 0,
@@ -144,7 +158,7 @@ class AudioRouterGUIEditor extends Editor {
 
             MenuSystem.MenuManager.registerMenuItem("mirrorverse-audio-router-playAreaContext", {
                 label: "Insert "+rootName+" value node",
-                icon: IconRegistry.createIcon("mdc:extension"),
+                icon: IconRegistry.createIcon(icon),
                 group: "ValueNode",
                 groupOrder: 20,
                 order: 0,
