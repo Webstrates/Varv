@@ -103,6 +103,7 @@ class AudioRouterGUIEditor extends Editor {
                 }
                 let node = new DecisionNode(id, fakeJson, self.svgArea, ()=>{self.updatedCallback()});
                 node.render(self.playArea);
+                self.updatedCallback();
             }
         });
 
@@ -126,6 +127,7 @@ class AudioRouterGUIEditor extends Editor {
 
                     let node = new RootNode(rootName, fakeJson, self.svgArea, ()=>{self.updatedCallback()});
                     node.render(self.playArea);
+                    self.updatedCallback();
                 },
                 onOpen: (evt)=>{
                     let found = false;
@@ -157,6 +159,8 @@ class AudioRouterGUIEditor extends Editor {
 
                     let node = new ValueNode(rootName, value, getRelativePos(evt.menu.openPosition), self.svgArea, ()=>{self.updatedCallback()});
                     node.render(self.playArea);
+
+                    self.updatedCallback();
                 }
             });
         })
@@ -185,6 +189,7 @@ class AudioRouterGUIEditor extends Editor {
 
                 if(audioRouterElm != null) {
                     audioRouterElm.audioRoutingNode.disconnectFromParent();
+                    self.updatedCallback();
                 }
             },
             onOpen: (evt)=>{
@@ -219,6 +224,7 @@ class AudioRouterGUIEditor extends Editor {
         });
         mutationObserver.observe(this.playArea, {
             attributes: true,
+            childList: true,
             attributeFilter: ["data-x", "data-y"],
             subtree: true
         });
@@ -871,6 +877,12 @@ class Decision extends Node {
         this.setup(json);
     }
 
+    delete() {
+        this.connect(null);
+        this.html.remove();
+        this.updateCallback();
+    }
+
     setup(json) {
         const self = this;
 
@@ -1128,12 +1140,15 @@ class DecisionNode extends Node {
             let fakeJson = {value: "", comparator: "equals"};
             let decision = new Decision(fakeJson, self, json, self.svg, self.updateCallback);
             self.children.push(decision);
-            this.render(this.html.parentNode);
+            self.render(self.html.parentNode);
+            self.updated();
         });
         this.html.querySelector(".removeDecision").addEventListener("click", ()=>{
-            let lastDecision = self.children.pop();
+            if(self.children.length > 0) {
+                let lastDecision = self.children.pop();
 
-            console.log("Removing:", lastDecision);
+                lastDecision.delete();
+            }
         });
     }
 
