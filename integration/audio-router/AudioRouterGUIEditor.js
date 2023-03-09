@@ -1256,11 +1256,13 @@ class DecisionNode extends Node {
     }
 
     renderSelf(container) {
+        const self = this;
+
         if(this.html.closest("html") == null) {
             container.appendChild(this.html);
         }
 
-        this.html.querySelector(".title").textContent = this.data.name;
+        this.html.querySelector(".name input").value = this.data.name;
         this.html.querySelector(".id").textContent = this.id;
         this.html.querySelector(".concept select").value = this.data.concept;
 
@@ -1273,6 +1275,11 @@ class DecisionNode extends Node {
         decisionsDiv.innerHTML = "";
         this.children.forEach((decision)=>{
             decisionsDiv.appendChild(decision.html);
+        });
+
+        this.html.querySelector(".name input").addEventListener("change", ()=>{
+            self.data.name = self.html.querySelector(".name input").value;
+            self.updated();
         })
     }
 

@@ -2,13 +2,38 @@ class MirrorVerseAudioRouter {
     static toVarv(json) {
         let outputVarv = {"concepts": {"audioManager":{"actions":{}}}};
 
-        function createConnectionNode(nodeId, index, connection, rootName) {
+        let usedNames = new Set();
+
+        function getUniqueId(nodeData) {
+            let uniqueId = nodeData.id;
+
+            if(nodeData.name != null && nodeData.name.length > 0) {
+                uniqueId = nodeData.name;
+
+                if(usedNames.has(uniqueId)) {
+                    let i = 1;
+                    while(usedNames.has(uniqueId+""+i)) {
+                        i++;
+                    }
+                    uniqueId = uniqueId+""+i;
+                }
+            }
+
+            usedNames.add(uniqueId);
+
+            return uniqueId;
+        }
+
+        function createConnectionNode(uniqueId, index, connection, rootName) {
             let connectionActions = [];
-            outputVarv.concepts.audioManager.actions[nodeId+"NodeConnection"+index] = connectionActions;
+            outputVarv.concepts.audioManager.actions[uniqueId+"NodeConnection"+index] = connectionActions;
 
             if(typeof connection === "string") {
-                connectionActions.push(connection+"NodeIn");
-                createDecisionNode(connection, rootName);
+                let nodeData = json.nodes[connection];
+                let uniqueId = getUniqueId(nodeData);
+
+                connectionActions.push(uniqueId+"NodeIn");
+                createDecisionNode(nodeData, uniqueId, rootName);
             } else {
                 connectionActions.push("selectOriginalAudioStream");
                 let setAction = {"set":{}};
@@ -17,50 +42,47 @@ class MirrorVerseAudioRouter {
             }
         }
 
-        function createDecisionNode(nodeId, rootName) {
-            if(json.nodes != null) {
-                let nodeData = json.nodes[nodeId];
-                let nodeInActions = [];
-                outputVarv.concepts.audioManager.actions[nodeId+"NodeIn"] = nodeInActions;
+        function createDecisionNode(nodeData, uniqueId, rootName) {
+            let nodeInActions = [];
+            outputVarv.concepts.audioManager.actions[uniqueId+"NodeIn"] = nodeInActions;
 
-                //Select correct node
-                switch(nodeData.concept) {
-                    case "client":
-                        nodeInActions.push("selectClient")
-                        break;
-                    case "currentRoom":
-                        nodeInActions.push("selectCurrentRoom")
-                        break;
-                    case "toolManager":
-                        nodeInActions.push("selectToolManager")
-                        break;
-                    default:
-                        console.warn("Unknown concept:", nodeData.concept);
-                }
+            //Select correct node
+            switch(nodeData.concept) {
+                case "client":
+                    nodeInActions.push("selectClient")
+                    break;
+                case "currentRoom":
+                    nodeInActions.push("selectCurrentRoom")
+                    break;
+                case "toolManager":
+                    nodeInActions.push("selectToolManager")
+                    break;
+                default:
+                    console.warn("Unknown concept:", nodeData.concept);
+            }
 
-                //Push decisions
-                for(let decisionIndex = 1; decisionIndex<nodeData.decisions.length+1; decisionIndex++) {
-                    let decision = nodeData.decisions[decisionIndex-1];
+            //Push decisions
+            for(let decisionIndex = 1; decisionIndex<nodeData.decisions.length+1; decisionIndex++) {
+                let decision = nodeData.decisions[decisionIndex-1];
 
-                    let decisionActions = [];
-                    outputVarv.concepts.audioManager.actions[nodeId+"NodeDecision"+decisionIndex] = decisionActions;
-                    nodeInActions.push(nodeId+"NodeDecision"+decisionIndex);
+                let decisionActions = [];
+                outputVarv.concepts.audioManager.actions[uniqueId+"NodeDecision"+decisionIndex] = decisionActions;
+                nodeInActions.push(uniqueId+"NodeDecision"+decisionIndex);
 
-                    let where = {
-                        "where": {
-                            "property": nodeData.property,
-                            "stopIfEmpty": true
-                        }
-                    };
-
-                    where.where[decision.comparator] = decision.value;
-
-                    decisionActions.push(where);
-
-                    if(decision.connection != null) {
-                        createConnectionNode(nodeId, decisionIndex, decision.connection, rootName);
-                        decisionActions.push(nodeId + "NodeConnection" + decisionIndex);
+                let where = {
+                    "where": {
+                        "property": nodeData.property,
+                        "stopIfEmpty": true
                     }
+                };
+
+                where.where[decision.comparator] = decision.value;
+
+                decisionActions.push(where);
+
+                if(decision.connection != null) {
+                    createConnectionNode(uniqueId, decisionIndex, decision.connection, rootName);
+                    decisionActions.push(uniqueId + "NodeConnection" + decisionIndex);
                 }
             }
         }
@@ -71,15 +93,20 @@ class MirrorVerseAudioRouter {
 
                 if(nodeId != null) {
 
-                    let actionKey = rootName + "RootConnection";
-                    outputVarv.concepts.audioManager.actions[actionKey] = [
-                        nodeId + "NodeIn"
-                    ];
+                    if(json.nodes != null) {
+                        let nodeData = json.nodes[nodeId];
+                        let uniqueId = getUniqueId(nodeData);
 
-                    try {
-                        createDecisionNode(nodeId, rootName);
-                    } catch (e) {
-                        console.error(e);
+                        let actionKey = rootName + "RootConnection";
+                        outputVarv.concepts.audioManager.actions[actionKey] = [
+                            uniqueId + "NodeIn"
+                        ];
+
+                        try {
+                            createDecisionNode(nodeData, uniqueId, rootName);
+                        } catch (e) {
+                            console.error(e);
+                        }
                     }
                 }
             }
