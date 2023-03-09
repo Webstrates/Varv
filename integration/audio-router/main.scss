@@ -33,6 +33,10 @@ svg.mirrorverse-audio-router-maximized {
   &.error {
     border-color: orangered;
   }
+
+  input {
+    width: 3.5em;
+  }
 }
 
 .mirrorVerseAudioRouterDecisionNode {
@@ -56,18 +60,32 @@ svg.mirrorverse-audio-router-maximized {
 
       .select {
         input {
-          width: 2em;
+          width: 3.5em;
         }
       }
 
-      &.boolean {
+      &[data-type='boolean'] {
         .select {
           display: none;
         }
       }
 
-      &:not(.boolean) {
+      &[data-type='number'] {
         .boolean {
+          display: none;
+        }
+
+        .string {
+          display: none;
+        }
+      }
+
+      &[data-type='string'] {
+        .boolean {
+          display: none;
+        }
+
+        .number {
           display: none;
         }
       }

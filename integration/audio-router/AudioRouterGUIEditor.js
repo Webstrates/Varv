@@ -251,10 +251,6 @@ class AudioRouterGUIEditor extends Editor {
     }
 
     load(jsonRaw) {
-        console.groupCollapsed("Loading!");
-        console.trace();
-        console.groupEnd();
-
         const self = this;
 
         self.handleModelChanges = false;
@@ -883,39 +879,96 @@ class Decision extends Node {
         this.updateCallback();
     }
 
+    checkType() {
+        let concept = VarvEngine.getConceptFromType(this.node.data.concept);
+        let property = concept.getProperty(this.node.data.property);
+
+        let type = property.type;
+
+        let oldType = this.html.getAttribute("data-type");
+
+        if(oldType !== type) {
+            this.html.setAttribute("data-type", type);
+
+            switch (type) {
+                case "boolean": {
+                    this.decision.comparator = "equals";
+                    this.html.querySelector(".boolean .value").value = this.decision.value;
+                    let value = this.html.querySelector(".boolean .value").value === "true";
+
+                    //If we dont have a correct value, default to true
+                    this.html.querySelector(".boolean .value").value = value;
+
+                    this.decision.value = value;
+
+                    break;
+                }
+
+                case "number": {
+                    this.html.querySelector(".select .number").value = this.decision.value;
+                    this.html.querySelector(".select .comparator").value = this.decision.comparator;
+
+                    let value = parseFloat(this.html.querySelector(".select .number").value);
+
+                    if(isNaN(value) || value == null) {
+                        value = 1.0;
+                        this.html.querySelector(".select .number").value = 1.0;
+                    }
+
+                    this.decision.value = value;
+
+                    break;
+                }
+
+                case "string": {
+                    this.html.querySelector(".select .string").value = this.decision.value;
+                    this.html.querySelector(".select .comparator").value = this.decision.comparator;
+                    break;
+                }
+
+                default:
+                    console.warn("Unknown proprety type:", type);
+            }
+
+            this.updated();
+        }
+    }
+
     setup(json) {
         const self = this;
 
         this.html = WebstrateComponents.Tools.loadTemplate("#mirrorverse-audio-router-decision");
         this.html.audioRoutingNode = this;
 
-        let concept = VarvEngine.getConceptFromType(this.node.data.concept);
-        let property = concept.getProperty(this.node.data.property);
+        this.checkType();
 
-        let type = property.type;
+        this.html.querySelector(".boolean .value").addEventListener("change", ()=>{
+            self.decision.value = self.html.querySelector(".boolean .value").value;
+            self.updated();
+        });
 
-        this.html.classList.add(type);
+        this.html.querySelector(".select .number").addEventListener("change", ()=>{
+            let value = parseFloat(self.html.querySelector(".select .number").value);
 
-        switch(type) {
-            case "boolean":
-                this.html.querySelector(".boolean .value").value = this.decision.value;
-                this.html.querySelector(".boolean .value").addEventListener("change", ()=>{
-                    self.decision.value = self.html.querySelector(".boolean .value").value;
-                    self.updated();
-                });
-                break;
-            default:
-                this.html.querySelector(".select .value").value = this.decision.value;
-                this.html.querySelector(".select .comparator").value = this.decision.comparator;
-                this.html.querySelector(".select .value").addEventListener("change", ()=>{
-                    self.decision.value = self.html.querySelector(".select .value").value;
-                    self.updated();
-                });
-                this.html.querySelector(".select .comparator").addEventListener("change", ()=>{
-                    self.decision.comparator = self.html.querySelector(".select .comparator").value;
-                    self.updated();
-                });
-        }
+            if(value < 0) {
+                value = 0;
+                self.html.querySelector(".select .number").value = value;
+            } else if(value > 1) {
+                value = 1;
+                self.html.querySelector(".select .number").value = value;
+            }
+
+            self.decision.value = value;
+            self.updated();
+        });
+        this.html.querySelector(".select .string").addEventListener("change", ()=>{
+            self.decision.value = self.html.querySelector(".select .string").value;
+            self.updated();
+        });
+        this.html.querySelector(".select .comparator").addEventListener("change", ()=>{
+            self.decision.comparator = self.html.querySelector(".select .comparator").value;
+            self.updated();
+        });
 
         if(typeof this.decision.connection === "string") {
             let connectionNode = new DecisionNode(this.decision.connection, json, this.svg, this.updateCallback);;
@@ -1123,13 +1176,14 @@ class DecisionNode extends Node {
         conceptSelect.addEventListener("change", ()=>{
             self.data.concept = conceptSelect.value;
             self.updatePropertyDropdown();
-            this.updated();
+            self.updated();
         });
 
         let propertySelect = this.html.querySelector(".property select");
         propertySelect.addEventListener("change", ()=>{
             self.data.property = propertySelect.value;
-            this.updated();
+            self.updateDecisions();
+            self.updated();
         });
 
         this.data.decisions.forEach((decision)=>{
@@ -1149,6 +1203,12 @@ class DecisionNode extends Node {
 
                 lastDecision.delete();
             }
+        });
+    }
+
+    updateDecisions() {
+        this.children.forEach((decision)=>{
+            decision.checkType();
         });
     }
 
@@ -1187,6 +1247,7 @@ class DecisionNode extends Node {
 
         if(!skipSelect) {
             this.data.property = propertySelect.value;
+            this.updateDecisions();
         }
     }
 }
