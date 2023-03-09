@@ -9,7 +9,16 @@ class AudioRouterFragment extends Fragment {
     async require(options = {}) {
         let fragment = Fragment.create(ConceptDefinitionFragment.type());
 
-        fragment.raw = JSON.stringify(MirrorVerseAudioRouter.toVarv(JSON.parse(this.raw)));
+        let json = null;
+
+        try {
+            json = JSON.parse(this.raw);
+        } catch(e) {
+            console.warn("Unable to parse json:", this.raw);
+            json = {};
+        }
+
+        fragment.raw = JSON.stringify(MirrorVerseAudioRouter.toVarv(json));
         fragment.auto = true;
 
         return fragment.html[0];
@@ -46,8 +55,20 @@ class AudioRouterFragment extends Fragment {
 
         this.registerOnFragmentChangedHandler((context) => {
             //Check if really updated, or just a position change
-            let sanitizedNew = sanitize(self.raw);
-            let sanitizedOld = sanitize(this.oldRaw);
+            let sanitizedNew = null;
+            try {
+                sanitizedNew = sanitize(self.raw);
+            } catch(e) {
+                console.warn(e);
+            }
+
+            let sanitizedOld = null;
+
+            try {
+                sanitizedOld = sanitize(this.oldRaw);
+            } catch(e) {
+                console.warn(e);
+            }
 
             if(sanitizedOld !== sanitizedNew) {
                 //Save new raw

@@ -25,10 +25,24 @@ class AudioRouterGUIEditor extends Editor {
         this.editorDiv[0].appendChild(this.playArea);
         this.editorDiv[0].appendChild(this.svgArea);
 
-        this.playAreaContextMenu = MenuSystem.MenuManager.createMenu("mirrorverse-audio-router-playAreaContext",{
+        function makeId(length) {
+            let result = '';
+            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            const charactersLength = characters.length;
+            let counter = 0;
+            while (counter < length) {
+                result += characters.charAt(Math.floor(Math.random() * charactersLength));
+                counter += 1;
+            }
+            return result;
+        }
+
+        let menuId = makeId(10);
+
+        this.playAreaContextMenu = MenuSystem.MenuManager.createMenu("mirrorverse-audio-router-playAreaContext"+menuId,{
             groupDividers: true
         });
-        this.audioRouterNodeContextMenu = MenuSystem.MenuManager.createMenu("mirrorverse-audio-router-audioRouterNodeContext");
+        this.audioRouterNodeContextMenu = MenuSystem.MenuManager.createMenu("mirrorverse-audio-router-audioRouterNodeContext"+menuId);
 
         this.editorDiv[0].appendChild(this.playAreaContextMenu.html);
         this.editorDiv[0].appendChild(this.audioRouterNodeContextMenu.html);
@@ -60,18 +74,6 @@ class AudioRouterGUIEditor extends Editor {
             }
         });
 
-        function makeid(length) {
-            let result = '';
-            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-            const charactersLength = characters.length;
-            let counter = 0;
-            while (counter < length) {
-                result += characters.charAt(Math.floor(Math.random() * charactersLength));
-                counter += 1;
-            }
-            return result;
-        }
-
         function getRelativePos(menuPos) {
 
             let playAreaBounds = self.playArea.getBoundingClientRect();
@@ -82,14 +84,16 @@ class AudioRouterGUIEditor extends Editor {
             }
         }
 
-        MenuSystem.MenuManager.registerMenuItem("mirrorverse-audio-router-playAreaContext", {
+        this.menuItems = [];
+
+        this.menuItems.push(MenuSystem.MenuManager.registerMenuItem("mirrorverse-audio-router-playAreaContext"+menuId, {
             label: "Insert Decision Node",
             icon: IconRegistry.createIcon("mdc:schema"),
             group: "DecisionNode",
             groupOrder: 10,
             order: 0,
             onAction: (evt)=>{
-                let id = makeid(10);
+                let id = makeId(10);
                 let fakeJson = {
                     "nodes": {}
                 }
@@ -105,7 +109,7 @@ class AudioRouterGUIEditor extends Editor {
                 node.render(self.playArea);
                 self.updatedCallback();
             }
-        });
+        }));
 
         ["muted", "volume", "audioFilter"].forEach((rootName)=>{
             let icon = "";
@@ -122,14 +126,14 @@ class AudioRouterGUIEditor extends Editor {
                 icon = "mdc:filter_alt";
             }
 
-            MenuSystem.MenuManager.registerMenuItem("mirrorverse-audio-router-playAreaContext", {
+            self.menuItems.push(MenuSystem.MenuManager.registerMenuItem("mirrorverse-audio-router-playAreaContext"+menuId, {
                 label: "Insert "+rootName+" root node",
                 icon: IconRegistry.createIcon(icon),
                 group: "RootNode",
                 groupOrder: 0,
                 order: 0,
                 onAction: (evt)=>{
-                    let id = makeid(10);
+                    let id = makeId(10);
                     let fakeJson = {
                         "rootConnections": {}
                     }
@@ -154,9 +158,9 @@ class AudioRouterGUIEditor extends Editor {
 
                     return !found;
                 }
-            });
+            }));
 
-            MenuSystem.MenuManager.registerMenuItem("mirrorverse-audio-router-playAreaContext", {
+            self.menuItems.push(MenuSystem.MenuManager.registerMenuItem("mirrorverse-audio-router-playAreaContext"+menuId, {
                 label: "Insert "+rootName+" value node",
                 icon: IconRegistry.createIcon(icon),
                 group: "ValueNode",
@@ -176,10 +180,10 @@ class AudioRouterGUIEditor extends Editor {
 
                     self.updatedCallback();
                 }
-            });
+            }));
         })
 
-        MenuSystem.MenuManager.registerMenuItem("mirrorverse-audio-router-audioRouterNodeContext", {
+        self.menuItems.push(MenuSystem.MenuManager.registerMenuItem("mirrorverse-audio-router-audioRouterNodeContext"+menuId, {
             label: "Delete",
             icon: IconRegistry.createIcon("mdc:extension"),
             order: 0,
@@ -192,9 +196,9 @@ class AudioRouterGUIEditor extends Editor {
                     audioRouterElm.audioRoutingNode.delete();
                 }
             }
-        });
+        }));
 
-        MenuSystem.MenuManager.registerMenuItem("mirrorverse-audio-router-audioRouterNodeContext", {
+        self.menuItems.push(MenuSystem.MenuManager.registerMenuItem("mirrorverse-audio-router-audioRouterNodeContext"+menuId, {
             label: "Disconnect",
             icon: IconRegistry.createIcon("mdc:extension"),
             order: 0,
@@ -219,7 +223,7 @@ class AudioRouterGUIEditor extends Editor {
 
                 return false;
             }
-        });
+        }));
 
         if(VarvEngine.concepts.length > 0) {
             this.load(this.fragment.raw);
@@ -269,7 +273,13 @@ class AudioRouterGUIEditor extends Editor {
 
         self.handleModelChanges = false;
 
-        let json = JSON.parse(jsonRaw);
+        let json = {};
+
+        try {
+            json = JSON.parse(jsonRaw);
+        } catch(e) {
+
+        }
 
         //Clear editor
         while(this.playArea.lastChild != null) {
@@ -318,9 +328,10 @@ class AudioRouterGUIEditor extends Editor {
             });
         }
 
-        this.redrawSvgLines();
-
-        this.checkTypes();
+        setTimeout(()=>{
+            this.redrawSvgLines();
+            this.checkTypes();
+        }, 0);
 
         self.handleModelChanges = true;
     }
@@ -449,6 +460,24 @@ class AudioRouterGUIEditor extends Editor {
         });
 
         return JSON.stringify(result, null, 2);
+    }
+
+    unload() {
+        if(this.audioRouterNodeContextMenu != null) {
+            this.audioRouterNodeContextMenu.destroy();
+            this.audioRouterNodeContextMenu = null;
+        }
+
+        if(this.playAreaContextMenu != null) {
+            this.playAreaContextMenu.destroy();
+            this.playAreaContextMenu = null;
+        }
+
+        this.menuItems.forEach((menuItem)=>{
+            menuItem.delete();
+        });
+
+        super.unload();
     }
 
     static types() {
