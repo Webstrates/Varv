@@ -67,7 +67,7 @@ class MirrorVerseAudioRouter {
 
                 let decisionActions = [];
                 outputVarv.concepts.audioManager.actions[uniqueId+"NodeDecision"+decisionIndex] = decisionActions;
-                nodeInActions.push(uniqueId+"NodeDecision"+decisionIndex);
+                nodeInActions.push({"run": uniqueId+"NodeDecision"+decisionIndex});
 
                 let where = {
                     "where": {
