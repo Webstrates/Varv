@@ -20,6 +20,7 @@ class AudioRouterGUIEditor extends Editor {
 
         this.playArea = document.createElement("div");
         this.playArea.classList.add("mirrorverse-audio-router-maximized");
+        this.playArea.classList.add("mirrorverse-audio-router");
         this.svgArea = document.createElementNS('http://www.w3.org/2000/svg', "svg");
         this.svgArea.classList.add("mirrorverse-audio-router-maximized");
         this.editorDiv[0].appendChild(this.playArea);
@@ -105,7 +106,7 @@ class AudioRouterGUIEditor extends Editor {
                     decisions: [],
                     position: getRelativePos(evt.menu.openPosition)
                 }
-                let node = new DecisionNode(id, fakeJson, self.svgArea, ()=>{self.updatedCallback()});
+                let node = new DecisionNode(id, fakeJson, self, ()=>{self.updatedCallback()});
                 node.render(self.playArea);
                 self.updatedCallback();
             }
@@ -133,7 +134,6 @@ class AudioRouterGUIEditor extends Editor {
                 groupOrder: 0,
                 order: 0,
                 onAction: (evt)=>{
-                    let id = makeId(10);
                     let fakeJson = {
                         "rootConnections": {}
                     }
@@ -143,7 +143,7 @@ class AudioRouterGUIEditor extends Editor {
                         connection: null
                     }
 
-                    let node = new RootNode(rootName, fakeJson, self.svgArea, ()=>{self.updatedCallback()});
+                    let node = new RootNode(rootName, fakeJson, self, ()=>{self.updatedCallback()});
                     node.render(self.playArea);
                     self.updatedCallback();
                 },
@@ -175,7 +175,15 @@ class AudioRouterGUIEditor extends Editor {
                         value = "none";
                     }
 
-                    let node = new ValueNode(rootName, value, getRelativePos(evt.menu.openPosition), self.svgArea, ()=>{self.updatedCallback()});
+                    let id = makeId(10);
+
+                    let fakeJson = {
+                        type: rootName,
+                        value: value,
+                        position: getRelativePos(evt.menu.openPosition)
+                    }
+
+                    let node = new ValueNode(id, fakeJson, self, ()=>{self.updatedCallback()});
                     node.render(self.playArea);
 
                     self.updatedCallback();
@@ -189,8 +197,6 @@ class AudioRouterGUIEditor extends Editor {
             order: 0,
             onAction: (evt)=>{
                 let audioRouterElm = evt.menu.context.closest(".mirrorVerseAudioRouterNode");
-
-                console.log(audioRouterElm);
 
                 if(audioRouterElm != null) {
                     audioRouterElm.audioRoutingNode.delete();
@@ -211,7 +217,7 @@ class AudioRouterGUIEditor extends Editor {
                 }
             },
             onOpen: (evt)=>{
-                console.log(evt);
+                return false;
 
                 let audioRouterElm = evt.context.closest(".mirrorVerseAudioRouterNode");
 
@@ -264,11 +270,16 @@ class AudioRouterGUIEditor extends Editor {
 
     checkTypes() {
         this.playArea.querySelectorAll(".mirrorVerseAudioRouterNode").forEach((elm)=>{
+            elm.audioRoutingNode.checkUnused();
             elm.audioRoutingNode.checkType();
         });
     }
 
     load(jsonRaw) {
+        console.groupCollapsed("Load");
+        console.trace();
+        console.groupEnd();
+
         const self = this;
 
         self.handleModelChanges = false;
@@ -288,17 +299,17 @@ class AudioRouterGUIEditor extends Editor {
 
         if(json.rootConnections != null) {
             Array.from(Object.keys(json.rootConnections)).forEach((rootName) => {
-                let rootNode = new RootNode(rootName, json, self.svgArea, ()=>{self.updatedCallback()});
+                let rootNode = new RootNode(rootName, json, self, ()=>{self.updatedCallback()});
                 rootNode.render(self.playArea);
             });
         }
 
         if(json.unused != null) {
             json.unused.forEach((unused)=>{
-                switch(unused.nodeType) {
+                let nodeData = json.nodes[unused.id];
+                switch(nodeData.nodeType) {
                     case "ValueNode": {
-                        let node = new ValueNode(unused.type, unused.value, unused.position, self.svgArea, ()=>{self.updatedCallback()});
-                        //Append?
+                        let node = new ValueNode(unused.id,nodeData, self, ()=>{self.updatedCallback()});
                         node.render(self.playArea);
                         break;
                     }
@@ -314,7 +325,7 @@ class AudioRouterGUIEditor extends Editor {
                         }
 
                         if(!found) {
-                            let node = new DecisionNode(unused.id, json, self.svgArea, () => {
+                            let node = new DecisionNode(unused.id, json, self, () => {
                                 self.updatedCallback()
                             });
                             node.render(self.playArea);
@@ -352,6 +363,19 @@ class AudioRouterGUIEditor extends Editor {
             "unused": []
         };
 
+        function handleValueNode(valueNode) {
+            valueNode.html.classList.remove("unused");
+
+            let valueNodeResult = {
+                "nodeType": "ValueNode",
+                value: valueNode.value,
+                position: valueNode.getPosition(),
+                type: valueNode.type
+            };
+
+            return valueNodeResult;
+        }
+
         function handleDecision(decision) {
             let decisionResult = {
                 "comparator": decision.decision.comparator,
@@ -361,13 +385,14 @@ class AudioRouterGUIEditor extends Editor {
             if(decision.children.length === 1) {
                 let connectionNode = decision.children[0];
 
+                decisionResult.connection = connectionNode.id;
+
                 if(connectionNode instanceof DecisionNode) {
                     let decisionNodeResult = handleDecisionNode(connectionNode);
                     result.nodes[connectionNode.id] = decisionNodeResult;
-                    decisionResult.connection = connectionNode.id;
                 } else if(connectionNode instanceof ValueNode) {
-                    connectionNode.html.classList.remove("unused");
-                    decisionResult.connection = {"value": connectionNode.value, "position": connectionNode.getPosition(), type: connectionNode.type}
+                    let valueNodeResult = handleValueNode(connectionNode);
+                    result.nodes[connectionNode.id] = valueNodeResult;
                 } else {
                     throw new Error("Unknown decision connection:"+JSON.stringify(connectionNode, null, 2));
                 }
@@ -382,6 +407,7 @@ class AudioRouterGUIEditor extends Editor {
             decisionNode.html.classList.remove("unused");
 
             let decisionNodeResult = {
+                "nodeType": "DecisionNode",
                 "name": decisionNode.data.name,
                 "concept": decisionNode.data.concept,
                 "property": decisionNode.data.property,
@@ -406,6 +432,7 @@ class AudioRouterGUIEditor extends Editor {
         });
 
         this.playArea.querySelectorAll(".mirrorVerseAudioRouterRootNode").forEach((rootElm)=>{
+            //Handle root node
             rootElm.classList.remove("unused");
             let rootNode = rootElm.audioRoutingNode;
 
@@ -434,20 +461,18 @@ class AudioRouterGUIEditor extends Editor {
             let node = elm.audioRoutingNode;
 
             if(node instanceof ValueNode) {
+                let valueResult = handleValueNode(node);
+                result.nodes[node.id] = valueResult;
                 result.unused.push({
-                    "nodeType": "ValueNode",
-                    "position": node.getPosition(),
-                    "value": node.value,
-                    "type": node.type
+                    "id": node.id
                 });
             }
             if(node instanceof DecisionNode) {
                 let decisionResult = handleDecisionNode(node);
                 result.nodes[node.id] = decisionResult;
                 result.unused.push({
-                    "nodeType": "DecisionNode",
                     "id": node.id
-                })
+                });
             }
         }
 
@@ -490,49 +515,85 @@ window.AudioRouterGUIEditor = AudioRouterGUIEditor;
 EditorManager.registerEditor(AudioRouterGUIEditor);
 
 class Node {
-    constructor(svg, updateCallback) {
+    constructor(editor, updateCallback) {
         this.children = [];
-        this.svg = svg;
+        this.editor = editor;
+        this.svg = this.editor.svgArea;
         this.updateCallback = updateCallback;
+        this.connectionLine = null;
+        this.connectionPoint = null;
     }
 
     checkType() {
-        console.warn("Override in subclass:", this);
+        console.warn("Override in subclass [checkType]:", this);
     }
 
-    findRootNode() {
-        let parent = this.findParentNode();
-        while(parent != null) {
+    findRootNodes() {
+        let rootNodes = [];
+
+        let parents = this.findParentNodes();
+
+        parents.forEach((parent)=>{
             if(parent instanceof RootNode) {
-                return parent;
+                rootNodes.push(parent);
+            } else {
+                rootNodes.push(...parent.findRootNodes());
             }
+        });
 
-            parent = parent.findParentNode();
-        }
 
-        return null;
+
+        return Array.from(new Set(rootNodes));
     }
 
-    findParentNode() {
+    findParentNodes() {
+        let parents = [];
+
         for(let line of this.svg.querySelectorAll("line")) {
             if(line.svgLine.endElement === this.html) {
                 let audioNodeElm = line.svgLine.startElement.closest(".mirrorVerseAudioRouterNode");
                 if(audioNodeElm != null) {
                     let audioRouterNode = audioNodeElm.audioRoutingNode;
-                    return audioRouterNode;
+                    parents.push(audioRouterNode);
                 }
             }
         }
 
-        return null;
+        return parents;
+    }
+
+    checkUnused() {
+        this.html.classList.remove("error");
+        this.html.classList.remove("mirrorVerseUnused");
+
+        if(this.findRootNodes().length === 0) {
+            this.html.classList.add("mirrorVerseUnused");
+        } else if(this.findRootNodes().length > 1) {
+            this.html.classList.add("error");
+        }
     }
 
     delete() {
-        console.warn("Override in subclass:", this);
+        this.html.remove();
+
+        this.disconnectAll();
+
+        this.disconnectFromParents();
+
+        this.updated();
     }
 
-    disconnectFromParent() {
-        console.warn("Override in subclass:", this);
+    disconnectFromParents() {
+        const self = this;
+
+        this.svg.querySelectorAll("line").forEach((line) => {
+            if (line.svgLine.endElement === self.html) {
+                let audioRoutingNode = line.svgLine.startElement.closest(".mirrorVerseAudioRouterNode").audioRoutingNode;
+                if(audioRoutingNode != null) {
+                    audioRoutingNode.disconnect(self);
+                }
+            }
+        });
     }
 
     onConnection(parentNode) {
@@ -571,7 +632,7 @@ class Node {
     }
 
     renderSelf(container) {
-        console.warn("Override in subclass:", this);
+        console.warn("Override in subclass [renderSelf]:", this);
     }
 
     render(container) {
@@ -579,33 +640,35 @@ class Node {
 
         this.renderSelf(container);
 
-        this.setupDrag(this.html, (offsetX, offsetY)=>{
-            let x = parseFloat(self.html.getAttribute("data-x"));
-            let y = parseFloat(self.html.getAttribute("data-y"));
+        if(this.html.classList.contains("draggable")) {
+            this.setupDrag(this.html, (offsetX, offsetY) => {
+                let x = parseFloat(self.html.getAttribute("data-x"));
+                let y = parseFloat(self.html.getAttribute("data-y"));
 
-            if(isNaN(x)) {
-                x = 0;
-            }
+                if (isNaN(x)) {
+                    x = 0;
+                }
 
-            if(isNaN(y)) {
-                y = 0;
-            }
+                if (isNaN(y)) {
+                    y = 0;
+                }
 
-            x += offsetX;
-            y += offsetY;
+                x += offsetX;
+                y += offsetY;
 
-            self.html.setAttribute("data-x", x);
-            self.html.setAttribute("data-y", y);
+                self.html.setAttribute("data-x", x);
+                self.html.setAttribute("data-y", y);
 
-            self.html.style.left = x + "px";
-            self.html.style.top = y + "px";
+                self.html.style.left = x + "px";
+                self.html.style.top = y + "px";
 
-            self.updated();
-        }, (dropTarget)=>{
-            //Ignore drop
-        });
+                self.updated();
+            }, (dropTarget) => {
+                //Ignore drop
+            });
+        }
 
-        this.children.forEach((child)=>{
+        this.children.forEach((child) => {
             child.render(container);
         });
     }
@@ -623,6 +686,10 @@ class Node {
         element.draggingEnabled = true;
 
         element.addEventListener("pointerdown", (evt)=>{
+            if(evt.target.matches("input, select, option, button")) {
+                return;
+            }
+
             if(evt.button === 0) {
                 evt.stopPropagation();
                 lastDragPosition = {
@@ -655,153 +722,12 @@ class Node {
             }
         });
     }
-}
 
-class ValueNode extends Node {
-    constructor(type, value, position, svg, updateCallback) {
-        super(svg, updateCallback);
-        
-        this.type = type;
-        this.value = value;
-        this.position = position;
-
-        this.setup();
-    }
-
-    checkType() {
-        //Do nothing
-        let root = this.findRootNode();
-
-        this.html.classList.remove("error");
-
-        if(root != null && root.rootName !== this.type) {
-            this.html.classList.add("error");
-        }
-    }
-
-    disconnectFromParent() {
+    setupConnectionDragging(connectionOut) {
         const self = this;
-
-        this.svg.querySelectorAll("line").forEach((line)=>{
-            if(line.svgLine.endElement === self.html) {
-                let decisionNode = line.svgLine.startElement.closest(".mirrorVerseAudioRouterNode").audioRoutingNode;
-                decisionNode.children.forEach((decision)=>{
-                    if(decision.connectionLine === line.svgLine) {
-                        decision.connect(null);
-                    }
-                });
-            }
-        });
-
-        this.checkType();
-    }
-
-    delete() {
-        const self = this;
-
-        //Find connection and remove
-        this.disconnectFromParent();
-
-        this.html.remove();
-
-        this.updated();
-    }
-
-    setup() {
-        const self = this;
-
-        this.html = WebstrateComponents.Tools.loadTemplate("#mirrorverse-audio-router-ValueNode");
-        this.html.audioRoutingNode = this;
-        this.html.querySelectorAll(".type").forEach((elm)=>{
-            elm.classList.add("hidden");
-        });
-
-        this.setPosition(this.position);
-
-        switch(this.type) {
-            case "muted":
-                this.html.querySelector(".type.muted").classList.remove("hidden");
-                this.html.querySelector(".type.muted input").checked = this.value;
-
-                this.html.querySelector(".type.muted input").addEventListener("change", ()=>{
-                    self.value = this.html.querySelector(".type.muted input").checked;
-                    self.updated();
-                });
-
-                break;
-            case "volume":
-                this.html.querySelector(".type.volume").classList.remove("hidden");
-                this.html.querySelector(".type.volume input").value = this.value;
-
-                this.html.querySelector(".type.volume input").addEventListener("change", ()=>{
-                    self.value = this.html.querySelector(".type.volume input").value;
-                    self.updated();
-                });
-
-                break;
-            case "audioFilter":
-                this.html.querySelector(".type.audioFilter").classList.remove("hidden");
-                this.html.querySelector(".type.audioFilter select").value = this.value;
-
-                this.html.querySelector(".type.audioFilter select").addEventListener("change", ()=>{
-                    self.value = this.html.querySelector(".type.audioFilter select").value;
-                    self.updated();
-                });
-
-                break;
-            default:
-                console.warn("Unknown ValueNode type:", this);
-        }
-    }
-
-    renderSelf(container) {
-        if(this.html.closest("html") == null) {
-            container.appendChild(this.html);
-        }
-    }
-}
-
-class RootNode extends Node {
-    constructor(rootName, json, svg, updateCallback) {
-        super(svg, updateCallback);
-
-        this.rootName = rootName;
-
-        this.connectionLine = null;
-
-        this.setup(json);
-    }
-
-    checkType() {
-        //Do nothing
-    }
-
-    delete() {
-        this.connect(null);
-
-        this.html.remove();
-
-        this.updated();
-    }
-
-    setup(json) {
-        const self = this;
-
-        this.html = WebstrateComponents.Tools.loadTemplate("#mirrorverse-audio-router-rootNode");
-        this.html.audioRoutingNode = this;
-
-        this.setPosition(json.rootConnections[this.rootName].position);
-
-        let nodeId = json.rootConnections[this.rootName].connection;
-        if(nodeId != null) {
-            let decisionNode = new DecisionNode(nodeId, json, this.svg, this.updateCallback);
-            this.connect(decisionNode);
-        }
 
         let lineDragElement = null;
         let svgLine = null;
-
-        let connectionOut = this.html.querySelector(".connectionOut");
 
         this.setupDrag(connectionOut, (offsetX, offsetY, evt)=>{
             if(lineDragElement == null) {
@@ -875,6 +801,234 @@ class RootNode extends Node {
         });
     }
 
+    connect(node) {
+        if(node instanceof DecisionNode) {
+            //Check if node is our own parent
+            let ourNode = this.html.closest(".mirrorVerseAudioRouterNode")?.audioRoutingNode;
+
+            //Check if we would create a loop
+            let foundLoop = false;
+            function findLoop(testNode) {
+                if(testNode === ourNode) {
+                    foundLoop = true;
+                    return;
+                }
+
+                testNode.children.forEach((child)=>{
+                    //Decisions inside here, as we are children of a DecisionNode
+                    if(child.children.length > 0) {
+                        if(child.children[0] instanceof DecisionNode) {
+                            findLoop(child.children[0]);
+                        }
+                    }
+                })
+            }
+
+            findLoop(node);
+
+            if(foundLoop) {
+                console.log("Found loop, unable to connect:", node);
+                return;
+            }
+        }
+
+        //No loop continue
+
+        //Remove old connection out from us
+        if(this.connectionLine != null) {
+            this.connectionLine.remove();
+        }
+
+        let connectPoint = this.html;
+
+        if(this.connectionPoint != null) {
+            connectPoint = this.connectionPoint;
+        }
+
+        this.connectionLine = new SVGLine(connectPoint, node.html, this.svg, true);
+
+        this.updated();
+
+        this.onConnected(node);
+
+        node.onConnection(this);
+    }
+
+    onConnected(childNode) {
+        console.warn("Override in subclass [onConnected]:", this);
+    }
+
+    disconnect(child) {
+        const self = this;
+
+        if(this.connectionLine != null) {
+            this.connectionLine.remove();
+        }
+
+        this.onDisconnected(child);
+    }
+
+    onDisconnected(child) {
+        console.warn("Override in subclass [onDisconnected]", this);
+    }
+
+    disconnectAll() {
+        console.warn("Override in subclass [disconnectAll]:", this);
+    }
+
+    getNodeFromId(id) {
+        let foundNode = null;
+
+        for(let nodeElm of this.editor.playArea.querySelectorAll(".mirrorVerseAudioRouterNode")) {
+            if(nodeElm?.audioRoutingNode?.id === id) {
+                foundNode = nodeElm.audioRoutingNode;
+                break;
+            }
+        }
+
+        return foundNode;
+    }
+}
+
+class ValueNode extends Node {
+    constructor(nodeId, data, editor, updateCallback) {
+        super(editor, updateCallback);
+
+        this.id = nodeId;
+        this.type = data.type;
+        this.value = data.value;
+        this.position = data.position;
+
+        this.setup();
+        this.checkUnused();
+    }
+
+    checkType() {
+        const self = this;
+
+        let roots = this.findRootNodes();
+
+        this.html.classList.remove("error");
+
+        roots.forEach((root)=>{
+            if(root != null && root.rootName !== self.type) {
+                self.html.classList.add("error");
+            }
+        });
+    }
+
+    setup() {
+        const self = this;
+
+        this.html = WebstrateComponents.Tools.loadTemplate("#mirrorverse-audio-router-ValueNode");
+        this.html.audioRoutingNode = this;
+        this.html.querySelectorAll(".type").forEach((elm)=>{
+            elm.classList.add("hidden");
+        });
+
+        this.setPosition(this.position);
+
+        this.renderSelf(this.editor.playArea);
+
+        switch(this.type) {
+            case "muted":
+                this.html.querySelector(".type.muted").classList.remove("hidden");
+                this.html.querySelector(".type.muted input").checked = this.value;
+
+                this.html.querySelector(".type.muted input").addEventListener("change", ()=>{
+                    self.value = this.html.querySelector(".type.muted input").checked;
+                    self.updated();
+                });
+
+                break;
+            case "volume":
+                this.html.querySelector(".type.volume").classList.remove("hidden");
+                this.html.querySelector(".type.volume input").value = this.value;
+
+                this.html.querySelector(".type.volume input").addEventListener("change", ()=>{
+                    self.value = this.html.querySelector(".type.volume input").value;
+                    self.updated();
+                });
+
+                break;
+            case "audioFilter":
+                this.html.querySelector(".type.audioFilter").classList.remove("hidden");
+                this.html.querySelector(".type.audioFilter select").value = this.value;
+
+                this.html.querySelector(".type.audioFilter select").addEventListener("change", ()=>{
+                    self.value = this.html.querySelector(".type.audioFilter select").value;
+                    self.updated();
+                });
+
+                break;
+            default:
+                console.warn("Unknown ValueNode type:", this);
+        }
+    }
+
+    renderSelf(container) {
+        if(this.html.closest("html") == null) {
+            container.appendChild(this.html);
+        }
+    }
+
+    disconnectAll() {
+        //Do nothing
+    }
+}
+
+class RootNode extends Node {
+    constructor(rootName, json, editor, updateCallback) {
+        super(editor, updateCallback);
+
+        this.rootName = rootName;
+
+        this.connectionLine = null;
+
+        this.setup(json);
+    }
+
+    disconnectAll() {
+        if(this.children.length > 0) {
+            this.disconnect(this.children[0]);
+        }
+    }
+
+    onDisconnected() {
+        this.children = [];
+    }
+
+    checkUnused() {
+        //Do nothing
+    }
+
+    checkType() {
+        //Do nothing
+    }
+
+    setup(json) {
+        const self = this;
+
+        this.html = WebstrateComponents.Tools.loadTemplate("#mirrorverse-audio-router-rootNode");
+        this.html.audioRoutingNode = this;
+
+        this.setPosition(json.rootConnections[this.rootName].position);
+
+        this.connectionPoint = this.html.querySelector(".connectionOut");
+
+        let nodeId = json.rootConnections[this.rootName].connection;
+        if(nodeId != null) {
+            let decisionNode = this.getNodeFromId(nodeId);
+            if(decisionNode == null) {
+                decisionNode = new DecisionNode(nodeId, json, this.editor, this.updateCallback);
+            }
+
+            this.connect(decisionNode);
+        }
+
+        this.setupConnectionDragging(this.connectionPoint);
+    }
+
     renderSelf(container) {
         if(this.html.closest("html") == null) {
             container.appendChild(this.html);
@@ -883,32 +1037,14 @@ class RootNode extends Node {
         this.html.querySelector(".title").textContent = this.rootName;
     }
 
-    connect(decisionNode) {
-        if(decisionNode != null) {
-            decisionNode.disconnectFromParent();
-        }
-
-        if(this.connectionLine != null) {
-            this.connectionLine.remove();
-        }
-
-        this.children = [];
-
-        if(decisionNode != null) {
-            this.children.push(decisionNode);
-
-            this.connectionLine = new SVGLine(this.html.querySelector(".connectionOut"), decisionNode.html, this.svg, true);
-
-            decisionNode.onConnection(this);
-        }
-
-        this.updated();
+    onConnected(childNode) {
+        this.children = [childNode];
     }
 }
 
 class Decision extends Node {
-    constructor(decision, node, json, svg, updateCallback) {
-        super(svg, updateCallback);
+    constructor(decision, node, json, editor, updateCallback) {
+        super(editor, updateCallback);
 
         this.decision = decision;
         this.node = node;
@@ -916,14 +1052,14 @@ class Decision extends Node {
         this.setup(json);
     }
 
-    delete() {
-        this.connect(null);
-        this.html.remove();
-        this.updateCallback();
-    }
-
     checkType() {
-        let concept = VarvEngine.getConceptFromType(this.node.data.concept);
+        let conceptType = this.node.data.concept;
+
+        if(conceptType === "currentRoom") {
+            conceptType = "containerMirror";
+        }
+
+        let concept = VarvEngine.getConceptFromType(conceptType);
         let property = concept.getProperty(this.node.data.property);
 
         let type = property.type;
@@ -1013,144 +1149,49 @@ class Decision extends Node {
             self.updated();
         });
 
-        if(typeof this.decision.connection === "string") {
-            let connectionNode = new DecisionNode(this.decision.connection, json, this.svg, this.updateCallback);;
-            this.connect(connectionNode);
-        } else if(typeof this.decision.connection === "object" && this.decision.connection != null) {
-            let valueNode = new ValueNode(this.decision.connection.type, this.decision.connection.value, this.decision.connection.position, this.svg, this.updateCallback);
-            this.connect(valueNode);
+        this.connectionPoint = this.html.querySelector(".connectionOut");
+
+        if(this.decision.connection != null) {
+            let data = json.nodes[this.decision.connection];
+
+            let connectionNode = this.getNodeFromId(this.decision.connection);
+
+            if(connectionNode == null) {
+                if (data?.nodeType === "DecisionNode") {
+                    connectionNode = new DecisionNode(this.decision.connection, json, this.editor, this.updateCallback);
+                } else if (data?.nodeType === "ValueNode") {
+                    connectionNode = new ValueNode(this.decision.connection, data, this.editor, this.updateCallback);
+                }
+            }
+
+            if(connectionNode != null) {
+                this.connect(connectionNode);
+            }
         }
 
-        let lineDragElement = null;
-        let svgLine = null;
-
-        let connectionOut = this.html.querySelector(".connectionOut");
-
-        this.setupDrag(connectionOut, (offsetX, offsetY, evt)=>{
-            if(lineDragElement == null) {
-                lineDragElement = document.createElement("div");
-                lineDragElement.style.position = "absolute";
-                lineDragElement.style.display = "inline-block";
-                lineDragElement.style.height = "1em";
-                lineDragElement.style.width = "1em";
-                lineDragElement.style.backgroundColor = "lime";
-
-                let elementX = parseFloat(self.html.getAttribute("data-x"));
-                let elementY = parseFloat(self.html.getAttribute("data-y"));
-
-                if(isNaN(elementX)) {
-                    elementX = 0;
-                }
-
-                if(isNaN(elementY)) {
-                    elementY = 0;
-                }
-
-                lineDragElement.setAttribute("data-x", (elementX+evt.target.offsetLeft));
-                lineDragElement.setAttribute("data-y", (elementY+evt.target.offsetTop));
-
-                svgLine = new SVGLine(connectionOut, lineDragElement, self.svg);
-
-                self.html.parentNode.appendChild(lineDragElement);
-            }
-
-            let x = parseFloat(lineDragElement.getAttribute("data-x"));
-            let y = parseFloat(lineDragElement.getAttribute("data-y"));
-
-            if(isNaN(x)) {
-                x = 0;
-            }
-
-            if(isNaN(y)) {
-                y = 0;
-            }
-
-            x += offsetX;
-            y += offsetY;
-
-            lineDragElement.setAttribute("data-x", x);
-            lineDragElement.setAttribute("data-y", y);
-
-            lineDragElement.style.left = x + "px";
-            lineDragElement.style.top = y + "px";
-
-            //svgLine.redraw();
-        }, (evt)=>{
-            if(lineDragElement != null) {
-                lineDragElement.remove();
-                lineDragElement = null;
-            }
-
-            if(svgLine != null) {
-                svgLine.remove();
-                svgLine = null;
-            }
-
-            let possibleConnection = document.elementFromPoint(evt.clientX, evt.clientY);
-
-            if(possibleConnection != null) {
-                possibleConnection = possibleConnection.closest(".decisionConnectTarget");
-                if(possibleConnection != null) {
-                    let source = possibleConnection.audioRoutingNode;
-
-                    self.connect(source);
-                }
-            }
-        });
+        this.setupConnectionDragging(this.connectionPoint);
     }
 
-    connect(node) {
-        if(node instanceof DecisionNode) {
-            //Check if node is our own parent
-            let ourNode = this.html.closest(".mirrorVerseAudioRouterNode")?.audioRoutingNode;
-
-            //Check if we would create a loop
-            let foundLoop = false;
-            function findLoop(testNode) {
-                if(testNode === ourNode) {
-                    foundLoop = true;
-                    return;
-                }
-
-                testNode.children.forEach((child)=>{
-                    //Decisions inside here, as we are children of a DecisionNode
-                    if(child.children.length > 0) {
-                        if(child.children[0] instanceof DecisionNode) {
-                            findLoop(child.children[0]);
-                        }
-                    }
-                })
-            }
-
-            findLoop(node);
-
-            if(foundLoop) {
-                console.log("Found loop, unable to connect:", node);
-                return;
-            }
+    isConnected(child) {
+        if(this.children.length > 0) {
+            return this.children[0] === child;
         }
 
-        if(node != null) {
-            node.disconnectFromParent();
+        return false;
+    }
+
+    disconnectAll() {
+        if(this.children.length > 0) {
+            this.disconnect(this.children[0]);
         }
+    }
 
-        if(this.connectionLine != null) {
-            this.connectionLine.remove();
-        }
+    onConnected(childNode) {
+        this.children = [childNode];
+    }
 
-        this.decision.connection = null;
-
+    onDisconnected() {
         this.children = [];
-
-        if(node != null) {
-            this.children.push(node);
-
-            this.connectionLine = new SVGLine(this.html.querySelector(".connectionOut"), node.html, this.svg, true);
-
-            node.onConnection(this);
-        }
-
-        this.updated();
     }
 
     renderSelf(container) {
@@ -1159,51 +1200,35 @@ class Decision extends Node {
 }
 
 class DecisionNode extends Node {
-    constructor(nodeId, json, svg, updateCallback) {
-        super(svg, updateCallback);
+    constructor(nodeId, json, editor, updateCallback) {
+        super(editor, updateCallback);
 
         this.id = nodeId;
         this.data = json.nodes[this.id];
 
         this.setup(json);
+
+        this.checkUnused();
     }
 
-    checkType() {
-        //Do nothing
-    }
-
-    disconnectFromParent() {
+    disconnectAll() {
         const self = this;
 
-        this.svg.querySelectorAll("line").forEach((line) => {
-            if (line.svgLine.endElement === self.html) {
-                let audioRoutingNode = line.svgLine.startElement.closest(".mirrorVerseAudioRouterNode").audioRoutingNode;
-                if (audioRoutingNode instanceof DecisionNode) {
-                    audioRoutingNode.children.forEach((decision) => {
-                        if (decision.connectionLine === line.svgLine) {
-                            decision.connect(null);
-                        }
-                    });
-                } else if (audioRoutingNode instanceof RootNode) {
-                    audioRoutingNode.connect(null);
-                }
+        this.children.forEach((decision)=>{
+            decision.disconnectAll();
+        });
+    }
+
+    disconnect(child) {
+        this.children.forEach((decision)=>{
+            if(decision.isConnected(child)) {
+                decision.disconnect(child);
             }
         });
     }
 
-    delete() {
-        const self = this;
-
-        //Find connection and remove
-        this.disconnectFromParent();
-
-        this.children.forEach((decision)=>{
-            decision.connect(null);
-        });
-
-        this.html.remove();
-
-        this.updated();
+    checkType() {
+        //Do nothing
     }
 
     setup(json) {
@@ -1213,6 +1238,8 @@ class DecisionNode extends Node {
         this.html.audioRoutingNode = this;
 
         this.setPosition(this.data.position);
+
+        this.renderSelf(this.editor.playArea);
 
         let conceptSelect = this.html.querySelector(".concept select");
 
@@ -1230,12 +1257,12 @@ class DecisionNode extends Node {
         });
 
         this.data.decisions.forEach((decision)=>{
-            self.children.push(new Decision(decision, self, json, self.svg, self.updateCallback));
+            self.children.push(new Decision(decision, self, json, self.editor, self.updateCallback));
         })
 
         this.html.querySelector(".addDecision").addEventListener("click", ()=>{
             let fakeJson = {value: "", comparator: "equals"};
-            let decision = new Decision(fakeJson, self, json, self.svg, self.updateCallback);
+            let decision = new Decision(fakeJson, self, json, self.editor, self.updateCallback);
             self.children.push(decision);
             self.render(self.html.parentNode);
             self.updated();

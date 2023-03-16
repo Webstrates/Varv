@@ -1,5 +1,5 @@
 <template id="mirrorverse-audio-router-decisionNode">
-  <div class="mirrorVerseAudioRouterDecisionNode mirrorVerseAudioRouterNode connectionTarget decisionConnectTarget">
+  <div class="mirrorVerseAudioRouterDecisionNode mirrorVerseAudioRouterNode connectionTarget draggable">
     <div class="name">Name: <input type="text"></div>
     <div class="hidden">Id: <span class="id"></span></div>
     <div class="concept">Concept: <select>
@@ -16,14 +16,14 @@
   </div>
 </template>
 <template id="mirrorverse-audio-router-rootNode">
-  <div class="mirrorVerseAudioRouterRootNode mirrorVerseAudioRouterNode">
+  <div class="mirrorVerseAudioRouterRootNode mirrorVerseAudioRouterNode draggable">
     <div class="title"></div>
     <div class="connectionOut"></div>
   </div>
 </template>
 
 <template id="mirrorverse-audio-router-ValueNode">
-  <div class="mirrorVerseAudioRouterValueNode mirrorVerseAudioRouterNode decisionConnectTarget">
+  <div class="mirrorVerseAudioRouterValueNode mirrorVerseAudioRouterNode connectionTarget draggable">
     <div class="muted type">Muted: <input type="checkbox"></div>
     <div class="volume type">Volume: <input type="number" min="0" max="1" step="0.01"></div>
     <div class="audioFilter type">Filter: <select><option value="none">none</option><option value="muffled">muffled</option><option value="overdrive">overdrive</option></select></div>

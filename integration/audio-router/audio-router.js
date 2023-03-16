@@ -4,8 +4,8 @@ class MirrorVerseAudioRouter {
 
         let usedNames = new Set();
 
-        function getUniqueId(nodeData) {
-            let uniqueId = nodeData.id;
+        function getUniqueId(nodeId, nodeData) {
+            let uniqueId = nodeId;
 
             if(nodeData.name != null && nodeData.name.length > 0) {
                 uniqueId = nodeData.name;
@@ -30,15 +30,18 @@ class MirrorVerseAudioRouter {
 
             if(typeof connection === "string") {
                 let nodeData = json.nodes[connection];
-                let uniqueId = getUniqueId(nodeData);
+                let uniqueId = getUniqueId(connection, nodeData);
 
-                connectionActions.push(uniqueId+"NodeIn");
-                createDecisionNode(nodeData, uniqueId, rootName);
-            } else {
-                connectionActions.push("selectOriginalAudioStream");
-                let setAction = {"set":{}};
-                setAction.set[rootName] = connection.value;
-                connectionActions.push(setAction);
+                if(nodeData.nodeType === "DecisionNode") {
+                    connectionActions.push(uniqueId+"NodeIn");
+                    createDecisionNode(nodeData, uniqueId, rootName);
+                } else {
+                    //Value node
+                    connectionActions.push("selectOriginalAudioStream");
+                    let setAction = {"set":{}};
+                    setAction.set[rootName] = nodeData.value;
+                    connectionActions.push(setAction);
+                }
             }
         }
 
@@ -95,7 +98,7 @@ class MirrorVerseAudioRouter {
 
                     if(json.nodes != null) {
                         let nodeData = json.nodes[nodeId];
-                        let uniqueId = getUniqueId(nodeData);
+                        let uniqueId = getUniqueId(nodeId, nodeData);
 
                         let actionKey = rootName + "RootConnection";
                         outputVarv.concepts.audioManager.actions[actionKey] = [

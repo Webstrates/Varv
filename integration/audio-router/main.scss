@@ -21,6 +21,14 @@ svg.mirrorverse-audio-router-maximized {
   align-items: center;
   position: absolute;
   gap: 0.25em;
+
+  &.mirrorVerseUnused {
+    opacity: 0.5;
+  }
+
+  &.error {
+    border-color: orangered;
+  }
 }
 
 .mirrorVerseAudioRouterValueNode {
