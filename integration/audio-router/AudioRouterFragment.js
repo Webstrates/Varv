@@ -7,6 +7,13 @@ class AudioRouterFragment extends Fragment {
     }
 
     async require(options = {}) {
+        let defaultOptions = {
+            pretty: false,
+            auto: true
+        }
+
+        options = Object.assign({}, defaultOptions, options);
+
         let fragment = Fragment.create(ConceptDefinitionFragment.type());
 
         let json = null;
@@ -23,7 +30,7 @@ class AudioRouterFragment extends Fragment {
         } else {
             fragment.raw = JSON.stringify(MirrorVerseAudioRouter.toVarv(json));
         }
-        fragment.auto = true;
+        fragment.auto = options.auto;
 
         return fragment.html[0];
     }

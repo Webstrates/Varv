@@ -120,22 +120,28 @@ class MirrorVerseAudioRouter {
     static concepts() {
         return {
             "client": [
-                    "name",
-                    "local",
-                    "muted",
-                    "logicalDistance",
-                    "logicalVolume",
-                    "analyserVolume",
-                    "inHoveredRoom",
-                    "distance"
+                "name",
+                "local",
+                "muted",
+                "logicalDistance",
+                "logicalVolume",
+                "analyserVolume",
+                "inHoveredRoom",
+                "distance",
+                "onPedestal",
+                "whisperTarget"
             ],
             "currentRoom": [
                 "name",
                 "audioFilter"
             ],
             "toolManager": [
-                "listeningIn",
-                "gather"
+                "listeningInActive",
+                "listeningInHoveredExists",
+                "gatherActive",
+                "whisperActive",
+                "whisperTargeted",
+                "whisperTargetedBy"
             ]
         }
     }

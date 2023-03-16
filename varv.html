@@ -22346,22 +22346,28 @@ class MirrorVerseAudioRouter {
     static concepts() {
         return {
             "client": [
-                    "name",
-                    "local",
-                    "muted",
-                    "logicalDistance",
-                    "logicalVolume",
-                    "analyserVolume",
-                    "inHoveredRoom",
-                    "distance"
+                "name",
+                "local",
+                "muted",
+                "logicalDistance",
+                "logicalVolume",
+                "analyserVolume",
+                "inHoveredRoom",
+                "distance",
+                "onPedestal",
+                "whisperTarget"
             ],
             "currentRoom": [
                 "name",
                 "audioFilter"
             ],
             "toolManager": [
-                "listeningIn",
-                "gather"
+                "listeningInActive",
+                "listeningInHoveredExists",
+                "gatherActive",
+                "whisperActive",
+                "whisperTargeted",
+                "whisperTargetedBy"
             ]
         }
     }
@@ -22380,6 +22386,13 @@ class AudioRouterFragment extends Fragment {
     }
 
     async require(options = {}) {
+        let defaultOptions = {
+            pretty: false,
+            auto: true
+        }
+
+        options = Object.assign({}, defaultOptions, options);
+
         let fragment = Fragment.create(ConceptDefinitionFragment.type());
 
         let json = null;
@@ -22396,7 +22409,7 @@ class AudioRouterFragment extends Fragment {
         } else {
             fragment.raw = JSON.stringify(MirrorVerseAudioRouter.toVarv(json));
         }
-        fragment.auto = true;
+        fragment.auto = options.auto;
 
         return fragment.html[0];
     }
@@ -23875,7 +23888,8 @@ MenuSystem.MenuManager.registerMenuItem("Cauldron.Editor.Toolbar", {
     onAction: (menuItem) => {
         let fragment = menuItem.menu.context;
 
-        fragment.require({pretty: true}).then((codeFragment)=>{
+        fragment.require({pretty: true, auto: false}).then((codeFragment)=>{
+            codeFragment.auto = false;
             WPMv2.stripProtection(codeFragment);
             fragment.html[0].parentNode.insertBefore(codeFragment, fragment.html[0].nextElementSibling);
         }).catch((e)=>{
@@ -24009,7 +24023,7 @@ svg.mirrorverse-audio-router-maximized {
         <option value="lessOrEquals">&lt;=</option>
       </select>
       <input type="text" class="string">
-      <input type="number" min="0" max="1" step="0.01" class="number">
+      <input type="number" class="number">
     </div>
     <div class="boolean">
       <select class="value">

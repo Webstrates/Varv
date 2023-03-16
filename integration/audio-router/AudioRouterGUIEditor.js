@@ -1400,7 +1400,8 @@ MenuSystem.MenuManager.registerMenuItem("Cauldron.Editor.Toolbar", {
     onAction: (menuItem) => {
         let fragment = menuItem.menu.context;
 
-        fragment.require({pretty: true}).then((codeFragment)=>{
+        fragment.require({pretty: true, auto: false}).then((codeFragment)=>{
+            codeFragment.auto = false;
             WPMv2.stripProtection(codeFragment);
             fragment.html[0].parentNode.insertBefore(codeFragment, fragment.html[0].nextElementSibling);
         }).catch((e)=>{
