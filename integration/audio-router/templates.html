@@ -32,7 +32,46 @@
 
 <template id="mirrorverse-audio-router-decision">
   <div class="decision">
-    <div class="select">
+    <div class="array type">
+      <select class="comparator">
+        <option value="equals">includes</option>
+      </select>
+      <div class="concept string arrayType">
+        <input type="text" class="value">
+      </div>
+      <div class="number arrayType">
+        <input type="number" class="value">
+      </div>
+      <div class="boolean arrayType">
+        <select class="value">
+          <option value="true">true</option>
+          <option value="false">false</option>
+        </select>
+      </div>
+    </div>
+    <div class="concept type">
+      <select class="comparator">
+        <option value="equals">==</option>
+        <option value="unequals">!=</option>
+      </select>
+      <input type="text" class="value">
+    </div>
+    <div class="string type">
+      <select class="comparator">
+        <option value="equals">==</option>
+        <option value="unequals">!=</option>
+        <option value="greaterThan">&gt;</option>
+        <option value="lessThan">&lt;</option>
+        <option value="greaterOrEquals">&gt;=</option>
+        <option value="lessOrEquals">&lt;=</option>
+        <option value="startsWith">startsWith</option>
+        <option value="endsWith">endsWith</option>
+        <option value="includes">includes</option>
+        <option value="matches">matches</option>
+      </select>
+      <input type="text" class="value">
+    </div>
+    <div class="number type">
       <select class="comparator">
         <option value="equals">==</option>
         <option value="unequals">!=</option>
@@ -41,10 +80,9 @@
         <option value="greaterOrEquals">&gt;=</option>
         <option value="lessOrEquals">&lt;=</option>
       </select>
-      <input type="text" class="string">
-      <input type="number" class="number">
+      <input type="number" class="value">
     </div>
-    <div class="boolean">
+    <div class="boolean type">
       <select class="value">
         <option value="true">true</option>
         <option value="false">false</option>

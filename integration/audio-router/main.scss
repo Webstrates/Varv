@@ -66,35 +66,14 @@ svg.mirrorverse-audio-router-maximized {
         background-color: #4D7A97;
       }
 
-      .select {
+      .type {
+
+        &.array:not(.hidden) {
+          display: flex;
+        }
+
         input {
           width: 3.5em;
-        }
-      }
-
-      &[data-type='boolean'] {
-        .select {
-          display: none;
-        }
-      }
-
-      &[data-type='number'] {
-        .boolean {
-          display: none;
-        }
-
-        .string {
-          display: none;
-        }
-      }
-
-      &[data-type='string'] {
-        .boolean {
-          display: none;
-        }
-
-        .number {
-          display: none;
         }
       }
     }

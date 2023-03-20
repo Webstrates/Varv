@@ -1063,20 +1063,43 @@ class Decision extends Node {
         let property = concept.getProperty(this.node.data.property);
 
         let type = property.type;
+        let arrayType = null;
+
+        if(property.isConceptType()) {
+            type = "concept";
+        }
+
+        if(type === "array") {
+            arrayType = property.getArrayType();
+
+            if(property.isConceptArrayType()) {
+                arrayType = "concept";
+            }
+        }
 
         let oldType = this.html.getAttribute("data-type");
 
         if(oldType !== type) {
+            console.log("Setting property type:", type, arrayType, this.html.querySelector("."+type+" .value"));
+
             this.html.setAttribute("data-type", type);
+
+            this.html.querySelectorAll(".type, .arrayType").forEach((elm)=>{
+                elm.classList.add("hidden");
+            });
+
+            this.html.querySelectorAll(".type."+type).forEach((elm)=>{
+                elm.classList.remove("hidden");
+            });
 
             switch (type) {
                 case "boolean": {
                     this.decision.comparator = "equals";
-                    this.html.querySelector(".boolean .value").value = this.decision.value;
-                    let value = this.html.querySelector(".boolean .value").value === "true";
+                    this.html.querySelector(".boolean:not(.hidden) .value").value = this.decision.value;
+                    let value = this.html.querySelector(".boolean:not(.hidden) .value").value === "true";
 
                     //If we dont have a correct value, default to true
-                    this.html.querySelector(".boolean .value").value = value;
+                    this.html.querySelector(".boolean:not(.hidden) .value").value = value;
 
                     this.decision.value = value;
 
@@ -1084,14 +1107,14 @@ class Decision extends Node {
                 }
 
                 case "number": {
-                    this.html.querySelector(".select .number").value = this.decision.value;
-                    this.html.querySelector(".select .comparator").value = this.decision.comparator;
+                    this.html.querySelector(".number:not(.hidden) .value").value = this.decision.value;
+                    this.html.querySelector(".number:not(.hidden) .comparator").value = this.decision.comparator;
 
-                    let value = parseFloat(this.html.querySelector(".select .number").value);
+                    let value = parseFloat(this.html.querySelector(".number:not(.hidden) .value").value);
 
                     if(isNaN(value) || value == null) {
                         value = 1.0;
-                        this.html.querySelector(".select .number").value = 1.0;
+                        this.html.querySelector(".number:not(.hidden) .value").value = 1.0;
                     }
 
                     this.decision.value = value;
@@ -1100,13 +1123,80 @@ class Decision extends Node {
                 }
 
                 case "string": {
-                    this.html.querySelector(".select .string").value = this.decision.value;
-                    this.html.querySelector(".select .comparator").value = this.decision.comparator;
+                    console.log("String!");
+                    this.html.querySelector(".string:not(.hidden) .value").value = this.decision.value;
+                    this.html.querySelector(".string:not(.hidden) .comparator").value = this.decision.comparator;
+                    break;
+                }
+
+                case "concept": {
+                    this.html.querySelector(".concept:not(.hidden) .value").value = this.decision.value;
+                    this.html.querySelector(".concept:not(.hidden) .comparator").value = this.decision.comparator;
+                    break;
+                }
+
+                case "array": {
+                    this.html.querySelectorAll(".arrayType."+arrayType).forEach((elm)=>{
+                        elm.classList.remove("hidden");
+                    });
+
+                    this.decision.comparator = "includes";
+
+                    switch(arrayType) {
+                        case "boolean": {
+                            this.html.querySelector(".array .boolean .value").value = this.decision.value;
+                            let value = this.html.querySelector(".array .boolean .value").value === "true";
+
+                            //If we dont have a correct value, default to true
+                            this.html.querySelector(".array .boolean .value").value = value;
+
+                            this.decision.value = value;
+
+                            break;
+                        }
+
+                        case "number": {
+                            this.html.querySelector(".array .number .value").value = this.decision.value;
+
+                            let value = parseFloat(this.html.querySelector(".array .number .value").value);
+
+                            if(isNaN(value) || value == null) {
+                                value = 1.0;
+                                this.html.querySelector(".array .number .value").value = 1.0;
+                            }
+
+                            this.decision.value = value;
+
+                            break;
+                        }
+
+                        case "string": {
+                            this.html.querySelector(".array .string .value").value = this.decision.value;
+                            break;
+                        }
+
+                        case "concept": {
+                            this.html.querySelector(".array .concept .value").value = this.decision.value;
+                            break;
+                        }
+
+                        default:
+                            console.warn("Unknown array type:", arrayType);
+                    }
+
                     break;
                 }
 
                 default:
                     console.warn("Unknown proprety type:", type);
+            }
+
+            let currentComparator = this.html.querySelector(".type:not(.hidden) .comparator");
+
+            if(currentComparator?.value === "") {
+                currentComparator.selectedIndex = 0;
+                this.decision.comparator = currentComparator.value;
+                console.log("Reset comparator to:", this.decision.comparator);
             }
 
             this.updated();
@@ -1121,32 +1211,31 @@ class Decision extends Node {
 
         this.checkType();
 
-        this.html.querySelector(".boolean .value").addEventListener("change", ()=>{
-            self.decision.value = self.html.querySelector(".boolean .value").value;
-            self.updated();
+        this.html.querySelectorAll(".boolean .value, .string .value, .concept .value").forEach((elm)=>{
+            elm.addEventListener("change", ()=>{
+                console.log("Value changed:", elm, elm.value);
+                self.decision.value = elm.value;
+                self.updated();
+            });
         });
 
-        this.html.querySelector(".select .number").addEventListener("change", ()=>{
-            let value = parseFloat(self.html.querySelector(".select .number").value);
+        this.html.querySelectorAll(".number .value").forEach((elm)=>{
+            elm.addEventListener("change", ()=>{
+                let value = parseFloat(elm.value);
 
-            if(value < 0) {
-                value = 0;
-                self.html.querySelector(".select .number").value = value;
-            } else if(value > 1) {
-                value = 1;
-                self.html.querySelector(".select .number").value = value;
-            }
+                console.log("Value changed:", elm, value);
 
-            self.decision.value = value;
-            self.updated();
+                self.decision.value = value;
+                self.updated();
+            });
         });
-        this.html.querySelector(".select .string").addEventListener("change", ()=>{
-            self.decision.value = self.html.querySelector(".select .string").value;
-            self.updated();
-        });
-        this.html.querySelector(".select .comparator").addEventListener("change", ()=>{
-            self.decision.comparator = self.html.querySelector(".select .comparator").value;
-            self.updated();
+
+        this.html.querySelectorAll(".comparator").forEach((comparatorElm)=>{
+            comparatorElm.addEventListener("change", (evt)=>{
+                console.log("Comparator changed:", evt);
+                self.decision.comparator = evt.target.value;
+                self.updated();
+            });
         });
 
         this.connectionPoint = this.html.querySelector(".connectionOut");
