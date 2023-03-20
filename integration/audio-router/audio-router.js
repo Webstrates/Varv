@@ -3,8 +3,14 @@ class MirrorVerseAudioRouter {
         let outputVarv = {"concepts": {"audioManager":{"actions":{}}}};
 
         let usedNames = new Set();
+        let uniqueIdMap = new Map();
+        let alreadySetup = new Set();
 
         function getUniqueId(nodeId, nodeData) {
+            if(uniqueIdMap.has(nodeId)) {
+                return uniqueIdMap.get(nodeId);
+            }
+
             let uniqueId = nodeId;
 
             if(nodeData.name != null && nodeData.name.length > 0) {
@@ -20,20 +26,27 @@ class MirrorVerseAudioRouter {
             }
 
             usedNames.add(uniqueId);
+            uniqueIdMap.set(nodeId, uniqueId);
 
             return uniqueId;
         }
 
-        function createConnectionNode(uniqueId, index, connection, rootName) {
+        function createConnectionNode(uniqueId, index, nodeId, rootName) {
             let connectionActions = [];
             outputVarv.concepts.audioManager.actions[uniqueId+"NodeConnection"+index] = connectionActions;
 
-            if(typeof connection === "string") {
-                let nodeData = json.nodes[connection];
-                let uniqueId = getUniqueId(connection, nodeData);
+            if(typeof nodeId === "string") {
+                let nodeData = json.nodes[nodeId];
+                let uniqueId = getUniqueId(nodeId, nodeData);
 
                 if(nodeData.nodeType === "DecisionNode") {
                     connectionActions.push(uniqueId+"NodeIn");
+
+                    if(alreadySetup.has(nodeId)) {
+                        return;
+                    }
+                    alreadySetup.add(nodeId);
+
                     createDecisionNode(nodeData, uniqueId, rootName);
                 } else {
                     //Value node
