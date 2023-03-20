@@ -20,11 +20,79 @@ class AudioRouterGUIEditor extends Editor {
 
         this.playArea = document.createElement("div");
         this.playArea.classList.add("mirrorverse-audio-router-maximized");
-        this.playArea.classList.add("mirrorverse-audio-router");
+        //this.playArea.classList.add("mirrorverse-audio-router");
         this.svgArea = document.createElementNS('http://www.w3.org/2000/svg', "svg");
         this.svgArea.classList.add("mirrorverse-audio-router-maximized");
         this.editorDiv[0].appendChild(this.playArea);
         this.editorDiv[0].appendChild(this.svgArea);
+
+        let lastDragPosition = null;
+
+        this.playArea.addEventListener("pointerdown", (evt)=>{
+            if(evt.button === 0) {
+                evt.stopPropagation();
+                lastDragPosition = {
+                    x: evt.clientX,
+                    y: evt.clientY
+                }
+            }
+        });
+
+        document.addEventListener("pointermove", (evt)=>{
+            if(lastDragPosition != null) {
+                evt.stopPropagation();
+
+                let offsetX = evt.clientX - lastDragPosition.x;
+                let offsetY = evt.clientY - lastDragPosition.y;
+
+                let x = parseFloat(self.playArea.getAttribute("data-x"));
+                let y = parseFloat(self.playArea.getAttribute("data-y"));
+
+                if (isNaN(x)) {
+                    x = 0;
+                }
+
+                if (isNaN(y)) {
+                    y = 0;
+                }
+
+                x += offsetX;
+                y += offsetY;
+
+                if(x > 2500) {
+                    x = 2500;
+                }
+
+                if(x < -2500) {
+                    x = -2500;
+                }
+
+                if(y > 2500) {
+                    y = 2500;
+                }
+
+                if(y < -2500) {
+                    y = -2500;
+                }
+
+                self.playArea.setAttribute("data-x", x);
+                self.playArea.setAttribute("data-y", y);
+
+                self.playArea.style.left = x + "px";
+                self.playArea.style.top = y + "px";
+
+                lastDragPosition = {
+                    x: evt.clientX,
+                    y: evt.clientY
+                }
+            }
+        });
+
+        document.addEventListener("pointerup", (evt)=>{
+            if(evt.button === 0) {
+                lastDragPosition = null;
+            }
+        });
 
         function makeId(length) {
             let result = '';
@@ -1038,6 +1106,10 @@ class RootNode extends Node {
     }
 
     onConnected(childNode) {
+        if(! (childNode instanceof DecisionNode)) {
+            this.disconnect(childNode);
+            return;
+        }
         this.children = [childNode];
     }
 }
