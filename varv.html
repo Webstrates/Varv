@@ -22278,6 +22278,13 @@ class MirrorVerseAudioRouter {
                     //Value node
                     connectionActions.push("selectOriginalAudioStream");
                     let setAction = {"set":{}};
+
+                    let value = nodeData.value;
+
+                    if(rootName === "volume") {
+                        value = parseFloat(value);
+                    }
+
                     setAction.set[rootName] = nodeData.value;
                     connectionActions.push(setAction);
                 }
@@ -23518,7 +23525,16 @@ class ValueNode extends Node {
                 this.html.querySelector(".type.volume input").value = this.value;
 
                 this.html.querySelector(".type.volume input").addEventListener("change", ()=>{
-                    self.value = this.html.querySelector(".type.volume input").value;
+                    self.value = parseFloat(this.html.querySelector(".type.volume input").value);
+
+                    if(self.value > 1) {
+                        self.value = 1;
+                    }
+
+                    if(self.value < 0) {
+                        self.value = 0;
+                    }
+
                     self.updated();
                 });
 

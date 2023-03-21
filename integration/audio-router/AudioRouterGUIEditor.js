@@ -1014,7 +1014,16 @@ class ValueNode extends Node {
                 this.html.querySelector(".type.volume input").value = this.value;
 
                 this.html.querySelector(".type.volume input").addEventListener("change", ()=>{
-                    self.value = this.html.querySelector(".type.volume input").value;
+                    self.value = parseFloat(this.html.querySelector(".type.volume input").value);
+
+                    if(self.value > 1) {
+                        self.value = 1;
+                    }
+
+                    if(self.value < 0) {
+                        self.value = 0;
+                    }
+
                     self.updated();
                 });
 

@@ -52,6 +52,13 @@ class MirrorVerseAudioRouter {
                     //Value node
                     connectionActions.push("selectOriginalAudioStream");
                     let setAction = {"set":{}};
+
+                    let value = nodeData.value;
+
+                    if(rootName === "volume") {
+                        value = parseFloat(value);
+                    }
+
                     setAction.set[rootName] = nodeData.value;
                     connectionActions.push(setAction);
                 }
