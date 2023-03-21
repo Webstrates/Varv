@@ -22667,6 +22667,76 @@ class AudioRouterGUIEditor extends Editor {
         this.menuItems = [];
 
         this.menuItems.push(MenuSystem.MenuManager.registerMenuItem("mirrorverse-audio-router-playAreaContext"+menuId, {
+            label: "Recenter View",
+            icon: IconRegistry.createIcon("mdc:zoom_in_map"),
+            group: "View",
+            groupOrder: 0,
+            order: 0,
+            onAction: (evt)=>{
+                self.playArea.setAttribute("data-x", 0);
+                self.playArea.setAttribute("data-y", 0);
+
+                self.playArea.style.left = "0px";
+                self.playArea.style.top = "0px";
+            }
+        }));
+        this.menuItems.push(MenuSystem.MenuManager.registerMenuItem("mirrorverse-audio-router-playAreaContext"+menuId, {
+            label: "Recenter Nodes",
+            icon: IconRegistry.createIcon("mdc:shuffle"),
+            group: "View",
+            groupOrder: 0,
+            order: 0,
+            onAction: (evt)=>{
+                let audioNodes = self.playArea.querySelectorAll(".mirrorVerseAudioRouterNode");
+
+                let minX = 9999999999999;
+                let minY = 9999999999999;
+
+                let maxX = -9999999999999;
+                let maxY = -9999999999999;
+
+                audioNodes.forEach((elm)=>{
+                    if(elm.hasAttribute("data-x")) {
+                        let x = parseFloat(elm.getAttribute("data-x")) + elm.offsetWidth / 2.0;
+                        let y = parseFloat(elm.getAttribute("data-y")) + elm.offsetHeight / 2.0;
+                        minX = Math.min(minX, x);
+                        minY = Math.min(minY, y);
+                        maxX = Math.max(maxX, x);
+                        maxY = Math.max(maxY, y);
+                    }
+                });
+
+                let centerX = minX + (maxX - minX) / 2.0;
+                let centerY = minY + (maxY - minY) / 2.0;
+
+                let editorCoreDiv = self.playArea.closest(".codestrates-editor-core");
+
+                let centerViewX = Math.floor(2500 + editorCoreDiv.offsetWidth / 2.0);
+                let centerViewY = Math.floor(2500 + editorCoreDiv.offsetHeight / 2.0);
+
+                let offsetX = centerViewX - centerX;
+                let offsetY = centerViewY - centerY;
+
+                console.log("Center view:", centerViewX, centerViewY, centerX, centerY, offsetX, offsetY);
+
+                audioNodes.forEach((elm)=>{
+                    if(elm.hasAttribute("data-x")) {
+                        let x = parseFloat(elm.getAttribute("data-x"));
+                        let y = parseFloat(elm.getAttribute("data-y"));
+                        x += offsetX;
+                        y += offsetY;
+
+                        elm.setAttribute("data-x", x);
+                        elm.setAttribute("data-y", y);
+
+                        elm.style.left = x+"px";
+                        elm.style.top = y+"px";
+                    }
+                });
+            }
+        }));
+
+        this.menuItems.push(MenuSystem.MenuManager.registerMenuItem("mirrorverse-audio-router-playAreaContext"+menuId, {
             label: "Insert Decision Node",
             icon: IconRegistry.createIcon("mdc:schema"),
             group: "DecisionNode",
@@ -22710,7 +22780,7 @@ class AudioRouterGUIEditor extends Editor {
                 label: "Insert "+rootName+" root node",
                 icon: IconRegistry.createIcon(icon),
                 group: "RootNode",
-                groupOrder: 0,
+                groupOrder: 5,
                 order: 0,
                 onAction: (evt)=>{
                     let fakeJson = {
