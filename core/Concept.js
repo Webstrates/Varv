@@ -295,6 +295,10 @@ class Concept {
 
         await this.created(wantedUUID);
 
+        for (let callback of this.appearedCallbacks) {
+            await callback(wantedUUID, this);
+        }
+
         VarvPerformance.stop("Concept.create", mark);
 
         return wantedUUID;

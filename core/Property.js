@@ -703,21 +703,25 @@ class Property {
     }
 
     getValue(uuid, forceDerivedReload) {
+        const self = this;
+
         let mark = VarvPerformance.start();
 
         if(this.derived != null) {
             return new Promise(async (resolve, reject)=>{
-                const derivedOldValue = this.derivedOldValues.get(uuid);
+                const derivedOldValue = self.derivedOldValues.get(uuid);
 
                 if(typeof derivedOldValue !== "undefined" && !forceDerivedReload) {
                     resolve(derivedOldValue);
                 }
 
                 try {
-                    const derivedValue = await this.deriveValue(uuid);
-                    this.derivedOldValues.set(uuid, derivedValue);
-                    if (typeof derivedOldValue === "undefined" || !this.isSame(derivedValue, derivedOldValue)) {
-                        await this.updated(uuid, derivedValue, false);
+                    const derivedValue = await self.deriveValue(uuid);
+                    self.derivedOldValues.set(uuid, derivedValue);
+
+
+                    if (typeof derivedOldValue === "undefined" || !self.isSame(derivedValue, derivedOldValue)) {
+                        await self.updated(uuid, derivedValue, false);
                     }
 
                     VarvPerformance.stop("Property.getValue.derived", mark);
