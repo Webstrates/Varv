@@ -22375,34 +22375,38 @@ class MirrorVerseAudioRouter {
     }
 
     static concepts() {
-        return {
-            "client": [
-                "name",
-                "local",
-                "muted",
-                "logicalDistance",
-                "logicalVolume",
-                "analyserVolume",
-                "inHoveredRoom",
-                "distance",
-                "onPedestal",
-                "whisperTarget"
-            ],
-            "currentRoom": [
-                "name",
-                "audioFilter"
-            ],
-            "toolManager": [
-                "listeningInActive",
-                "listeningInHoveredExists",
-                "gatherActive",
-                "whisperActive",
-                "whisperTargeted",
-                "whisperTargetedBy"
-            ]
-        }
+        return Object.assign({}, MirrorVerseAudioRouter.conceptPropertyList);
     }
 }
+
+MirrorVerseAudioRouter.conceptPropertyList = {
+    "client": [
+        "name",
+        "local",
+        "muted",
+        "logicalDistance",
+        "logicalVolume",
+        "analyserVolume",
+        "inHoveredRoom",
+        "distance",
+        "onPedestal",
+        "whisperTarget",
+        "broadcasting"
+    ],
+    "currentRoom": [
+        "name",
+        "audioFilter"
+    ],
+    "toolManager": [
+        "listeningInActive",
+        "listeningInHoveredExists",
+        "gatherActive",
+        "whisperActive",
+        "whisperTargeted",
+        "whisperTargetedBy"
+    ]
+};
+
 window.MirrorVerseAudioRouter = MirrorVerseAudioRouter;
 
 </script>
