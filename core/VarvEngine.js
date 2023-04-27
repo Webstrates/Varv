@@ -1263,14 +1263,22 @@ VarvEngine.lookupTargetCache = new Map();
 
 window.VarvEngine = VarvEngine;
 
-wpm.onAllInstalled(async ()=>{
-    if(typeof Fragment !== "undefined") {    
-        Fragment.addAllFragmentsLoadedCallback(async ()=>{
-            console.log("Starting VarvEngine with Codestrates");
+const urlParams = new URLSearchParams(location.search);
+window.VarvEngine.disabled = (urlParams.get("varv") === "false");
+
+if(!window.VarvEngine.disabled) {
+    wpm.onAllInstalled(async ()=>{
+        if(typeof Fragment !== "undefined") {
+            Fragment.addAllFragmentsLoadedCallback(async ()=>{
+                console.log("Starting VarvEngine with Codestrates");
+                await VarvEngine.init();
+            });
+        } else {
+            console.log("Starting VarvEngine");
             await VarvEngine.init();
-        });
-    } else {
-        console.log("Starting VarvEngine");
-        await VarvEngine.init();
-    };
-});
+        };
+    });
+} else {
+    console.log("Varv disabled!");
+}
+
