@@ -164,6 +164,13 @@ class Property {
                                     lookupResult.property.addUpdatedCallback(resetFunction);
                                 }
                             }
+                        }).catch((e)=>{
+                            console.groupCollapsed("Error in derived property ["+this.name+"]");
+                            console.log("Unable to setup property update callback for property:", propertyName);
+                            console.log("Error:", e);
+                            console.log("Derived property:", this);
+                            console.log("Concept:", concept);
+                            console.groupEnd();
                         });
                     });
                 } catch(e) {

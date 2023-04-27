@@ -729,32 +729,36 @@ class VarvEngine {
             throw new Error("Only able to lookup actions of the form 'actionname' or 'concept.actionname'");
         }
 
-        if(conceptName != null) {
-            if(VarvEngine.DEBUG || DEBUG_LOOKUP_PROPERTY) {
+        if (conceptName != null) {
+            if (VarvEngine.DEBUG || DEBUG_LOOKUP_PROPERTY) {
                 console.log("Lookup of form concept.property...", conceptName, propertyName);
             }
 
             let lookupConcept = VarvEngine.getConceptFromType(conceptName);
 
-            if(conceptName === "lastTarget") {
+            if (conceptName === "lastTarget") {
                 console.warn("Should never see this (conceptName === 'lastTarget') ?????");
             }
 
-            if(lookupConcept != null) {
+            if (lookupConcept != null) {
                 let lookupProperty = lookupConcept.getProperty(propertyName);
 
-                if(lookupProperty != null) {
+                if (lookupProperty != null) {
 
                     let lookupTarget = null;
 
-                    if(contextTarget != null && (await VarvEngine.getConceptFromUUID(contextTarget)).isA(conceptName)) {
-                        //The current target was of this concept, lets assume that is the wanted target?
-                        lookupTarget = contextTarget;
-                    } else {
-                        lookupTarget = await VarvEngine.lookupTarget(lookupConcept);
+                    try {
+                        if (contextTarget != null && (await VarvEngine.getConceptFromUUID(contextTarget)).isA(conceptName)) {
+                            //The current target was of this concept, lets assume that is the wanted target?
+                            lookupTarget = contextTarget;
+                        } else {
+                            lookupTarget = await VarvEngine.lookupTarget(lookupConcept);
+                        }
+                    } catch(e) {
+                        //Ignore for now?
                     }
 
-                    if(VarvEngine.DEBUG || DEBUG_LOOKUP_PROPERTY) {
+                    if (VarvEngine.DEBUG || DEBUG_LOOKUP_PROPERTY) {
                         console.log("Found concept.property, ", lookupProperty, lookupConcept, lookupTarget);
                         console.groupEnd();
                     }
@@ -778,10 +782,10 @@ class VarvEngine {
 
                     return result;
                 } else {
-                    throw new Error("Lookup property on ["+split.join(".")+"], property does not exist: "+propertyName);
+                    throw new Error("Lookup property on [" + split.join(".") + "], property does not exist: " + propertyName);
                 }
             } else {
-                throw new Error("Lookup property on ["+split.join(".")+"], concept does not exist: "+conceptName);
+                throw new Error("Lookup property on [" + split.join(".") + "], concept does not exist: " + conceptName);
             }
         }
 
@@ -830,10 +834,17 @@ class VarvEngine {
 
             VarvPerformance.stop("VarvEngine.lookupProperty.localConcept", mark);
 
+            let target = null;
+            try {
+                target = await VarvEngine.lookupTarget(localConcept)
+            } catch(e) {
+                //Ignore
+            }
+
             return {
                 property: property,
                 concept: localConcept,
-                target: await VarvEngine.lookupTarget(localConcept),
+                target: target,
                 type: "localConcept"
             }
         } catch(e) {
@@ -852,10 +863,17 @@ class VarvEngine {
 
                 VarvPerformance.stop("VarvEngine.lookupProperty.globalConcept", mark);
 
+                let target = null;
+                try {
+                    target = await VarvEngine.lookupTarget(globalConcept)
+                } catch(e) {
+                    //Ignore
+                }
+
                 return {
                     property: property,
                     concept: globalConcept,
-                    target: await VarvEngine.lookupTarget(globalConcept),
+                    target: target,
                     type: "globalConcept"
                 }
             } catch(e) {
