@@ -781,19 +781,19 @@ class DOMTriggers {
         targetDocument.body.addEventListener("click", (evt)=>{
             mouseHandler(evt, "click");
         });
-        targetDocument.body.addEventListener("mousemove", (evt)=>{
+        targetDocument.body.addEventListener("pointermove", (evt)=>{
             mouseHandler(evt, "mousemove");
         });
-        targetDocument.body.addEventListener("mouseover", (evt)=>{
+        targetDocument.body.addEventListener("pointerover", (evt)=>{
             mouseHandler(evt, "mouseover");
         });
-        targetDocument.body.addEventListener("mouseout", (evt)=>{
+        targetDocument.body.addEventListener("pointerout", (evt)=>{
             mouseHandler(evt, "mouseout");
         });
-        targetDocument.body.addEventListener("mouseup", (evt)=>{
+        targetDocument.body.addEventListener("pointerup", (evt)=>{
             mouseHandler(evt, "mouseup");
         });
-        targetDocument.body.addEventListener("mousedown", (evt)=>{
+        targetDocument.body.addEventListener("pointerdown", (evt)=>{
             mouseHandler(evt, "mousedown");
         });
         targetDocument.body.addEventListener("contextmenu", (evt)=>{
