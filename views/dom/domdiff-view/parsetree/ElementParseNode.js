@@ -18,8 +18,14 @@ class ElementParseNode extends ParseNode {
         
         // Create the element itself
         let name = this.templateElement.tagName;
+        let namespace = this.templateElement.namespaceURI;
         if (name==="DOM-VIEW-TEMPLATE") name = "varv-view"; // The template itself renames to view
-        let element = targetDocument.createElement(name);
+        let element;
+        if (namespace.endsWith("html")){
+            element = targetDocument.createElement(name);
+        } else {
+            element = targetDocument.createElementNS(namespace, name);
+        }
         let view = new ViewParticle(element, this, scope);
         element.scope = scope;
         element.templateElement = this.templateElement;
