@@ -6,7 +6,7 @@
         "#varv-builtin-actions",
         "#varv-builtin-triggers",
         "#varv-dom",
-        "#varv-dom-view",
+        "#varv-domdiff-view",
         "#varv-dom-triggers",
         "#varv-memory",
         "#varv-localstorage",

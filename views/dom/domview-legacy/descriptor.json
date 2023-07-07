@@ -1,6 +1,6 @@
 {
     "friendlyName": "Varv DOM View",
-    "description": "Allow data to be visualized as a browser-based UI",
+    "description": "Legacy view to allow data to be visualized as a browser-based UI (deprecated)",
     "dependencies": [
         "#varv-engine"
     ],
