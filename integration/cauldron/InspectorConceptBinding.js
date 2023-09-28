@@ -278,6 +278,7 @@ class InspectorPropertyEditor extends Cauldron.InspectorElement {
                         adder.innerText = "Add Entry";
                         adder.addEventListener("click", ()=>{
                             let newValue = prompt ("Value to add", "");
+                            newValue = self.convertArrayItem(newValue, property.options.items);
                             value.push(newValue);
                             property.setValue(conceptInstance.uuid, value);
                         });                    
@@ -305,6 +306,16 @@ class InspectorPropertyEditor extends Cauldron.InspectorElement {
             self.valueUpdaterCallback(self.conceptInstance.uuid, possiblePromiseOrValue);
         }
         property.addUpdatedCallback(this.valueUpdaterCallback);
+    }
+
+    convertArrayItem(value, itemsType){
+        if (itemsType === 'number')
+            return parseFloat(value);
+        
+        if (itemsType === "boolean")
+            return value === "true";
+        
+        return value;
     }
 
     updateLocator() {
