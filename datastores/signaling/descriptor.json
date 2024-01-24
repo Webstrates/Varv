@@ -1,0 +1,11 @@
+{
+    "friendlyName": "Varv Signaling Data Store",
+    "description": "Live data sharing over webstrate signals",
+    "dependencies": [
+        "#varv-engine"
+    ],
+    "assets": [],
+    "license": "MIT",
+    "version": "0.1",
+    "changelog": {}
+}
