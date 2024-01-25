@@ -119,7 +119,7 @@ class SignalingDataStore extends DirectDatastore {
     async receiveSignal(message, sender){
         if (sender==webstrate.clientId) return; // Ignore our own messages
         if (!message.q) return;
-        console.log(message, sender);
+        if (SignalingDataStore.DEBUG) console.log(message, sender);
         switch (message.q){
             case "getConceptUUIDs":
                 // A peer is asking us about what UUIDs we know about for a given concept type
@@ -289,7 +289,7 @@ class SignalingDataStore extends DirectDatastore {
         }
     }
 }
-SignalingDataStore.DEBUG = true;
+SignalingDataStore.DEBUG = false;
 window.SignalingDataStore = SignalingDataStore;
 
 // Register default dom datastore
