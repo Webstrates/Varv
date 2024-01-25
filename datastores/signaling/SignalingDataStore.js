@@ -29,7 +29,7 @@
 /**
  * @memberOf Datastores
  */
-class SignalingDataStore extends DirectDatastore {
+class SignalingDataStore extends DirectDatastore {    
     constructor(name, options = {}) {
         super(name, options);
 
@@ -44,7 +44,7 @@ class SignalingDataStore extends DirectDatastore {
     destroy() {
         this.deleteCallbacks.forEach((deleteCallback)=>{
             deleteCallback.delete();
-        })
+        });
     }
 
     async init() {
@@ -68,7 +68,7 @@ class SignalingDataStore extends DirectDatastore {
             delete: ()=>{
                 this.backingElement.webstrate.off("signal", signalFunction);
             }
-        })
+        });
 
 
         this.deleteCallbacks.push(VarvEngine.registerEventCallback("disappeared", async (context)=> {
@@ -95,12 +95,23 @@ class SignalingDataStore extends DirectDatastore {
                 console.log("Saw appeared UUID (SignalingDataStore):", context.target);
             }
             if (self.isConceptMapped(context.concept)){
+                if (self.inflightChanges.has("appear"+"."+context.target)) return; // This was caused by us, ignore it
+
                 // Broadcast to everyone
-                this.backingElement.webstrate.signal({
-                    q: "notifyExists",
+                let initialInstance = {
+                    q: "notifyInitialInstance",
                     type: context.concept.name,
-                    uuids: [context.target]
-                });
+                    uuid: context.target,
+                    properties: {}
+                };
+                for (let property of Array.from(self.mappedConcepts.get(context.concept.name).keys())){
+                    try {
+                        initialInstance.properties[property] = await context.concept.getPropertyValue(context.target, property);   
+                    } catch (ex){
+                        // May not have a getter at all, so skip it
+                    }
+                }                
+                this.backingElement.webstrate.signal(initialInstance);
             }
         }));
     }
@@ -131,9 +142,9 @@ class SignalingDataStore extends DirectDatastore {
                 
                 let properties = Array.from(this.mappedConcepts.get(message.type).keys());
                 for (let uuid of message.uuids){
-                    // Check if already registered and only request data discovery if not
-                    let varvConceptByUUID = await VarvEngine.getConceptFromUUID(uuid);
-                    if (!varvConceptByUUID){
+                    // Check if we already synced this one and only request data discovery if not
+                    let ourConceptByUUID = await this.getConceptFromUUID(uuid);
+                    if (!ourConceptByUUID){
                         this.backingElement.webstrate.signal({
                             q: "getInitialInstance",
                             uuid: uuid,
@@ -188,6 +199,8 @@ class SignalingDataStore extends DirectDatastore {
                 let usInitialInstance = this.getConceptFromUUID(message.uuid);
                 
                 // Maybe this was the first time Varv heard about this instance ever, in that case make it appear
+                let appearChange = "appear"+"."+message.uuid;
+                this.inflightChanges.add(appearChange); // Avoid writebacks from this
                 if (!varvInitialInstance) {
                     await concept.appeared(message.uuid);                        
                 }                        
@@ -202,12 +215,13 @@ class SignalingDataStore extends DirectDatastore {
                             let property = concept.getProperty(propertyName);                    
                             if (SignalingDataStore.DEBUG) console.log("Loading property", property, message.properties[propertyName]);
                             // TODO: Error if not set in message
-                            await property.setValue(message.uuid, message.properties[propertyName]);
+                            await this._setVarvProperty(concept, message.uuid, propertyName, message.properties[propertyName]);
                         } catch (ex){
                             console.error("Failed to push concept property from signal to concept", ex);
                         }
                     }                    
                 }
+                this.inflightChanges.delete(appearChange); // Avoid writebacks from this
                            
                 break;
             case "setProperty":
@@ -223,14 +237,18 @@ class SignalingDataStore extends DirectDatastore {
                     break;
                 }
                 
-                let change = message.uuid+"."+message.property;
-                this.inflightChanges.add(change); // Avoid writebacks from this
-                await changedConcept.setPropertyValue(message.uuid, message.property, message.value);
-                this.inflightChanges.delete(change);
+                await this._setVarvProperty(changedConcept, message.uuid, message.property, message.value);
                 break;
             default:
                 console.log("Unhandled signal ",message);
         }
+    }
+    
+    async _setVarvProperty(concept, uuid, propertyName, value){
+        let change = uuid+"."+propertyName;
+        this.inflightChanges.add(change); // Avoid writebacks from this
+        await concept.setPropertyValue(uuid, propertyName, value);
+        this.inflightChanges.delete(change);        
     }
 
     createBackingStore(concept, property) {
@@ -271,7 +289,7 @@ class SignalingDataStore extends DirectDatastore {
         }
     }
 }
-SignalingDataStore.DEBUG = false;
+SignalingDataStore.DEBUG = true;
 window.SignalingDataStore = SignalingDataStore;
 
 // Register default dom datastore
