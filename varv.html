@@ -21878,6 +21878,15 @@ class GigaVarvDatastore extends Datastore {
                 console.log("GigaVarv["+this.constructor.name+"] query", typeNames, query, gigaVarvQuery, normalizedQuery);
             }
             let result = await this.request({op:"q", q:gigaVarvQuery});
+            
+            /** Optimization: When we KNOW that these results are of specific type (because we asked for only one type) then
+             * we can cache it here upfront */
+            if (typeNames.length===1){
+                let precachedType = VarvEngine.getConceptFromType(typeNames[0]);
+                result.a.forEach((uuid)=>{
+                    VarvEngine.conceptUUIDCache.set(uuid, result);                
+                });
+            }
             return result.a;
         } catch (ex){
             console.log(typeNames, query, ex);
