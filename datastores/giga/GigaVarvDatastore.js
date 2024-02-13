@@ -66,6 +66,7 @@ class GigaVarvDatastore extends Datastore {
             deleteCallback.delete();
         });
         this.websocket.close();
+        clearInterval(this.pingerInterval);
     }
 
     async init() {
@@ -77,6 +78,7 @@ class GigaVarvDatastore extends Datastore {
 
         this.requestQueue = {};
         this.requestCounter = 0;
+        this.pingerInterval = null;
 
         let bucketPromise = new Promise((resolve, reject)=>{
             self.bucketResolve = resolve;
@@ -88,6 +90,12 @@ class GigaVarvDatastore extends Datastore {
             // Log into our data bucket
             if (GigaVarvDatastore.DEBUG) console.log("GigaVarv["+self.constructor.name+"]: Attempting login to backend at "+self.serverURL+"#"+self.storageName);
             self.request({op: "bucket", bucket: self.storageName, key: self.authKey});
+            
+            if (GigaVarvDatastore.DEBUG) console.log("Starting pinger");
+            self.pingerInterval = setInterval(()=>{
+                if (GigaVarvDatastore.DEBUG) console.log("Sending ping");
+                self.request({op: "ping"});
+            },10000);
         };
         self.websocket.onerror = function (evt) {
             console.error("GigaVarv["+self.constructor.name+"]: Fatal websocket error, cannot continue GigaVarv connection to "+self.storageName+" at "+self.serverURL+" - check URL and server", evt);
@@ -172,6 +180,8 @@ class GigaVarvDatastore extends Datastore {
                     } finally {
                         self.ignoreEventsUUID = false;
                     }
+                    break;
+                case "pong":
                     break;
                 default:
                     console.error("GigaVarv["+self.constructor.name+"]: Unhandled message from GigaVarv websocket", messageObject);
