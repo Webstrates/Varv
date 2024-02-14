@@ -124,7 +124,7 @@ class SQLDataStore extends GigaVarvDatastore {
         return VarvEngine.getConceptFromType(type.a[0]);
     }    
 }
-SQLDataStore.DEBUG = true;
+SQLDataStore.DEBUG = false;
 SQLDataStore.INSTANCE_TABLE = "instances";
 window.SQLDataStore = SQLDataStore;
 SQLDataStore.storages = new Map();
