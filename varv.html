@@ -7720,18 +7720,24 @@ class SelectAction extends Action {
                 conceptUUIDs = filteredUUIDs;
             }
 
-            let result = conceptUUIDs.map((uuid)=>{
-                // Turn into context
-                let newContext = Object.assign({}, context, {target: uuid});
-                //Make sure the target variable from commonVariables, does not bleed out, since we just set a correct target.
-                delete newContext.variables["target"];
-                return newContext;
-            });
-
-            if(options.as) {
-                result.forEach((resultContext)=>{
-                    Action.setVariable(resultContext, options.as, conceptUUIDs);
+            let result = null;
+            if (options.keepContext){
+                Action.setVariable(context, options.as?options.as:"select", conceptUUIDs);
+                result = [context];
+            } else {
+                result = conceptUUIDs.map((uuid)=>{
+                    // Turn into context
+                    let newContext = Object.assign({}, context, {target: uuid});
+                    //Make sure the target variable from commonVariables, does not bleed out, since we just set a correct target.
+                    delete newContext.variables["target"];
+                    return newContext;
                 });
+
+                if(options.as) {
+                    result.forEach((resultContext)=>{
+                        Action.setVariable(resultContext, options.as, conceptUUIDs);
+                    });
+                }
             }
 
             VarvPerformance.stop("SelectAction.doSelect", mark);
@@ -7771,8 +7777,7 @@ class SelectAction extends Action {
             });
 
             let optionsWithVariablesAndArguments = await Action.lookupVariables(optionsWithArguments, {target: commonTarget, variables: commonVariables});
-
-            result = await doSelect({target: null, variables: commonVariables}, optionsWithVariablesAndArguments, optionsWithArguments);
+            result = await doSelect({target: commonTarget, variables: commonVariables}, optionsWithVariablesAndArguments, optionsWithArguments);
         }
 
         if(optionsWithArguments.stopIfEmpty && result.length === 0) {
