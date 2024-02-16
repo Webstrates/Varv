@@ -1,0 +1,13 @@
+{
+    "friendlyName": "Varv React View",
+    "description": "Allow connection to browser-based UI based on React",
+    "dependencies": [
+        "#varv-engine",
+        "#varv-domdiff-view",
+        "codestrate-repos #fragment-js-babel"
+    ],
+    "assets": [],
+    "license": "MIT",
+    "version": "0.1",
+    "changelog": {}
+}

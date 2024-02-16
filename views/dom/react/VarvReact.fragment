@@ -1,0 +1,64 @@
+import React from "react"
+
+const VarvScope = React.createContext([]);
+
+export const Varv = (params)=>{
+    let [lookupResult,setLookupResult] = React.useState([]);
+    let scope = React.useContext(VarvScope);
+
+    function onResultsUpdated(scopes){
+        setLookupResult(scopes);
+    }
+
+    React.useEffect(() => {
+        const queryParser = new JSXQueryParseNode(params, onResultsUpdated); // STUB: maybe reuse?
+        const view = queryParser.getView(document, scope);
+
+        return () => {
+            // TODO: Cleanup varv view
+            view.destroy();
+        };
+    }, [params.concept, params.property, params.if]);    
+
+    return lookupResult.map(result=>{
+        return <VarvScope.Provider key={result[0].uuid} value={result}>
+            {params.children}
+        </VarvScope.Provider>;
+    });
+}
+
+export function useProperty(lookup){
+    let scope = React.useContext(VarvScope);
+    let [value,setValue] = React.useState();
+    let [binding,setBinding] = React.useState();
+
+    // From React -> Varv
+    let storeValue = async function sendValueToVarv(value){
+        await binding.setValueFor(lookup, value);
+    }
+
+    // Add a cleanup hook
+    React.useEffect(() => {
+        // Fetch the binding from Varv -> React
+        let binding = DOMView.getBindingFromScope(lookup, scope);
+        if (!binding) throw new Error("Could not look up "+lookup+" in scope"+scope);
+        let changeListener = binding.generateRawChangeListener(lookup, null);
+        changeListener.onChanged = async function updateReactValueFromVarv(value){
+            setValue(value);
+        };
+
+        // Enqueue initial value fetch
+        binding.getValueFor(lookup).then((initialValue)=>{
+            setValue(initialValue);
+        });
+        setBinding(binding);
+
+        return () => {
+            if (changeListener && changeListener.destroy) changeListener.destroy();
+        };
+    }, []);
+
+    return [value,storeValue];
+}
+
+
