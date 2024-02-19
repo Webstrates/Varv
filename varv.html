@@ -16717,7 +16717,7 @@ window.JSXQueryParseNode = JSXQueryParseNode;
 
 if (!window.VarvScope) window.VarvScope = React.createContext([]);
 
-export const Varv = (params)=>{
+export const Varv = (params)=&gt;{
     let [lookupResult,setLookupResult] = React.useState([]);
     let scope = React.useContext(VarvScope);
 
@@ -16725,24 +16725,24 @@ export const Varv = (params)=>{
         setLookupResult(scopes);
     }
 
-    React.useEffect(() => {
+    React.useEffect(() =&gt; {
         const queryParser = new JSXQueryParseNode(params, onResultsUpdated); // STUB: maybe reuse?
         const view = queryParser.getView(document, scope);
 
-        return () => {
+        return () =&gt; {
             // TODO: Cleanup varv view
             view.destroy();
         };
     }, [params.concept, params.property, params.if, scope]);    
 
-    return lookupResult.map(result=>{
+    return lookupResult.map(result=&gt;{
         if (result[0].errorMessage){
             console.log(result[0].errorMessage,result[0].ex);
-            return <varv-failure>{result[0].errorMessage}{result[0].ex.toString()}</varv-failure>
+            return &lt;varv-failure&gt;{result[0].errorMessage}{result[0].ex.toString()}&lt;/varv-failure&gt;
         } else {
-            return <VarvScope.Provider key={result[0].uuid} value={[...result, ...scope]}>
+            return &lt;VarvScope.Provider key={result[0].uuid} value={[...result, ...scope]}&gt;
                 {params.children}
-            </VarvScope.Provider>
+            &lt;/VarvScope.Provider&gt;
         }
     });
 }
@@ -16752,14 +16752,14 @@ export function useProperty(lookup){
     let [value,setValue] = React.useState();
     let [binding,setBinding] = React.useState();
 
-    // From React -> Varv
+    // From React -&gt; Varv
     let storeValue = async function sendValueToVarv(value){
         await binding.setValueFor(lookup, value);
     }
 
     // Add a cleanup hook
-    React.useEffect(() => {
-        // Fetch the binding from Varv -> React
+    React.useEffect(() =&gt; {
+        // Fetch the binding from Varv -&gt; React
         let binding = DOMView.getBindingFromScope(lookup, scope);
         if (!binding) throw new Error("Could not look up "+lookup+" in scope"+JSON.stringify(scope));
         let changeListener = binding.generateRawChangeListener(lookup, null);
@@ -16768,12 +16768,12 @@ export function useProperty(lookup){
         };
 
         // Enqueue initial value fetch
-        binding.getValueFor(lookup).then((initialValue)=>{
+        binding.getValueFor(lookup).then((initialValue)=&gt;{
             setValue(initialValue);
         });
         setBinding(binding);
 
-        return () => {
+        return () =&gt; {
             if (changeListener && changeListener.destroy) changeListener.destroy();
         };
     }, []);
@@ -16785,7 +16785,7 @@ export function useProperty(lookup){
 export function useAction(lookup, actionArguments = {}){
     if (lookup.includes(".")) throw new Error("STUB: Only direct action names supported right now for useAction(), no fancy lookups");
     let scope = React.useContext(VarvScope);
-    return ()=>{
+    return ()=&gt;{
         // Simply lookup the action in scope                
         for (let scopeEntry of scope){
             if (scopeEntry.concept && scopeEntry.concept.actions){ // TODO: Also consider other kinds of scopes instead of assuming only Concept/Property
