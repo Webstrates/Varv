@@ -1,6 +1,6 @@
 import React from "react"
 
-const VarvScope = React.createContext([]);
+if (!window.VarvScope) window.VarvScope = React.createContext([]);
 
 export const Varv = (params)=>{
     let [lookupResult,setLookupResult] = React.useState([]);
@@ -18,12 +18,17 @@ export const Varv = (params)=>{
             // TODO: Cleanup varv view
             view.destroy();
         };
-    }, [params.concept, params.property, params.if]);    
+    }, [params.concept, params.property, params.if, scope]);    
 
     return lookupResult.map(result=>{
-        return <VarvScope.Provider key={result[0].uuid} value={result}>
-            {params.children}
-        </VarvScope.Provider>;
+        if (result[0].errorMessage){
+            console.log(result[0].errorMessage,result[0].ex);
+            return <varv-failure>{result[0].errorMessage}{result[0].ex.toString()}</varv-failure>
+        } else {
+            return <VarvScope.Provider key={result[0].uuid} value={[...result, ...scope]}>
+                {params.children}
+            </VarvScope.Provider>
+        }
     });
 }
 
@@ -41,7 +46,7 @@ export function useProperty(lookup){
     React.useEffect(() => {
         // Fetch the binding from Varv -> React
         let binding = DOMView.getBindingFromScope(lookup, scope);
-        if (!binding) throw new Error("Could not look up "+lookup+" in scope"+scope);
+        if (!binding) throw new Error("Could not look up "+lookup+" in scope"+JSON.stringify(scope));
         let changeListener = binding.generateRawChangeListener(lookup, null);
         changeListener.onChanged = async function updateReactValueFromVarv(value){
             setValue(value);
@@ -61,4 +66,22 @@ export function useProperty(lookup){
     return [value,storeValue];
 }
 
+
+export function useAction(lookup, actionArguments = {}){
+    if (lookup.includes(".")) throw new Error("STUB: Only direct action names supported right now for useAction(), no fancy lookups");
+    let scope = React.useContext(VarvScope);
+    return ()=>{
+        // Simply lookup the action in scope                
+        for (let scopeEntry of scope){
+            if (scopeEntry.concept && scopeEntry.concept.actions){ // TODO: Also consider other kinds of scopes instead of assuming only Concept/Property
+                let action = scopeEntry.concept.actions.get(lookup);
+                if (action) {
+                    action.apply([{target:scope[0].uuid}], actionArguments);
+                    return;
+                }
+            }
+        }
+        throw new Error("Unknown action "+lookup+" not found in scope");
+    };
+}
 

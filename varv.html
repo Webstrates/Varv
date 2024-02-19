@@ -15774,7 +15774,7 @@ class QueryParseNode extends ScopedParseNode {
                                         })));
                                     } else {
                                         // Single property value, no duplication
-                                        if (!engineProperty.isConceptType()) throw new Error("Cannot use a type for the property attribute that is not a list of references, a list of simple values or a single concept reference: "+propertyValue);
+                                        if (!engineProperty.isConceptType()) throw new Error("Cannot use a type for the property attribute that is not a list of references, a list of simple values or a single concept reference: "+propertyValue+" ("+engineProperty.type+")");
                                         scopeMap.set(localScope,[[
                                             ...localScope,
                                             new ConceptInstanceBinding(await VarvEngine.getConceptFromUUID(propertyValue),propertyValue),
@@ -16675,7 +16675,134 @@ varv-view {
   display: none; }
 </style>
                 
-            </div>               
+            </div>         
+            <div class="package" id="varv-react">
+                <script id="descriptor-script" type="descriptor">
+{
+    "friendlyName": "Varv React View",
+    "description": "Allow connection to browser-based UI based on React",
+    "dependencies": [
+        "#varv-engine",
+        "#varv-domdiff-view",
+        "codestrate-repos #fragment_js_babel"
+    ],
+    "assets": [],
+    "license": "MIT",
+    "version": "0.1",
+    "changelog": {}
+}
+
+</script>
+
+                <script id="JSXQueryParseNode-script" type="disabled">
+class JSXQueryParseNode extends QueryParseNode {
+    constructor(reactParamsObject, scopeUpdateCallback){
+        super({
+            getAttribute: (attribute)=>reactParamsObject.hasOwnProperty(attribute)?reactParamsObject[attribute]:null
+        });
+        this.scopeUpdateCallback = scopeUpdateCallback;
+    }
+
+    onScopesUpdated(view, newChildScopes){ 
+        this.scopeUpdateCallback(newChildScopes);
+    }
+}
+
+window.JSXQueryParseNode = JSXQueryParseNode;
+
+</script>
+        
+                <code-fragment data-type="text/javascript+babel" id="VarvReact">
+                    import React from "react"
+
+if (!window.VarvScope) window.VarvScope = React.createContext([]);
+
+export const Varv = (params)=>{
+    let [lookupResult,setLookupResult] = React.useState([]);
+    let scope = React.useContext(VarvScope);
+
+    function onResultsUpdated(scopes){
+        setLookupResult(scopes);
+    }
+
+    React.useEffect(() => {
+        const queryParser = new JSXQueryParseNode(params, onResultsUpdated); // STUB: maybe reuse?
+        const view = queryParser.getView(document, scope);
+
+        return () => {
+            // TODO: Cleanup varv view
+            view.destroy();
+        };
+    }, [params.concept, params.property, params.if, scope]);    
+
+    return lookupResult.map(result=>{
+        if (result[0].errorMessage){
+            console.log(result[0].errorMessage,result[0].ex);
+            return <varv-failure>{result[0].errorMessage}{result[0].ex.toString()}</varv-failure>
+        } else {
+            return <VarvScope.Provider key={result[0].uuid} value={[...result, ...scope]}>
+                {params.children}
+            </VarvScope.Provider>
+        }
+    });
+}
+
+export function useProperty(lookup){
+    let scope = React.useContext(VarvScope);
+    let [value,setValue] = React.useState();
+    let [binding,setBinding] = React.useState();
+
+    // From React -> Varv
+    let storeValue = async function sendValueToVarv(value){
+        await binding.setValueFor(lookup, value);
+    }
+
+    // Add a cleanup hook
+    React.useEffect(() => {
+        // Fetch the binding from Varv -> React
+        let binding = DOMView.getBindingFromScope(lookup, scope);
+        if (!binding) throw new Error("Could not look up "+lookup+" in scope"+JSON.stringify(scope));
+        let changeListener = binding.generateRawChangeListener(lookup, null);
+        changeListener.onChanged = async function updateReactValueFromVarv(value){
+            setValue(value);
+        };
+
+        // Enqueue initial value fetch
+        binding.getValueFor(lookup).then((initialValue)=>{
+            setValue(initialValue);
+        });
+        setBinding(binding);
+
+        return () => {
+            if (changeListener && changeListener.destroy) changeListener.destroy();
+        };
+    }, []);
+
+    return [value,storeValue];
+}
+
+
+export function useAction(lookup, actionArguments = {}){
+    if (lookup.includes(".")) throw new Error("STUB: Only direct action names supported right now for useAction(), no fancy lookups");
+    let scope = React.useContext(VarvScope);
+    return ()=>{
+        // Simply lookup the action in scope                
+        for (let scopeEntry of scope){
+            if (scopeEntry.concept && scopeEntry.concept.actions){ // TODO: Also consider other kinds of scopes instead of assuming only Concept/Property
+                let action = scopeEntry.concept.actions.get(lookup);
+                if (action) {
+                    action.apply([{target:scope[0].uuid}], actionArguments);
+                    return;
+                }
+            }
+        }
+        throw new Error("Unknown action "+lookup+" not found in scope");
+    };
+}
+
+
+                </code-fragment>
+            </div>            
             <div class="package" id="varv-memory">
                 <script id="descriptor-script" type="descriptor">
 {

@@ -154,7 +154,7 @@ class QueryParseNode extends ScopedParseNode {
                                         })));
                                     } else {
                                         // Single property value, no duplication
-                                        if (!engineProperty.isConceptType()) throw new Error("Cannot use a type for the property attribute that is not a list of references, a list of simple values or a single concept reference: "+propertyValue);
+                                        if (!engineProperty.isConceptType()) throw new Error("Cannot use a type for the property attribute that is not a list of references, a list of simple values or a single concept reference: "+propertyValue+" ("+engineProperty.type+")");
                                         scopeMap.set(localScope,[[
                                             ...localScope,
                                             new ConceptInstanceBinding(await VarvEngine.getConceptFromUUID(propertyValue),propertyValue),
