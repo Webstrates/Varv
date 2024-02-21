@@ -44,8 +44,10 @@ class QueryParseNode extends ScopedParseNode {
                     // Concept enumeration queries                
                     let doConceptEnumeration = async function doConceptEnumerationForScopes(){
                         // TODO: possibly filter for performance
-                        if (self.templateElement.getAttribute("property")) console.log("FIXME: DOMView concept='' enumerations combined with property='' lookups on same element can be optimized further, use filters here");
-                        if (self.templateElement.getAttribute("if")) console.log("FIXME: DOMView concept='' enumerations combined with if='' can sometimes be optimized further, use filters here");
+                        if (DOMView.DEBUG){
+                            if (self.templateElement.getAttribute("property")) console.log("FIXME: DOMView concept='' enumerations combined with property='' lookups on same element can be optimized further, use filters here");
+                            if (self.templateElement.getAttribute("if")) console.log("FIXME: DOMView concept='' enumerations combined with if='' can sometimes be optimized further, use filters here");
+                        }
                         let instances = await VarvEngine.lookupInstances(VarvEngine.getAllImplementingConceptNames(conceptName)); // TODO: Fancy filtering opportunity here
                         let localScopes = await Promise.all(instances.map(async function lookupConcreteTypes(uuid){
                             let concreteConcept = await VarvEngine.getConceptFromUUID(uuid);
