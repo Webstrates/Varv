@@ -16742,7 +16742,7 @@ export const Varv = (params)=&gt;{
             console.log(result[0].errorMessage,result[0].ex);
             return &lt;varv-failure&gt;{result[0].errorMessage}{result[0].ex.toString()}&lt;/varv-failure&gt;
         } else {
-            return &lt;VarvScope.Provider key={result[0].uuid} value={[...result, ...scope]}&gt;
+            return &lt;VarvScope.Provider key={result[0].uuid} value={[...scope,...result]}&gt;
                 {params.children}
             &lt;/VarvScope.Provider&gt;
         }
