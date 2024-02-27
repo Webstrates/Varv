@@ -16717,6 +16717,7 @@ window.JSXQueryParseNode = JSXQueryParseNode;
         
                 <code-fragment data-type="text/javascript+babel" id="VarvReact">
                     import React from "react"
+let {useMemo} = React;
 
 if (!window.VarvScope) window.VarvScope = React.createContext([]);
 
@@ -16766,8 +16767,13 @@ export function useProperty(lookup){
         let binding = DOMView.getBindingFromScope(lookup, scope);
         if (!binding) throw new Error("Could not look up "+lookup+" in scope"+JSON.stringify(scope));
         let changeListener = binding.generateRawChangeListener(lookup, null);
-        changeListener.onChanged = async function updateReactValueFromVarv(value){
-            setValue(value);
+        changeListener.onChanged = async function updateReactValueFromVarv(newValue){
+            if (Array.isArray(newValue)){
+                // Make sure not to send the original array as React will remember it and not see changes
+                setValue(structuredClone(newValue));
+            } else {
+                setValue(newValue);
+            }
         };
 
         // Enqueue initial value fetch
