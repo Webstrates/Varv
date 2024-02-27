@@ -16789,13 +16789,18 @@ export function useAction(lookup, actionArguments = {}){
     if (lookup.includes(".")) throw new Error("STUB: Only direct action names supported right now for useAction(), no fancy lookups");
     let scope = React.useContext(VarvScope);
     return ()=&gt;{
-        // Simply lookup the action in scope                
-        for (let scopeEntry of scope){
-            if (scopeEntry.concept && scopeEntry.concept.actions){ // TODO: Also consider other kinds of scopes instead of assuming only Concept/Property
-                let action = scopeEntry.concept.actions.get(lookup);
-                if (action) {
-                    action.apply([{target:scope[0].uuid}], actionArguments);
-                    return;
+        // Lookup the action in scope                
+        let target = null;
+        for (let i = scope.length-1; i>=0; i--){
+            let scopeEntry = scope[i];
+            if (scopeEntry.concept){
+                if (!target) target = scopeEntry.uuid;
+                if (scopeEntry.concept.actions){ // TODO: Also consider other kinds of scopes instead of assuming only Concept/Property
+                    let action = scopeEntry.concept.actions.get(lookup);
+                    if (action) {
+                        action.apply([{target:target}], actionArguments);
+                        return;
+                    }
                 }
             }
         }
