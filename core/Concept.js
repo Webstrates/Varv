@@ -517,7 +517,7 @@ class Concept {
 
                     datastore.createBackingStore(this, property);
                 } else {
-                    console.warn("["+self.name+"] is attempting to map ["+propertyName+"] to a non existing datastore ["+datastoreName+"]");
+                    if (!Datastore.optionalDatastores.includes(datastoreName)) console.warn("["+self.name+"] is attempting to map ["+propertyName+"] to a non existing datastore ["+datastoreName+"]");
                 }
             });
 

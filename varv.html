@@ -874,7 +874,7 @@ class Concept {
 
                     datastore.createBackingStore(this, property);
                 } else {
-                    console.warn("["+self.name+"] is attempting to map ["+propertyName+"] to a non existing datastore ["+datastoreName+"]");
+                    if (!Datastore.optionalDatastores.includes(datastoreName)) console.warn("["+self.name+"] is attempting to map ["+propertyName+"] to a non existing datastore ["+datastoreName+"]");
                 }
             });
 
@@ -2082,6 +2082,7 @@ class Datastore {
 }
 Datastore.DEBUG = false;
 Datastore.datastores = new Map();
+Datastore.optionalDatastores = ["cauldron"]; // A list of datastores for which there is no warning emitted if not found
 Datastore.datastoreTypes = new Map();
 
 window.Datastore = Datastore;

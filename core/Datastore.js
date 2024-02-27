@@ -157,6 +157,7 @@ class Datastore {
 }
 Datastore.DEBUG = false;
 Datastore.datastores = new Map();
+Datastore.optionalDatastores = ["cauldron"]; // A list of datastores for which there is no warning emitted if not found
 Datastore.datastoreTypes = new Map();
 
 window.Datastore = Datastore;
