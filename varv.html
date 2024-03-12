@@ -12261,7 +12261,10 @@ class DOMDataStore extends DirectDatastore {
             }
 
             this.executeObserverless(()=>{
-                let conceptElement = self.getConceptElementOrCreate(uuid, concept);
+                let conceptElement = self.getConceptElement(uuid, concept);
+                if (!conceptElement){
+                    throw new Error("Cannot set property "+property.name+" on "+concept.name+" "+uuid+" because it has not appeared or was deleted");
+                }
 
                 let propertyElement = conceptElement.querySelector("property[name='" + property.name + "']");
                 if (!propertyElement) {
@@ -12309,9 +12312,12 @@ class DOMDataStore extends DirectDatastore {
         this.internalAddPropertyMapping(concept, property, {setter: setter, getter: getter});
     }
 
+    getConceptElement(uuid){
+        return this.queryCache.querySelector("concept[uuid='" + uuid + "']");
+    }
     getConceptElementOrCreate(uuid, concept) {
         let mark = VarvPerformance.start();
-        let conceptElement = this.queryCache.querySelector("concept[uuid='" + uuid + "']");
+        let conceptElement = this.getConceptElement(uuid);
         if (!conceptElement) {
             conceptElement = document.createElement("concept", {approved: true});
             conceptElement.setAttribute("type", concept.name, { approved: true });
