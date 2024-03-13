@@ -78,7 +78,7 @@ export function useProperty(lookup){
 export function useAction(lookup, actionArguments = {}){
     if (lookup.includes(".")) throw new Error("STUB: Only direct action names supported right now for useAction(), no fancy lookups");
     let scope = React.useContext(VarvScope);
-    return ()=&gt;{
+    return (additionalActionArguments)=&gt;{
         // Lookup the action in scope                
         let target = null;
         for (let i = scope.length-1; i>=0; i--){
@@ -88,7 +88,7 @@ export function useAction(lookup, actionArguments = {}){
                 if (scopeEntry.concept.actions){ // TODO: Also consider other kinds of scopes instead of assuming only Concept/Property
                     let action = scopeEntry.concept.actions.get(lookup);
                     if (action) {
-                        action.apply([{target:target}], actionArguments);
+                        action.apply([{target:target}], {...actionArguments, ...additionalActionArguments});
                         return;
                     }
                 }
