@@ -146,12 +146,12 @@ class QueryParseNode extends ScopedParseNode {
                                 if (propertyValue !== null && propertyValue !== undefined && propertyValue!=="") {
                                     if (engineProperty.getType()==="array") {
                                         // We need to map the array into additional childscopes with arrayentry bindings
-                                        scopeMap.set(localScope, await Promise.all(propertyValue.map(async (arrayEntry, index)=>{
+                                        scopeMap.set(localScope, await Promise.all(propertyValue.map(async (arrayEntry, index, inArray)=>{
                                             let newScope = [...localScope];
                                             if (engineProperty.isConceptArrayType()) {         
                                                 newScope.push(new ConceptInstanceBinding(await VarvEngine.getConceptFromUUID(arrayEntry),arrayEntry));
                                             }
-                                            newScope.push(new PropertyArrayEntryBinding(engineProperty, binding.uuid, arrayEntry, index, as));
+                                            newScope.push(new PropertyArrayEntryBinding(engineProperty, binding.uuid, arrayEntry, index, inArray.length, as));
                                             return newScope;
                                         })));
                                     } else {

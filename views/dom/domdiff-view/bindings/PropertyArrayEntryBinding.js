@@ -1,7 +1,8 @@
 class PropertyArrayEntryBinding extends PropertyBinding {
-    constructor(property, uuid, boundValue, index, as=null) {
+    constructor(property, uuid, boundValue, index, length, as=null) {
         super(property, uuid, boundValue, as);
         this.index = index;
+        this.length = length;
         this._reIndexCount = 0;
         this._indexCallbacks = [];
     }
@@ -13,6 +14,7 @@ class PropertyArrayEntryBinding extends PropertyBinding {
         }
         
         if (name===".index") return true;
+        if (name===".size") return true;
         if (name==="view::reused") return true;
         if (this.as){
             // We are available under as.value
@@ -26,7 +28,9 @@ class PropertyArrayEntryBinding extends PropertyBinding {
         if (!this.hasBindingFor(name)) throw new Error("PropertyArrayEntryBinding asked for value for "+name+" but does not support it");
         if (name==="view::reused") return this._reIndexCount;
         
-        if (name.endsWith(".index")){
+        if (name.endsWith(".size")){
+            return this.length;
+        } else if (name.endsWith(".index")){
             return this.index;
         } else {
             return this.boundValue;

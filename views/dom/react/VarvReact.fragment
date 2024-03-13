@@ -61,9 +61,14 @@ export function useProperty(lookup){
         };
 
         // Enqueue initial value fetch
-        binding.getValueFor(lookup).then((initialValue)=&gt;{
-            setValue(initialValue);
-        });
+        let init = binding.getValueFor(lookup);
+        if (init.then) {
+            init.then((initialValue)=&gt;{
+                setValue(initialValue);
+            });
+        } else {
+            setValue(init);
+        }
         setBinding(binding);
 
         return () =&gt; {
