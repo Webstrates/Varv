@@ -16734,15 +16734,12 @@ if (!window.VarvScope) window.VarvScope = React.createContext([]);
 export const Varv = (params)=&gt;{
     let [lookupResult,setLookupResult] = React.useState([]);
     let scope = React.useContext(VarvScope);
-console.log("Constructing with parasmw", params);
 
     function onResultsUpdated(scopes){
-        console.log("Results are",params,scopes);
         setLookupResult(scopes);
     }
 
     React.useEffect(() =&gt; {
-console.log("Updating with params", params);
         const queryParser = new JSXQueryParseNode(params, onResultsUpdated); // STUB: maybe reuse?
         const view = queryParser.getView(document, scope);
 
