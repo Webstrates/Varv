@@ -1,0 +1,24 @@
+{
+    "source": {
+        "include": ["."]
+    },
+    "opts": {
+        "recurse": true,
+        "destination": "./jsdoc/",
+        "readme": "README.md"
+    },
+    "docdash": {
+        "sort": true,
+        "collapse": true,   // Collapse navigation by default except current object's navigation of the current page, top for top level collapse        
+        "sectionOrder": [               // Order the main section in the navbar (default order shown here)
+             "Namespaces",
+             "Classes",
+             "Modules",
+             "Externals",
+             "Events",
+             "Mixins",
+             "Tutorials",
+             "Interfaces"
+        ]
+    }
+}
