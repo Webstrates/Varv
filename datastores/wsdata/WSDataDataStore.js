@@ -95,7 +95,11 @@ class WSDataDataStore extends DirectDatastore {
             }
             if (self.isConceptMapped(context.concept)){
                 if (self.inflightChanges.has("appear"+"."+context.target)) return; // This was caused by us, ignore it
+                if (typeof automerge.doc.data[self.storageName][context.concept.name] !== "undefined") return; // This already exists
                 
+                if(WSDataDataStore.DEBUG) {
+                    console.log("Writing appeared UUID (WSDataDataStore):", context.target);
+                }
                 // Broadcast to everyone
                 let initialProperties = {}
                 for (let property of Array.from(self.mappedConcepts.get(context.concept.name).keys())){
@@ -144,6 +148,7 @@ class WSDataDataStore extends DirectDatastore {
                             let conceptByUUID = await VarvEngine.getConceptFromUUID(uuid);
                             if (conceptByUUID){
                                 if (WSDataDataStore.DEBUG) console.log("Ignoring that remote added instance that already exists", type, uuid);
+                                continue;
                             }
                             if (WSDataDataStore.DEBUG) console.log("Remote added instance", type, uuid);
                             // TODO: Read forward and bulk set properties
@@ -181,6 +186,7 @@ class WSDataDataStore extends DirectDatastore {
         }
         let setter = async (uuid, value) => {
             if (self.inflightChanges.has(uuid+"."+property.name)) return; // Avoid writebacks from our own changes            
+            console.log("Setting ",property.name);
             await webstrate.updateData((data)=>{
                 data[self.storageName][concept.name][uuid][property.name]=value;
             });
@@ -211,10 +217,12 @@ class WSDataDataStore extends DirectDatastore {
     }    
     
     async _generateAppear(concept, uuid){
-        this.registerConceptFromUUID(uuid, concept);
         let appearChange = "appear"+"."+uuid;
+        this.registerConceptFromUUID(uuid, concept);
         this.inflightChanges.add(appearChange); // Avoid writebacks from this
+        console.log("Added fence ",appearChange);
         await concept.appeared(uuid);     
+        console.log("Removing fence ",appearChange);
         this.inflightChanges.delete(appearChange); // Avoid writebacks from this                                
     }
     
@@ -231,6 +239,7 @@ class WSDataDataStore extends DirectDatastore {
                 for (let [uuid,storedConcept] of Object.entries(instances)){
                     // Check if already registered and only generate an appear event if not
                     let conceptByUUID = await VarvEngine.getConceptFromUUID(uuid);
+                    if (WSDataDataStore.DEBUG) console.log("Loading concept", type, uuid);
 
                     // Set the properties that are mapped
                     for (const [propertyName,value] of Object.entries(storedConcept)){
