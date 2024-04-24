@@ -50,7 +50,7 @@ class Datastore {
         return this.mappedConcepts.get(concept.name).has(property.name);
     }
     isPropertyNameMapped(conceptName, propertyName){
-        if (!this.isConceptMapped(concept)) return false;
+        if (!this.isConceptTypeMapped(conceptName)) return false;
         return this.mappedConcepts.get(conceptName).has(propertyName);
     }    
     internalAddConceptMapping(concept){

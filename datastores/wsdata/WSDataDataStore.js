@@ -106,12 +106,9 @@ class WSDataDataStore extends DirectDatastore {
                     }
                 }
 
-                let appearChange = "appear"+"."+context.target;
-                self.inflightChanges.add(appearChange); // Avoid writebacks from this                
                 await webstrate.updateData((data)=>{
                     data[self.storageName][context.concept.name][context.target] = initialProperties;
                 });
-                this.inflightChanges.delete(appearChange);
             }
         }));
     }
@@ -155,23 +152,15 @@ class WSDataDataStore extends DirectDatastore {
                         default:
                             console.log("FIXME: Unknown concept action in wsdata", patch);
                     }
-                } else if (patch.path.length===4){ // This targets a property
+                } else { // This targets a property
                     let propertyName = patch.path[3];
                     if (!self.isPropertyNameMapped(type,propertyName)){
                         if (WSDataDataStore.DEBUG) console.log("Patch with unmapped property", type, propertyName, patch);
                         continue;
                     }           
                     if (self.inflightChanges.has(uuid+"."+propertyName)) return;  // This was caused by us, ignore it                            
-                    
-                    switch (patch.action){
-                        case "put":
-                            await self._setVarvProperty(concept, uuid, propertyName, structuredClone(patch.value));
-                            break;
-                        default:
-                            console.log("FIXME: Unknown property action in wsdata", patch);
-                    }
-                } else {
-                    if (WSDataDataStore.DEBUG) console.log("Patch with weird path length", patch.path, patch);
+                    if (WSDataDataStore.DEBUG) console.log("Patch changed property", type, propertyName, patch);
+                    await self._setVarvProperty(concept, uuid, propertyName, structuredClone(automerge.doc.data[self.storageName][type][uuid][propertyName]));
                 }
             }
         }
