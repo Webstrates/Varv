@@ -1,0 +1,11 @@
+{
+    "friendlyName": "MyWebstrates Data Object Data Store",
+    "description": "Live data sharing using the document data object",
+    "dependencies": [
+        "#varv-engine"
+    ],
+    "assets": [],
+    "license": "MIT",
+    "version": "0.1",
+    "changelog": {}
+}
