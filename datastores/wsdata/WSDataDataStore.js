@@ -91,11 +91,11 @@ class WSDataDataStore extends DirectDatastore {
         }));
         this.deleteCallbacks.push(VarvEngine.registerEventCallback("appeared", async (context)=> {
             if(WSDataDataStore.DEBUG) {
-                console.log("Saw appeared UUID (WSDataDataStore):", context.target);
+                console.log("Saw appeared UUID (WSDataDataStore):", context);
             }
             if (self.isConceptMapped(context.concept)){
                 if (self.inflightChanges.has("appear"+"."+context.target)) return; // This was caused by us, ignore it
-                if (typeof automerge.doc.data[self.storageName][context.concept.name] !== "undefined") return; // This already exists
+                if (typeof automerge.doc.data[self.storageName][context.concept.name][context.target] !== "undefined") return; // This already exists
                 
                 if(WSDataDataStore.DEBUG) {
                     console.log("Writing appeared UUID (WSDataDataStore):", context.target);
