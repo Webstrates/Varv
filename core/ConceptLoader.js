@@ -119,6 +119,10 @@ class ConceptLoader {
         if(ConceptLoader.DEBUG) {
             console.groupEnd();
         }
+        
+        if(json.defaultMappings != null) {
+            ConceptLoader.SystemDefaultMappings = json.defaultMappings;
+        }        
 
         if(json.concepts != null) {
             // Go through every concept in this JSON
