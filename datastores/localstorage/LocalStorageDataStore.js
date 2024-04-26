@@ -30,10 +30,8 @@
 /**
  * A storage that serializes into the localStorage database
  * 
- * Options:
- * <ul>
- * <li>storageName - The name of the prefix to store that data below (Default: "varv-data")</li>
- * </ul>
+ * ### Options
+ * * storageName - The name of the prefix to store that data below (Default: "varv-data")
  *
  * @memberOf Datastores
  */

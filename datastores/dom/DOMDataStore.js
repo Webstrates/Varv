@@ -34,11 +34,9 @@
  * across the web as modifications made to the storage structure also make notifications
  * back into the program.
  *
- * Options:
- * <ul>
- * <li>storageName - The name of the element to store that data below (Default: "varv-data")</li>
- * <li>storageWebstrate - The name of the webstrate to store the data at (Default: the current webstrate)</li>
- * </ul>
+ * ### Options
+ * * storageName - The name of the element to store that data below (Default: "varv-data")
+ * * storageWebstrate - The name of the webstrate to store the data at (Default: the current webstrate)
  *
  * @memberOf Datastores
  */

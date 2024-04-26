@@ -31,10 +31,8 @@
  * 
  * This datastore registers as the type "wsdata".
  *
- * Options:
- * <ul>
- * "storageName" - The name of the data bucket you intend to use inside automerge.doc.data (default: "varvData")
- * </ul>
+ * ### Options
+ * * "storageName" - The name of the data bucket you intend to use inside automerge.doc.data (default: "varvData")
  *
  * @memberOf Datastores
  * @example

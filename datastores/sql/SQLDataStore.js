@@ -30,20 +30,21 @@
  * A general purpose datastore that uses an SQL server as backend.
  * 
  * This datastore registers as the type "sql".
- * <table>
- * <tr><th>Feature</th><th>Remark</th></tr>
- * <tr><th>Property Lengths</th><td>Max 64KB string length</td></tr>
- * <tr><th>Concept Instances</th><td>Max 4294967295 total (including deleted ones)</td></tr>
- * <tr><th>Properties / Instance</th>No specific limit on number of named properties per concept as long as their names are shorter than 62 chars</td></tr>
- * <tr><th>Performance</th><td><ul><li>Searching for strings that "equals"/"startWith" is really fast</li>
- * <li>Good at combining multiple search requirements</li>
- * <li>Creating instances and setting properties is fairly fast if no reads are performed in-between</li></ul></td></tr></table>
+ * 
+ * | Feature             | Remark                                        |
+ * |---------------------|-----------------------------------------------|
+ * | Property Lengths    | Max 64KB string length                        |
+ * | Concept Instances   | Max 4294967295 total (including deleted ones) |
+ * | Properties          | No specific limit on number of named properties per concept as long as their names are shorter than 62 chars |
+ * 
+ * ### Performance
+ * * Searching for strings that "equals"/"startWith" is really fast
+ * * Good at combining multiple search requirements
+ * * Creating instances and setting properties is fairly fast if no reads are performed in-between
  *
- * Options inherited from GigaVarv:
- * <ul>
- * <li>"serverURL" - The URL to the server on the form "ws(s)://yourserver/sql". Note that secure websockets (wss) may be required on some sites.</li>
- * <li>"storageName" - The name of the data bucket you intend to use</li>
- * </ul>
+ *  ### Options
+ * * "serverURL" - The URL to the server on the form "ws(s)://yourserver/sql". Note that secure websockets (wss) may be required on some sites.
+ * * "storageName" - The name of the data bucket you intend to use
  *
  * @memberOf Datastores
  * @example

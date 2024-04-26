@@ -32,10 +32,8 @@
  * 
  * This datastore registers as the type "memory".
  *
- * Options:
- * <ul>
- * "storageName" - The memory bucket name of the storage (default: "memory"). Multiple independant buckets can be maintained
- * </ul>
+ * ### Options
+ * * "storageName" - The memory bucket name of the storage (default: "memory"). Multiple independant buckets can be maintained
  *
  * @memberOf Datastores
  * @example

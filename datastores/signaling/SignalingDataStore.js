@@ -31,10 +31,8 @@
  * 
  * This datastore registers as the type "signaling".
  *
- * Options:
- * <ul>
- * "storageName" - The element name of the DOM element to send signals through (default: "varv-signaling")
- * </ul>
+ * ### Options
+ * * "storageName" - The element name of the DOM element to send signals through (default: "varv-signaling")
  *
  * @memberOf Datastores
  * @example
