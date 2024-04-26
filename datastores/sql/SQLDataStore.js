@@ -48,8 +48,9 @@
  *
  * @memberOf Datastores
  * @example
+ * <caption>Adding the datastore</caption>
  * {
- *   "dataStores": { 
+ *   "dataStoreds": { 
  *      "myDataStore": {
  *          "type": "sql", 
  *          "options": {

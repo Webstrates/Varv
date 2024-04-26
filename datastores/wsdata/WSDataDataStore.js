@@ -36,6 +36,7 @@
  *
  * @memberOf Datastores
  * @example
+ * <caption>Adding the datastore</caption>
  * {
  *   "dataStores": { 
  *      "myDataStore": {
@@ -47,7 +48,12 @@
  *      ...
  *  },
  *  ...
- *
+
+ * @example
+ * <caption>Using the datastore as default store globally</caption>
+ * {
+ *   "defaultMappings": ["wsdata", "cauldron]
+ * }
  */
 class WSDataDataStore extends DirectDatastore {    
     constructor(name, options = {}) {

@@ -17400,6 +17400,7 @@ Datastore.registerDatastoreType("localStorage", LocalStorageDataStore);
  *
  * @memberOf Datastores
  * @example
+ * <caption>Adding the datastore</caption>
  * {
  *   "dataStores": { 
  *      "myDataStore": {
@@ -17411,7 +17412,12 @@ Datastore.registerDatastoreType("localStorage", LocalStorageDataStore);
  *      ...
  *  },
  *  ...
- *
+
+ * @example
+ * <caption>Using the datastore as default store globally</caption>
+ * {
+ *   "defaultMappings": ["wsdata", "cauldron]
+ * }
  */
 class WSDataDataStore extends DirectDatastore {    
     constructor(name, options = {}) {
@@ -22514,8 +22520,9 @@ GigaVarvDatastore.storages = new Map();
  *
  * @memberOf Datastores
  * @example
+ * <caption>Adding the datastore</caption>
  * {
- *   "dataStores": { 
+ *   "dataStoreds": { 
  *      "myDataStore": {
  *          "type": "sql", 
  *          "options": {
