@@ -1,5 +1,5 @@
 /**
- *  SignalingDataStore - stores properties temporarily in collective memory
+ *  SignalingDataStore - signals data over webstrate signals
  * 
  *  This code is licensed under the MIT License (MIT).
  *  
@@ -27,7 +27,29 @@
  */
 
 /**
+ * A general purpose datastore that signals changes to data over webstrate signals
+ * 
+ * This datastore registers as the type "signaling".
+ *
+ * Options:
+ * <ul>
+ * "storageName" - The element name of the DOM element to send signals through (default: "varv-signaling")
+ * </ul>
+ *
  * @memberOf Datastores
+ * @example
+ * {
+ *   "dataStores": { 
+ *      "myDataStore": {
+ *          "type": "signaling", 
+ *          "options": {
+ *              "storageName": "my-signals"
+ *          }
+ *      },
+ *      ...
+ *  },
+ *  ...
+ *
  */
 class SignalingDataStore extends DirectDatastore {    
     constructor(name, options = {}) {

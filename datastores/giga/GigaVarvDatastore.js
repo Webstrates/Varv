@@ -27,6 +27,11 @@
  */
 
 /**
+ * This datastore is abstract. Consider using one of the actual implementations of
+ * it or using it as a base for another datastore.
+ * 
+ * It provides the websocket protocol for Gigavarv-based datastores.
+ * 
  * Protocol:
  *
  * Client to server (r=requestCounter):

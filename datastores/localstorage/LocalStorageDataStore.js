@@ -29,10 +29,11 @@
 
 /**
  * A storage that serializes into the localStorage database
- * <pre>
- * options:
- * storageName - The name of the prefix to store that data below (Default: "varv-data")
- * </pre>
+ * 
+ * Options:
+ * <ul>
+ * <li>storageName - The name of the prefix to store that data below (Default: "varv-data")</li>
+ * </ul>
  *
  * @memberOf Datastores
  */

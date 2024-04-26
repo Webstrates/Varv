@@ -27,7 +27,30 @@
  */
 
 /**
+ * A general purpose datastore that stores properties temporarily in memory. The
+ * memory is lost on reload.
+ * 
+ * This datastore registers as the type "memory".
+ *
+ * Options:
+ * <ul>
+ * "storageName" - The memory bucket name of the storage (default: "memory"). Multiple independant buckets can be maintained
+ * </ul>
+ *
  * @memberOf Datastores
+ * @example
+ * {
+ *   "dataStores": { 
+ *      "myDataStore": {
+ *          "type": "memory", 
+ *          "options": {
+ *              "storageName": "myMemory"
+ *          }
+ *      },
+ *      ...
+ *  },
+ *  ...
+ *
  */
 class MemoryDataStore extends DirectDatastore {
     constructor(name, options = {}) {

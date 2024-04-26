@@ -11920,13 +11920,18 @@ window.ActionTrigger = ActionTrigger;
  */
 
 /**
- * A storage that provides a DOM-element&attribute-based serialization of Concept properties
+ * A general purpose storage that serializes Concepts and Properties into DOM-elements and their attributes
+ * and stores them in the document.
+ * 
+ * For webstrates-based documents this allows synchronizing with other programs 
+ * across the web as modifications made to the storage structure also make notifications
+ * back into the program.
  *
- * <pre>
- * options:
- * storageName - The name of the element to store that data below (Default: "varv-data")
- * storageWebstrate - The name of the webstrate to store the data at (Default: current webstrate)
- * </pre>
+ * Options:
+ * <ul>
+ * <li>storageName - The name of the element to store that data below (Default: "varv-data")</li>
+ * <li>storageWebstrate - The name of the webstrate to store the data at (Default: the current webstrate)</li>
+ * </ul>
  *
  * @memberOf Datastores
  */
@@ -16885,7 +16890,30 @@ export function useAction(lookup, actionArguments = {}){
  */
 
 /**
+ * A general purpose datastore that stores properties temporarily in memory. The
+ * memory is lost on reload.
+ * 
+ * This datastore registers as the type "memory".
+ *
+ * Options:
+ * <ul>
+ * "storageName" - The memory bucket name of the storage (default: "memory"). Multiple independant buckets can be maintained
+ * </ul>
+ *
  * @memberOf Datastores
+ * @example
+ * {
+ *   "dataStores": { 
+ *      "myDataStore": {
+ *          "type": "memory", 
+ *          "options": {
+ *              "storageName": "myMemory"
+ *          }
+ *      },
+ *      ...
+ *  },
+ *  ...
+ *
  */
 class MemoryDataStore extends DirectDatastore {
     constructor(name, options = {}) {
@@ -17084,10 +17112,11 @@ Datastore.registerDatastoreType("memory", MemoryDataStore);
 
 /**
  * A storage that serializes into the localStorage database
- * <pre>
- * options:
- * storageName - The name of the prefix to store that data below (Default: "varv-data")
- * </pre>
+ * 
+ * Options:
+ * <ul>
+ * <li>storageName - The name of the prefix to store that data below (Default: "varv-data")</li>
+ * </ul>
  *
  * @memberOf Datastores
  */
@@ -17368,7 +17397,29 @@ Datastore.registerDatastoreType("localStorage", LocalStorageDataStore);
  */
 
 /**
+ * A general purpose datastore that uses Webstrates Data API as the storage.
+ * 
+ * This datastore registers as the type "wsdata".
+ *
+ * Options:
+ * <ul>
+ * "storageName" - The name of the data bucket you intend to use inside automerge.doc.data (default: "varvData")
+ * </ul>
+ *
  * @memberOf Datastores
+ * @example
+ * {
+ *   "dataStores": { 
+ *      "myDataStore": {
+ *          "type": "wsdata", 
+ *          "options": {
+ *              "storageName": "myData"
+ *          }
+ *      },
+ *      ...
+ *  },
+ *  ...
+ *
  */
 class WSDataDataStore extends DirectDatastore {    
     constructor(name, options = {}) {
@@ -17527,7 +17578,9 @@ class WSDataDataStore extends DirectDatastore {
         }
         let setter = async (uuid, value) => {
             if (self.inflightChanges.has(uuid+"."+property.name)) return; // Avoid writebacks from our own changes            
-            console.log("Setting ",property.name);
+            if(WSDataDataStore.DEBUG) {
+                console.log("Setting ",property.name);
+            }
             await webstrate.updateData((data)=>{
                 data[self.storageName][concept.name][uuid][property.name]=value;
             });
@@ -17561,9 +17614,7 @@ class WSDataDataStore extends DirectDatastore {
         let appearChange = "appear"+"."+uuid;
         this.registerConceptFromUUID(uuid, concept);
         this.inflightChanges.add(appearChange); // Avoid writebacks from this
-        console.log("Added fence ",appearChange);
         await concept.appeared(uuid);     
-        console.log("Removing fence ",appearChange);
         this.inflightChanges.delete(appearChange); // Avoid writebacks from this                                
     }
     
@@ -17603,7 +17654,7 @@ class WSDataDataStore extends DirectDatastore {
         }
     }
 }
-WSDataDataStore.DEBUG = true;
+WSDataDataStore.DEBUG = false;
 window.WSDataDataStore = WSDataDataStore;
 
 // Register default dom datastore
@@ -17630,7 +17681,7 @@ Datastore.registerDatastoreType("wsdata", WSDataDataStore);
 
                 <script id="SignalingDataStore-script" type="disabled">
 /**
- *  SignalingDataStore - stores properties temporarily in collective memory
+ *  SignalingDataStore - signals data over webstrate signals
  * 
  *  This code is licensed under the MIT License (MIT).
  *  
@@ -17658,7 +17709,29 @@ Datastore.registerDatastoreType("wsdata", WSDataDataStore);
  */
 
 /**
+ * A general purpose datastore that signals changes to data over webstrate signals
+ * 
+ * This datastore registers as the type "signaling".
+ *
+ * Options:
+ * <ul>
+ * "storageName" - The element name of the DOM element to send signals through (default: "varv-signaling")
+ * </ul>
+ *
  * @memberOf Datastores
+ * @example
+ * {
+ *   "dataStores": { 
+ *      "myDataStore": {
+ *          "type": "signaling", 
+ *          "options": {
+ *              "storageName": "my-signals"
+ *          }
+ *      },
+ *      ...
+ *  },
+ *  ...
+ *
  */
 class SignalingDataStore extends DirectDatastore {    
     constructor(name, options = {}) {
@@ -21907,6 +21980,11 @@ Inspector.instance = new Inspector();
  */
 
 /**
+ * This datastore is abstract. Consider using one of the actual implementations of
+ * it or using it as a base for another datastore.
+ * 
+ * It provides the websocket protocol for Gigavarv-based datastores.
+ * 
  * Protocol:
  *
  * Client to server (r=requestCounter):
@@ -22426,22 +22504,22 @@ GigaVarvDatastore.storages = new Map();
 
 /**
  * A general purpose datastore that uses an SQL server as backend.
+ * 
  * This datastore registers as the type "sql".
  * <table>
  * <tr><th>Feature</th><th>Remark</th></tr>
  * <tr><th>Property Lengths</th><td>Max 64KB string length</td></tr>
  * <tr><th>Concept Instances</th><td>Max 4294967295 total (including deleted ones)</td></tr>
  * <tr><th>Properties / Instance</th>No specific limit on number of named properties per concept as long as their names are shorter than 62 chars</td></tr>
- * <tr><th>Performance</th><td><ul><li>Searching for strings that "equals"/"startWith" is really fas</li>
+ * <tr><th>Performance</th><td><ul><li>Searching for strings that "equals"/"startWith" is really fast</li>
  * <li>Good at combining multiple search requirements</li>
  * <li>Creating instances and setting properties is fairly fast if no reads are performed in-between</li></ul></td></tr></table>
  *
- * Options inherited from GigaVarv
- *
- * <pre>
- * "serverURL" - The URL to the server on the form "ws(s)://yourserver/sql". Note that secure websockets (wss) may be required on some sites.
- * "storageName" - The name of the data bucket you intend to use
- * </pre>
+ * Options inherited from GigaVarv:
+ * <ul>
+ * <li>"serverURL" - The URL to the server on the form "ws(s)://yourserver/sql". Note that secure websockets (wss) may be required on some sites.</li>
+ * <li>"storageName" - The name of the data bucket you intend to use</li>
+ * </ul>
  *
  * @memberOf Datastores
  * @example
@@ -22805,7 +22883,22 @@ SQLFilter.registeredFilters["SQLFilterCalc"] = SQLFilterCalc;
  */
 
 /**
- * A datastore that uses the location, query and hash as storage
+ * A datastore that allows reading and writing the location, query and hash as data.
+ * 
+ * This datastore registers as the type "location".
+ * 
+ * Any field mapped to this datastore from any object will use the URL params as the
+ * source of the data. For example mapping the field "useBirds" will allow reading the
+ * xyz value of a ?fun=true&useBirds=xyz URL.
+ * 
+ * The special mapping "locationHash" allows reading the hash-postfix of the URL. For
+ * example the "cats" from https://cavi.au.dk/#cats
+ * 
+ * Listening for changes to the mapped locationHash will notify the program on load
+ * as well as if/when the hash changes.
+ * 
+ * This datastore has no options.
+ * 
  * @memberOf Datastores
  */
 class LocationDataStore extends DirectDatastore {
@@ -22822,13 +22915,11 @@ class LocationDataStore extends DirectDatastore {
     destroy() {
         this.deleteCallbacks.forEach((deleteCallback)=>{
             deleteCallback.delete();
-        })
+        });
     }
 
     async init() {
         const self = this;
-
-        this.storageName = "memory";
 
         this.deleteCallbacks.push(VarvEngine.registerEventCallback("disappeared", async (context)=> {
             if(LocationDataStore.DEBUG) {

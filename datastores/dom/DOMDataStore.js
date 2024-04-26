@@ -27,13 +27,18 @@
  */
 
 /**
- * A storage that provides a DOM-element&attribute-based serialization of Concept properties
+ * A general purpose storage that serializes Concepts and Properties into DOM-elements and their attributes
+ * and stores them in the document.
+ * 
+ * For webstrates-based documents this allows synchronizing with other programs 
+ * across the web as modifications made to the storage structure also make notifications
+ * back into the program.
  *
- * <pre>
- * options:
- * storageName - The name of the element to store that data below (Default: "varv-data")
- * storageWebstrate - The name of the webstrate to store the data at (Default: current webstrate)
- * </pre>
+ * Options:
+ * <ul>
+ * <li>storageName - The name of the element to store that data below (Default: "varv-data")</li>
+ * <li>storageWebstrate - The name of the webstrate to store the data at (Default: the current webstrate)</li>
+ * </ul>
  *
  * @memberOf Datastores
  */

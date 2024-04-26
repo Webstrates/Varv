@@ -27,7 +27,22 @@
  */
 
 /**
- * A datastore that uses the location, query and hash as storage
+ * A datastore that allows reading and writing the location, query and hash as data.
+ * 
+ * This datastore registers as the type "location".
+ * 
+ * Any field mapped to this datastore from any object will use the URL params as the
+ * source of the data. For example mapping the field "useBirds" will allow reading the
+ * xyz value of a ?fun=true&useBirds=xyz URL.
+ * 
+ * The special mapping "locationHash" allows reading the hash-postfix of the URL. For
+ * example the "cats" from https://cavi.au.dk/#cats
+ * 
+ * Listening for changes to the mapped locationHash will notify the program on load
+ * as well as if/when the hash changes.
+ * 
+ * This datastore has no options.
+ * 
  * @memberOf Datastores
  */
 class LocationDataStore extends DirectDatastore {
@@ -44,13 +59,11 @@ class LocationDataStore extends DirectDatastore {
     destroy() {
         this.deleteCallbacks.forEach((deleteCallback)=>{
             deleteCallback.delete();
-        })
+        });
     }
 
     async init() {
         const self = this;
-
-        this.storageName = "memory";
 
         this.deleteCallbacks.push(VarvEngine.registerEventCallback("disappeared", async (context)=> {
             if(LocationDataStore.DEBUG) {

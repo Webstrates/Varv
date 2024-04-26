@@ -27,7 +27,29 @@
  */
 
 /**
+ * A general purpose datastore that uses Webstrates Data API as the storage.
+ * 
+ * This datastore registers as the type "wsdata".
+ *
+ * Options:
+ * <ul>
+ * "storageName" - The name of the data bucket you intend to use inside automerge.doc.data (default: "varvData")
+ * </ul>
+ *
  * @memberOf Datastores
+ * @example
+ * {
+ *   "dataStores": { 
+ *      "myDataStore": {
+ *          "type": "wsdata", 
+ *          "options": {
+ *              "storageName": "myData"
+ *          }
+ *      },
+ *      ...
+ *  },
+ *  ...
+ *
  */
 class WSDataDataStore extends DirectDatastore {    
     constructor(name, options = {}) {
@@ -186,7 +208,9 @@ class WSDataDataStore extends DirectDatastore {
         }
         let setter = async (uuid, value) => {
             if (self.inflightChanges.has(uuid+"."+property.name)) return; // Avoid writebacks from our own changes            
-            console.log("Setting ",property.name);
+            if(WSDataDataStore.DEBUG) {
+                console.log("Setting ",property.name);
+            }
             await webstrate.updateData((data)=>{
                 data[self.storageName][concept.name][uuid][property.name]=value;
             });
@@ -220,9 +244,7 @@ class WSDataDataStore extends DirectDatastore {
         let appearChange = "appear"+"."+uuid;
         this.registerConceptFromUUID(uuid, concept);
         this.inflightChanges.add(appearChange); // Avoid writebacks from this
-        console.log("Added fence ",appearChange);
         await concept.appeared(uuid);     
-        console.log("Removing fence ",appearChange);
         this.inflightChanges.delete(appearChange); // Avoid writebacks from this                                
     }
     
@@ -262,7 +284,7 @@ class WSDataDataStore extends DirectDatastore {
         }
     }
 }
-WSDataDataStore.DEBUG = true;
+WSDataDataStore.DEBUG = false;
 window.WSDataDataStore = WSDataDataStore;
 
 // Register default dom datastore
