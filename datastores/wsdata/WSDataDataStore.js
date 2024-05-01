@@ -32,7 +32,7 @@
  * This datastore registers as the type "wsdata".
  *
  * ### Options
- * * "storageName" - The name of the data bucket you intend to use inside automerge.doc.data (default: "varvData")
+ * * "storageName" - The name of the data bucket you intend to use inside automerge.contentDoc.data (default: "varvData")
  *
  * @memberOf Datastores
  * @example
@@ -86,11 +86,11 @@ class WSDataDataStore extends DirectDatastore {
             typeof webstrate.updateData === "undefined" ||
             typeof webstrate.on === "undefined" ||
             typeof automerge === "undefined" ||
-            typeof automerge.doc === "undefined" ||
-            typeof automerge.doc.data === "undefined"){        
-            throw new Error("Cannot use wsdata datastore on page without automerge.doc.data and websstrate.updateData");
+            typeof automerge.contentDoc === "undefined" ||
+            typeof automerge.contentDoc.data === "undefined"){        
+            throw new Error("Cannot use wsdata datastore on page without automerge.contentDoc.data and websstrate.updateData");
         }
-        if (typeof automerge.doc.data[self.storageName] === "undefined"){
+        if (typeof automerge.contentDoc.data[self.storageName] === "undefined"){
             await webstrate.updateData((data)=>{
                 data[self.storageName] = {};
             });
@@ -121,7 +121,7 @@ class WSDataDataStore extends DirectDatastore {
             }
             if (self.isConceptMapped(context.concept)){
                 if (self.inflightChanges.has("appear"+"."+context.target)) return; // This was caused by us, ignore it
-                if (typeof automerge.doc.data[self.storageName][context.concept.name][context.target] !== "undefined") return; // This already exists
+                if (typeof automerge.contentDoc.data[self.storageName][context.concept.name][context.target] !== "undefined") return; // This already exists
                 
                 if(WSDataDataStore.DEBUG) {
                     console.log("Writing appeared UUID (WSDataDataStore):", context.target);
@@ -191,7 +191,7 @@ class WSDataDataStore extends DirectDatastore {
                     }           
                     if (self.inflightChanges.has(uuid+"."+propertyName)) return;  // This was caused by us, ignore it                            
                     if (WSDataDataStore.DEBUG) console.log("Patch changed property", type, propertyName, patch);
-                    await self._setVarvProperty(concept, uuid, propertyName, structuredClone(automerge.doc.data[self.storageName][type][uuid][propertyName]));
+                    await self._setVarvProperty(concept, uuid, propertyName, structuredClone(automerge.contentDoc.data[self.storageName][type][uuid][propertyName]));
                 }
             }
         }
@@ -202,7 +202,7 @@ class WSDataDataStore extends DirectDatastore {
         
         // Check if concept already is mapped, if not, register it
         if (this.isPropertyMapped(concept,property)) return;
-        if (typeof automerge.doc.data[self.storageName][concept.name]==="undefined"){
+        if (typeof automerge.contentDoc.data[self.storageName][concept.name]==="undefined"){
             if(WSDataDataStore.DEBUG) {
                 console.log("Adding type space to data for:", concept.name);
             }
@@ -220,7 +220,7 @@ class WSDataDataStore extends DirectDatastore {
             });
         };
         let getter = (uuid, value) => {
-            return automerge.doc.data[self.storageName][concept.name][uuid][property.name];
+            return automerge.contentDoc.data[self.storageName][concept.name][uuid][property.name];
         };        
         property.addGetCallback(getter);
         property.addSetCallback(setter);
@@ -255,7 +255,7 @@ class WSDataDataStore extends DirectDatastore {
     async loadBackingStore() {    
         // For each of our mapped concepts, popuplate local state from the corresponding stored data objects
         let self = this;
-        for (let [type,instances] of Object.entries(automerge.doc.data[self.storageName])){
+        for (let [type,instances] of Object.entries(automerge.contentDoc.data[self.storageName])){
             if (!self.isConceptTypeMapped(type)){
                 if (WSDataDataStore.DEBUG) console.log("Ignoring concept type from wsdata since it is not mapped", type, instances);
                 continue;
