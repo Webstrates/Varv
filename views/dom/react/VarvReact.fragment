@@ -19,7 +19,7 @@ export const Varv = (params)=&gt;{
             // TODO: Cleanup varv view
             view.destroy();
         };
-    }, [params.concept, params.property, params.if, scope]);    
+    }, [params.concept, params.property, params.target, params.if, scope]);    
 
     return lookupResult.map(result=&gt;{
         if (result.length==0){

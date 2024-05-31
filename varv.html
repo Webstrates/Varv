@@ -15652,6 +15652,7 @@ class QueryParseNode extends ScopedParseNode {
             
             // Attribute evaluators
             view.conceptUpdatingEvaluation?.destroy();
+            view.targetUpdatingEvaluation?.destroy();
             view.propertyUpdatingEvaluation?.destroy();
             view.conditionalUpdatingEvaluation?.destroy();
         });        
@@ -15663,60 +15664,79 @@ class QueryParseNode extends ScopedParseNode {
         this.generateConceptScopes(view);
     }
     
-    // Look at the CONCEPT attribute and generate some scopes
+    // Look at the CONCEPT and TARGET attributes and generate some scopes
     generateConceptScopes(view){
         let self = this;
         let conceptQuery = this.templateElement.getAttribute("concept");
+        let targetQuery = this.templateElement.getAttribute("target");
+        
+        let conceptTargetAttributesUpdated = async function conceptTargetAttributesUpdated(conceptName){                        
+            try {
+                // Clean up any previous appeared/disappeared callbacks
+                view.conceptAppearedCallback?.delete();
+                view.conceptDisappearedCallback?.delete();
+
+                // Concept enumeration queries                
+                let doConceptEnumeration = async function doConceptEnumerationForScopes(){
+                    // TODO: possibly filter for performance
+                    if (DOMView.DEBUG){
+                        if (self.templateElement.getAttribute("property")) console.log("FIXME: DOMView concept='' enumerations combined with property='' lookups on same element can be optimized further, use filters here");
+                        if (self.templateElement.getAttribute("if")) console.log("FIXME: DOMView concept='' enumerations combined with if='' can sometimes be optimized further, use filters here");
+                    }
+                    let instances = await VarvEngine.lookupInstances(VarvEngine.getAllImplementingConceptNames(conceptName)); // TODO: Fancy filtering opportunity here
+
+                    // Merge with any target query
+                    if (targetQuery && !instances.includes(targetQuery)){
+                        instances.push(targetQuery);
+                    }
+                    let localScopes = await Promise.all(instances.map(async function lookupConcreteTypes(uuid){
+                        let concreteConcept = await VarvEngine.getConceptFromUUID(uuid);
+                        return [new ConceptInstanceBinding(concreteConcept, uuid)];
+                    }));                
+                    self.generatePropertyScopes(view, localScopes);
+                };
+
+                // Populate the scope
+                await doConceptEnumeration();                    
+                let refreshTimer;
+                view.conceptAppearedCallback = VarvEngine.registerEventCallback("appeared", async (evt) => {
+                    if (evt.concept.isA(conceptName)){
+                        clearTimeout(refreshTimer);
+                        refreshTimer = setTimeout(()=>{
+                            doConceptEnumeration();
+                        },0);                            
+                    }
+                });
+                view.conceptDisappearedCallback = VarvEngine.registerEventCallback("disappeared", async (evt) => {
+                    if (evt.concept.isA(conceptName)){
+                        clearTimeout(refreshTimer);
+                        refreshTimer = setTimeout(()=>{
+                            doConceptEnumeration();
+                        },0);                            
+                    }
+                });                    
+            } catch (ex){
+                self.showError(view, "Evaluating concept='"+conceptQuery+"': "+ex, ex);
+                return;            
+            }
+        };
+
+        let emptyQuery = true;
+        
         if ((conceptQuery!==null) && conceptQuery.trim().length>0){
             // Need to monitor a list of concept instances
-            view.conceptUpdatingEvaluation = new UpdatingEvaluation(conceptQuery, view.scope, async function conceptAttributeUpdated(conceptName){                        
-                try {
-                    // Clean up any previous appeared/disappeared callbacks
-                    view.conceptAppearedCallback?.delete();
-                    view.conceptDisappearedCallback?.delete();
-                    
-                    // Concept enumeration queries                
-                    let doConceptEnumeration = async function doConceptEnumerationForScopes(){
-                        // TODO: possibly filter for performance
-                        if (DOMView.DEBUG){
-                            if (self.templateElement.getAttribute("property")) console.log("FIXME: DOMView concept='' enumerations combined with property='' lookups on same element can be optimized further, use filters here");
-                            if (self.templateElement.getAttribute("if")) console.log("FIXME: DOMView concept='' enumerations combined with if='' can sometimes be optimized further, use filters here");
-                        }
-                        let instances = await VarvEngine.lookupInstances(VarvEngine.getAllImplementingConceptNames(conceptName)); // TODO: Fancy filtering opportunity here
-                        let localScopes = await Promise.all(instances.map(async function lookupConcreteTypes(uuid){
-                            let concreteConcept = await VarvEngine.getConceptFromUUID(uuid);
-                            return [new ConceptInstanceBinding(concreteConcept, uuid)];
-                        }));                
-                        self.generatePropertyScopes(view, localScopes);
-                    };
-                    
-                    // Populate the scope
-                    await doConceptEnumeration();                    
-                    let refreshTimer;
-                    view.conceptAppearedCallback = VarvEngine.registerEventCallback("appeared", async (evt) => {
-                        if (evt.concept.isA(conceptName)){
-                            clearTimeout(refreshTimer);
-                            refreshTimer = setTimeout(()=>{
-                                doConceptEnumeration();
-                            },0);                            
-                        }
-                    });
-                    view.conceptDisappearedCallback = VarvEngine.registerEventCallback("disappeared", async (evt) => {
-                        if (evt.concept.isA(conceptName)){
-                            clearTimeout(refreshTimer);
-                            refreshTimer = setTimeout(()=>{
-                                doConceptEnumeration();
-                            },0);                            
-                        }
-                    });                    
-                } catch (ex){
-                    self.showError(view, "Evaluating concept='"+conceptQuery+"': "+ex, ex);
-                    return;            
-                }
-            });
-
-            // TODO: also run the above for concept added callbacks
-        } else {
+            view.conceptUpdatingEvaluation = new UpdatingEvaluation(conceptQuery, view.scope, conceptTargetAttributesUpdated);
+            emptyQuery = false;
+            // TODO: also run the above for concept added callbacks            
+        }
+        if ((targetQuery!==null) && targetQuery.trim().length>0){
+            // Need to monitor a list of concept instances
+            view.targetUpdatingEvaluation = new UpdatingEvaluation(targetQuery, view.scope, conceptTargetAttributesUpdated);
+            emptyQuery = false;
+            // TODO: also run the above for concept added callbacks            
+        }
+        
+        if (emptyQuery){
             // We can skip straight to property with just the view scope
             self.generatePropertyScopes(view, [[]]);
         }       
@@ -16704,7 +16724,7 @@ varv-view {
     "dependencies": [
         "#varv-engine",
         "#varv-domdiff-view",
-        "codestrate-repos #fragment_js_babel"
+        "codestrates-repos #fragment_js_babel"
     ],
     "assets": [],
     "license": "MIT",
@@ -16754,7 +16774,7 @@ export const Varv = (params)=&gt;{
             // TODO: Cleanup varv view
             view.destroy();
         };
-    }, [params.concept, params.property, params.if, scope]);    
+    }, [params.concept, params.property, params.target, params.if, scope]);    
 
     return lookupResult.map(result=&gt;{
         if (result.length==0){

@@ -4,7 +4,7 @@
     "dependencies": [
         "#varv-engine",
         "#varv-domdiff-view",
-        "codestrate-repos #fragment_js_babel"
+        "codestrates-repos #fragment_js_babel"
     ],
     "assets": [],
     "license": "MIT",
