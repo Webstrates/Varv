@@ -321,6 +321,8 @@ class DOMDataStore extends DirectDatastore {
                 return conceptUUID != entry[0];
             });
         }
+        
+        DOMDataStore.isSyncingPropertyNodes = true;
         for(let propertyNode of propertyChangedNodes) {
             try {
                 await self.synchronizePropertyElementFromDOM(propertyNode);
@@ -328,6 +330,7 @@ class DOMDataStore extends DirectDatastore {
                 console.error("Error synchronizing property element from dom: ", e);
             }
         }
+        DOMDataStore.isSyncingPropertyNodes = false;
     }
 
     createBackingStore(concept, property) {
